@@ -26,7 +26,22 @@ if __name__ == '__main__':
     """
     Main script for testing
     """
-    print('Hello world\n')
+    
+    # Input signal
+    fs = 44100 # Sampling frequency
+    T = 2 # Duration 
+    f1 = 220 # Starting fundamental frequency
+    f2 = 4400 # Ending fundamental frequency
+    A = 1 # Amplitude    
+    
+    time_vector = np.arange(0, T, step=1/fs)
+    f0_vector = np.linspace(f1, f2, num=len(time_vector))
+    sig = np.cos(2 * np.pi * f0_vector * time_vector)
+    
+    plt.figure
+    plt.plot(time_vector, sig)
+    plt.xlim([0, 0.025])
+    plt.show
 
 
 #==============================================================================
