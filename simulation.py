@@ -22,47 +22,77 @@ from matplotlib import pyplot as plt
 # Functions
 #==============================================================================
 
-def list_combi(h_mpq_bool, nl_order_max):
-    list_pq = np.empty((0, 3), dtype=int)
-    nb_set_2_report = 0
+def list_combi(h_mpq_bool, nl_order_max, print_opt=False):
+    
+    ## List of Mpq function ##
+    # Compute the list of Mpq functions used in each order of nonlinearity, up
+    # to a certain order in the ndarray list_pq
+    
+    list_pq = np.empty((0, 3), dtype=int) # Initialisation
+    nb_set_2_report = 0 # Variable for reporting sets from the previous order
+    # Loop on order of nonlinearity
     for n in range(2, nl_order_max+1):
+        # Report previous sets and change the corresponding order
         list_pq = np.concatenate((list_pq, list_pq[-nb_set_2_report-1:-1,:]))
-        list_pq[-nb_set_2_report:,0] += 1       
+        list_pq[-nb_set_2_report:,0] += 1
+        # Loop on all new combination (p,q)
         for q in range(n+1):
             array_tmp = np.array([n, n-q, q])
             array_tmp.shape = (1, 3)
             list_pq = np.concatenate((list_pq, array_tmp))
+            # We don't report the use of the Mpq function for p = 0
             if not (n == q):
                 nb_set_2_report += 1
-                
-    mask_pq = np.empty(list_pq.shape[0], dtype=bool)
+
+    ## Elimination ##
+    # Eliminates the unused Mpq, depending on the system (via the given lambda
+    # function h_mpq_bool)
+      
+    mask_pq = np.empty(list_pq.shape[0], dtype=bool) # Initialisation
+    # Loop on all set combination    
     for idx in range(list_pq.shape[0]):
         # In the following:
-        # n = list_pq[idx,0]
-        # p = list_pq[idx,1]
-        # q = list_pq[idx,2]
+        # list_pq[idx,0] represents n
+        # list_pq[idx,1] represents p
+        # list_pq[idx,2] represents q
         mask_pq[idx] = h_mpq_bool(list_pq[idx,1], list_pq[idx,2])
     list_pq = list_pq[mask_pq]
     
-    list_pq_w_set = []
+    ## State combinatorics ##
+    # Compute, for each Mpq function at a given order n, the different sets of
+    # state-homogenous-order that are the inputs of the Mpq function
+    # (all sets are created, even those equals in respect to the order, so, if
+    # the Mpq function are symmetric, there is redudancy)
+    
+    list_pq_w_set = [] # Initialisation
     for elt in list_pq:
         # In the following:
-        # n = elt[0]
-        # p = elt[1]
-        # q = elt[2]
-        k_sum = elt[0] - elt[2]
-        k_max = k_sum - elt[1] + 1
+        # elt[0] represents n
+        # elt[1] represents p
+        # elt[2] represents q
+        k_sum = elt[0] - elt[2] # Maximum value possiblee for a state order
+        k_max = k_sum - elt[1] + 1 # Value needed for the sum of all state order
+        if print_opt: # Optional printing
+            print('(n, p, q) = {}'.format(elt))
+        # Loop on all possible sets
         for index in np.ndindex( (k_max,)*elt[1] ):
             index = tuple(map(sum, zip(index, (1,)*elt[1])))
-#            print('elt: ', elt, 'idx: ', index, sum(index) == k_sum)
+            if print_opt: # Optional printing
+                print('        Set: {}, Used = {}'.format(index,
+                      sum(index) == k_sum))
+            # Check if the corresponds to the current (n,p,q) combination
             if sum(index) == k_sum:
                 elt_bis = list(elt)
                 elt_bis.append(index)
                 list_pq_w_set.append(elt_bis)
     
-    for elt in list_pq_w_set:
-        print(elt)
+    ## Output ##
     
+    if print_opt: # Optional printing
+        print('')
+        for elt in list_pq_w_set:
+            print(elt)
+            
     return list_pq_w_set
     
 def simulation(input_sig, matrices,
@@ -215,5 +245,7 @@ if __name__ == '__main__':
     plt.show    print('Test combinatoire')
     list_combi(lambda p, q: True, 4)
    
+    print('Test combinatoire')
+    list_combi(lambda p, q: True, 4, True)
     print('\n\nHP') 
-    list_combi(m_pq[0], 4)
+    list_combi(m_pq[0], 4, True)
