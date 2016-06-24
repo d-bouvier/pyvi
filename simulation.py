@@ -183,7 +183,7 @@ def simulation(input_sig, matrices,
                sizes=(1, 1, 1), sym_bool=True,
                fs=44100, nl_order_max=1):
     """
-    Comupte the simulation of a nonlinear system for a given input
+    Comupte the simulation of a nonlinear system for a given input.
     """
     
     ## Init ##
@@ -203,7 +203,7 @@ def simulation(input_sig, matrices,
     h_npq = n_pq[1]
     
     # Compute parameters
-    sig_len = np.shape(input_sig)[0]
+    sig_len = max(input_sig.shape)
     sampling_time = 1/fs
     w_filter = linalg.expm(A_m*sampling_time)
     holder_bias_state = np.dot(np.linalg.inv(A_m),
@@ -235,7 +235,8 @@ def simulation(input_sig, matrices,
 def hp_parameters():
     """
     Gives the linear matrices and nonlinear operators of the state-space
-    representation for the loudspeaker SICA Z000900 
+    representation for the loudspeaker SICA Z000900
+    (http://www.sica.it/media/Z000900C.pdf551d31b7b491e.pdf).
     """ 
 
     state_dim = 3
@@ -277,11 +278,12 @@ def hp_parameters():
 
     def hp_mpq_tensor(p, q, state_dim, coeff_value):
         """
-        Gives the tensor form of the Mpq function (with q = 0)
+        Gives the tensor form of the Mpq function (with q = 0).
         """ 
         if q==0:
             Mpq_tensor = np.zeros((state_dim,)*(p+1))
-            idx = np.concatenate((np.array([2], dtype=int), np.ones(p, dtype=int)))
+            idx = np.concatenate((np.array([2], dtype=int),
+                                  np.ones(p, dtype=int)))
             Mpq_tensor[tuple(idx)] = coeff_value
             return Mpq_tensor
         else:
@@ -297,7 +299,7 @@ def hp_parameters():
 
 if __name__ == '__main__':
     """
-    Main script for testing
+    Main script for testing.
     """
     
     plt.close("all")
