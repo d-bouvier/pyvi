@@ -273,19 +273,19 @@ def hp_parameters():
     h_mpq_bool = (lambda p, q: q==0) 
     h_npq_bool = (lambda p, q: False)
     # Handles for fonction giving the Mpq tensor
-    h_mpq = (lambda p, q: hp_mpq_tensor(p, q, state_dim,  mpq_coeff(p)))
-    h_npq = (lambda p, q: None)
+    h_mpq = (lambda p, q: hp_mpq_tensor(p, q, state_dim,  mpq_coeff[p-1]))
+    h_npq = (lambda p, q: None)  
 
     def hp_mpq_tensor(p, q, state_dim, coeff_value):
         """
         Gives the tensor form of the Mpq function (with q = 0).
         """ 
         if q==0:
-            Mpq_tensor = np.zeros((state_dim,)*(p+1))
+            mpq_tensor = np.zeros((state_dim,)*(p+1))
             idx = np.concatenate((np.array([2], dtype=int),
                                   np.ones(p, dtype=int)))
-            Mpq_tensor[tuple(idx)] = coeff_value
-            return Mpq_tensor
+            mpq_tensor[tuple(idx)] = coeff_value
+            return mpq_tensor
         else:
             return None
             
