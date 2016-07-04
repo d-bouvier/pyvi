@@ -210,6 +210,13 @@ def simulation(input_sig, matrices,
                                w_filter - np.identity(state_dim))
     holder_bias_input = np.dot(holder_bias_state, B_m)
     
+    # Compute list of Mpq functions and set
+    list_mpq_set = make_list_mpq_set(h_mpq_bool, nl_order_max)
+    dict_mpq = {}
+    for idx, elt in enumerate(list_mpq_set):
+        if (elt[1], elt[2]) not in dict_mpq:
+            dict_mpq[elt[1], elt[2]] = h_mpq(elt[1], elt[2])
+            
     # State and output initialization
     state_sig = np.zeros((state_dim, sig_len))
     state_by_order = np.zeros((nl_order_max, state_dim, sig_len))
@@ -227,8 +234,20 @@ def simulation(input_sig, matrices,
                     np.dot(w_filter, state_by_order[0,:,k]) +\
                     np.dot(holder_bias_input, input_sig[:,k])
     
+        for idx, elt in enumerate(list_mpq_set):
+            n = elt[0]
+            p = elt[1]
+            q = elt[2]
+            temp_array = dict_mpq[(p, q)].copy()
+            for order in elt[3]:
+                temp_array = np.dot(temp_array,
+                                    state_by_order[order-1,:,k])
+            state_by_order[n-1,:,k+1] = \
+                    np.dot(w_filter, state_by_order[n-1,:,k]) +\
+                    np.dot(holder_bias_state, temp_array)
     state_sig = state_by_order.sum(0)
     output_sig = np.dot(C_m, state_sig) + np.dot(D_m, input_sig)
+    input_sig.shape = (sig_len, input_dim)
     return output_sig.transpose()
 
     
@@ -327,6 +346,7 @@ if __name__ == '__main__':
     output = simulation(sig, matrices, m_pq, n_pq, sizes, sym_bool, fs)
     
     plt.figure(1)
+    output = simulation(sig, matrices, m_pq, n_pq, sizes, sym_bool, fs, 3)
     plt.plot(time_vector, output)
     plt.xlim([0, 0.05])
     plt.show    print('Test combinatoire')
