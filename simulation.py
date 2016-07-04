@@ -324,35 +324,32 @@ if __name__ == '__main__':
     plt.close("all")
     
     # Input signal
-    fs = 44100 # Sampling frequency
-    T = 2 # Duration 
-    f1 = 400 # Starting fundamental frequency
-    f2 = 50 # Ending fundamental frequency
-    A = 1 # Amplitude    
+    fs = 20000 # Sampling frequency
+    T = 0.5 # Duration 
+    f1 = 150 # Starting fundamental frequency
+    f2 = 210 # Ending fundamental frequency
+    A = 10 # Amplitude    
     
     time_vector = np.arange(0, T, step=1/fs)
     f0_vector = np.linspace(f1, f2, num=len(time_vector))
-    sig = np.cos(2 * np.pi * f0_vector * time_vector)
+    sig = A * np.cos(2 * np.pi * f0_vector * time_vector)
     
-    plt.figure(0)
-    plt.plot(time_vector, sig)
-    plt.xlim([0, 0.05])
-    plt.show
-
     # Loudspeakers parameters
     matrices, m_pq, n_pq, sizes, sym_bool = hp_parameters()
     
     # Simulation
-    output = simulation(sig, matrices, m_pq, n_pq, sizes, sym_bool, fs)
-    
-    plt.figure(1)
     output = simulation(sig, matrices, m_pq, n_pq, sizes, sym_bool, fs, 3)
-    plt.plot(time_vector, output)
-    plt.xlim([0, 0.05])
-    plt.show    print('Test combinatoire')
-    list_combi(lambda p, q: True, 4)
-   
+
+    # Plot    
+    plt.figure()
+    plt.subplot(2, 1, 1)
+    plt.plot(time_vector, sig, 'b', time_vector, output, 'r')
+    plt.subplot(2, 1, 2)
+    plt.plot(time_vector, sig, 'b', time_vector, output, 'r')
+    plt.xlim([0.1, 0.12])    
+    plt.show()
+        
     print('Test combinatoire')
     make_list_mpq_set(lambda p, q: True, 4, True)
-    print('\n\nHP') 
+    print('\n\nHP')
     make_list_mpq_set(m_pq[0], 4, True)
