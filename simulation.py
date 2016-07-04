@@ -123,13 +123,15 @@ def state_combinatorics(list_mpq, print_opt=False):
             print('(n, p, q) = {}'.format(elt))
         # Loop on all possible sets
         for index in np.ndindex( (k_max,)*elt[1] ):
-            index = tuple(map(sum, zip(index, (1,)*elt[1])))
-            if print_opt: # Optional printing
+            index = list(map(sum, zip(index, (1,)*elt[1])))
+            # Optional printing
+            if print_opt:
                 print('        Set: {}, Used = {}'.format(index,
                       sum(index) == k_sum))
             # Check if the corresponds to the current (n,p,q) combination
             if sum(index) == k_sum:
                 elt_bis = list(elt)
+#                elt_bis.append(index + [0,] * elt[2])
                 elt_bis.append(index)
                 mpq_sets.append(elt_bis)
     
@@ -211,24 +213,40 @@ def simulation(input_sig, matrices,
                                w_filter - np.identity(state_dim))
     holder_bias_input = np.dot(holder_bias_state, B_m)
     
-    # Compute list of Mpq functions and set
+    # Compute list of Mpq combinations and tensors
     list_mpq_set = make_list_pq_set(h_mpq_bool, nl_order_max)
     dict_mpq = {}
     for idx, elt in enumerate(list_mpq_set):
         if (elt[1], elt[2]) not in dict_mpq:
             dict_mpq[elt[1], elt[2]] = h_mpq(elt[1], elt[2])
             
+    # Compute list of Npq combinations and tensors
+    list_npq_set = make_list_pq_set(h_npq_bool, nl_order_max)
+    dict_npq = {}
+    for idx, elt in enumerate(list_npq_set):
+        if (elt[1], elt[2]) not in dict_npq:
+            dict_npq[elt[1], elt[2]] = h_npq(elt[1], elt[2])
+    # Add the linear part (respectively the D and C matrices)
+    list_npq_set.insert(0, [1, 0, 1, []])
+    dict_npq[0, 1] = D_m
+    for n in range(1, nl_order_max+1):
+        list_npq_set.insert(0, [n, n, 0, [n]])
+        dict_npq[n, 0] = C_m
+        
     # State and output initialization
     state_sig = np.zeros((state_dim, sig_len))
     state_by_order = np.zeros((nl_order_max, state_dim, sig_len))
     output_sig = np.zeros((output_dim, sig_len))
-
+    output_by_order = np.zeros((nl_order_max, output_dim, sig_len))
+    
     # Enforce good shape when dimension is 1
     if input_dim == 1:
         input_sig.shape = (input_dim, sig_len)
         holder_bias_input.shape = (state_dim, input_dim)
 
     ## Numerical simulation ##
+
+    # Dynamical equation
     # Main loop (on time indexes)
     for k in np.arange(sig_len-1):
         state_by_order[0,:,k+1] = \
@@ -240,6 +258,8 @@ def simulation(input_sig, matrices,
             p = elt[1]
             q = elt[2]
             temp_array = dict_mpq[(p, q)].copy()
+            for order in range(q):
+                temp_array = np.dot(temp_array, input_sig[:,k])
             for order in elt[3]:
                 temp_array = np.dot(temp_array,
                                     state_by_order[order-1,:,k])
@@ -247,7 +267,23 @@ def simulation(input_sig, matrices,
                     np.dot(w_filter, state_by_order[n-1,:,k]) +\
                     np.dot(holder_bias_state, temp_array)
     state_sig = state_by_order.sum(0)
-    output_sig = np.dot(C_m, state_sig) + np.dot(D_m, input_sig)
+
+    # Output equation
+    for k in np.arange(sig_len):
+        for idx, elt in enumerate(list_npq_set):
+            n = elt[0]
+            p = elt[1]
+            q = elt[2]
+            temp_array = dict_npq[(p, q)].copy()
+            for order in range(q):
+                temp_array = np.dot(temp_array, input_sig[:,k])
+            for order in elt[3]:
+                temp_array = np.dot(temp_array,
+                                    state_by_order[order-1,:,k])
+                output_by_order[n-1,:,k] += temp_array
+    output_sig = output_by_order.sum(0)
+    
+    # Function outputs
     input_sig.shape = (sig_len, input_dim)
     return output_sig.transpose()
 
