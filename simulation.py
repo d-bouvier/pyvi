@@ -183,8 +183,8 @@ def make_list_pq_set(h_mpq_bool, nl_order_max, print_opt=False):
 def simulation(input_sig, matrices,
                m_pq=(lambda p,q: False, lambda p,q: None),
                n_pq=(lambda p,q: False, lambda p,q: None),
-               sizes=(1, 1, 1), sym_bool=True,
-               fs=44100, nl_order_max=1):
+               sizes=(1, 1, 1), sym_bool=True, fs=44100,
+               nl_order_max=1, hold_opt=1):
     """
     Comupte the simulation of a nonlinear system for a given input.
     """
@@ -258,22 +258,45 @@ def simulation(input_sig, matrices,
     ## Numerical simulation ##
 
     # Dynamical equation
-    # Main loop (on time indexes)
-    for k in np.arange(sig_len-1):
-        for idx, elt in enumerate(list_mpq_set):
-            n = elt[0]
-            p = elt[1]
-            q = elt[2]
-            temp_array = dict_mpq[(p, q)].copy()
-            for order in range(q):
-                temp_array = np.dot(temp_array, input_sig[:,k])
-            for order in elt[3]:
-                temp_array = np.dot(temp_array,
-                                    state_by_order[order-1,:,k])
-            state_by_order[n-1,:,k+1] = \
-                    np.dot(w_filter, state_by_order[n-1,:,k]) +\
-                    np.dot(holder_bias_state, temp_array)
+    if hold_opt == 0: # Simulation for ADC converter with holder of order 0
+        # Main loop (on time indexes)
+        for k in np.arange(sig_len-1):        
+            for idx, elt in enumerate(list_mpq_set):
+                n = elt[0]
+                p = elt[1]
+                q = elt[2]
+                temp_array = dict_mpq[(p, q)].copy()
+                for order in range(q):
+                    temp_array = np.dot(temp_array, input_sig[:,k])
+                for order in elt[3]:
+                    temp_array = np.dot(temp_array,
+                                        state_by_order[order,:,k])
+                state_by_order[n,:,k+1] = \
+                        np.dot(w_filter, state_by_order[n,:,k]) +\
+                        np.dot(holder0_bias, temp_array)
 
+    elif hold_opt == 1: # Simulation for ADC converter with holder of order 1
+        # Main loop (on time indexes)
+        for k in np.arange(sig_len-1):        
+            for idx, elt in enumerate(list_mpq_set):
+                n = elt[0]
+                p = elt[1]
+                q = elt[2]                       
+                temp_array1 = dict_mpq[(p, q)].copy()
+                temp_array2 = dict_mpq[(p, q)].copy()
+                for order in range(q):
+                    temp_array1 = np.dot(temp_array1, input_sig[:,k])
+                    temp_array2 = np.dot(temp_array2, input_sig[:,k+1])
+                for order in elt[3]:
+                    temp_array1 = np.dot(temp_array1,
+                                        state_by_order[order,:,k])
+                    temp_array2 = np.dot(temp_array2,
+                                        state_by_order[order,:,k+1])
+                state_by_order[n,:,k+1] = \
+                        np.dot(w_filter, state_by_order[n,:,k]) +\
+                        np.dot(holder1_bias, temp_array1) +\
+                        np.dot(holder0_bias - holder1_bias, temp_array2)
+   
     # Output equation
     for k in np.arange(sig_len):
         for idx, elt in enumerate(list_npq_set):
