@@ -209,50 +209,57 @@ def simulation(input_sig, matrices,
     sig_len = max(input_sig.shape)
     sampling_time = 1/fs
     w_filter = linalg.expm(A_m*sampling_time)
-    holder_bias_state = np.dot(np.linalg.inv(A_m),
-                               w_filter - np.identity(state_dim))
-    holder_bias_input = np.dot(holder_bias_state, B_m)
+    A_inv = np.linalg.inv(A_m) 
     
+    # Enforce good shape when dimension is 1
+    if input_dim == 1:
+        B_m.shape = (state_dim, input_dim)
+        D_m.shape = (output_dim, input_dim)
+        input_sig.shape = (input_dim, sig_len)
+
+    # By-order state and output initialization
+    state_by_order = np.zeros((nl_order_max+1, state_dim, sig_len))
+    output_by_order = np.zeros((nl_order_max, output_dim, sig_len))
+    # Put the input signal as order-zero state
+    state_by_order[0,:,:] = np.dot(B_m, input_sig)
+    
+    holder0_bias = np.dot(A_inv, w_filter - np.identity(state_dim))
+    if hold_opt == 1:
+        holder1_bias = \
+                np.dot(A_inv, w_filter) -\
+                fs * np.dot(np.dot(A_inv, A_inv),
+                            w_filter - np.identity(state_dim))
+
     # Compute list of Mpq combinations and tensors
     list_mpq_set = make_list_pq_set(h_mpq_bool, nl_order_max)
     dict_mpq = {}
     for idx, elt in enumerate(list_mpq_set):
         if (elt[1], elt[2]) not in dict_mpq:
             dict_mpq[elt[1], elt[2]] = h_mpq(elt[1], elt[2])
-            
+    # Add the linear part (the B matrix)
+    list_mpq_set.insert(0, [1, 0, 0, [0]])
+    dict_mpq[0, 0] = np.identity(state_dim)
+    
     # Compute list of Npq combinations and tensors
     list_npq_set = make_list_pq_set(h_npq_bool, nl_order_max)
     dict_npq = {}
     for idx, elt in enumerate(list_npq_set):
         if (elt[1], elt[2]) not in dict_npq:
             dict_npq[elt[1], elt[2]] = h_npq(elt[1], elt[2])
+
     # Add the linear part (respectively the D and C matrices)
     list_npq_set.insert(0, [1, 0, 1, []])
     dict_npq[0, 1] = D_m
     for n in range(1, nl_order_max+1):
         list_npq_set.insert(0, [n, n, 0, [n]])
         dict_npq[n, 0] = C_m
-        
-    # State and output initialization
-    state_sig = np.zeros((state_dim, sig_len))
-    state_by_order = np.zeros((nl_order_max, state_dim, sig_len))
-    output_sig = np.zeros((output_dim, sig_len))
-    output_by_order = np.zeros((nl_order_max, output_dim, sig_len))
     
-    # Enforce good shape when dimension is 1
-    if input_dim == 1:
-        input_sig.shape = (input_dim, sig_len)
-        holder_bias_input.shape = (state_dim, input_dim)
 
     ## Numerical simulation ##
 
     # Dynamical equation
     # Main loop (on time indexes)
     for k in np.arange(sig_len-1):
-        state_by_order[0,:,k+1] = \
-                    np.dot(w_filter, state_by_order[0,:,k]) +\
-                    np.dot(holder_bias_input, input_sig[:,k])
-    
         for idx, elt in enumerate(list_mpq_set):
             n = elt[0]
             p = elt[1]
@@ -266,7 +273,6 @@ def simulation(input_sig, matrices,
             state_by_order[n-1,:,k+1] = \
                     np.dot(w_filter, state_by_order[n-1,:,k]) +\
                     np.dot(holder_bias_state, temp_array)
-    state_sig = state_by_order.sum(0)
 
     # Output equation
     for k in np.arange(sig_len):
@@ -279,7 +285,7 @@ def simulation(input_sig, matrices,
                 temp_array = np.dot(temp_array, input_sig[:,k])
             for order in elt[3]:
                 temp_array = np.dot(temp_array,
-                                    state_by_order[order-1,:,k])
+                                    state_by_order[order,:,k])
                 output_by_order[n-1,:,k] += temp_array
     output_sig = output_by_order.sum(0)
     
