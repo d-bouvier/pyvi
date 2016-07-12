@@ -14,7 +14,7 @@ Developed for Python 3.5.1
 #==============================================================================
 
 import numpy as np
-from scipy  import fftpack, linalg
+from scipy import fftpack, linalg
 from matplotlib import pyplot as plt
 
 
@@ -131,7 +131,6 @@ def state_combinatorics(list_mpq, print_opt=False):
             # Check if the corresponds to the current (n,p,q) combination
             if sum(index) == k_sum:
                 elt_bis = list(elt)
-#                elt_bis.append(index + [0,] * elt[2])
                 elt_bis.append(index)
                 mpq_sets.append(elt_bis)
     
@@ -386,35 +385,37 @@ if __name__ == '__main__':
     """
     Main script for testing.
     """
-    
-    plt.close("all")
-    
+        
     # Input signal
     fs = 20000 # Sampling frequency
     T = 0.5 # Duration 
-    f1 = 150 # Starting fundamental frequency
-    f2 = 210 # Ending fundamental frequency
-    A = 10 # Amplitude    
+    f1 = 160 # Starting fundamental frequency
+    f2 = 160 # Ending fundamental frequency
+    amp = 10 # Amplitude    
     
     time_vector = np.arange(0, T, step=1/fs)
     f0_vector = np.linspace(f1, f2, num=len(time_vector))
-    sig = A * np.cos(2 * np.pi * f0_vector * time_vector)
+    sig = amp * np.cos(2 * np.pi * f0_vector * time_vector)
     
     # Loudspeakers parameters
     matrices, m_pq, n_pq, sizes, sym_bool = hp_parameters()
     
-    # Simulation
-    output = simulation(sig, matrices, m_pq, n_pq, sizes, sym_bool, fs, 3)
-
-    # Plot    
-    plt.figure()
-    plt.subplot(2, 1, 1)
-    plt.plot(time_vector, sig, 'b', time_vector, output, 'r')
-    plt.subplot(2, 1, 2)
-    plt.plot(time_vector, sig, 'b', time_vector, output, 'r')
-    plt.xlim([0.1, 0.12])    
+    for ampIdx in np.arange(amp):
+        # Simulation
+        sig = (ampIdx+1) * np.cos(2 * np.pi * f0_vector * time_vector)
+        output = simulation(sig, matrices, m_pq, n_pq, sizes=sizes,
+                        fs=fs, nl_order_max=3, hold_opt=0, plot_opt=True)
+    
+        plt.figure('Input and output {}'.format(max(abs(sig))))
+        plt.clf()
+        plt.subplot(2, 1, 1)
+        plt.plot(time_vector, sig, 'b')
+        plt.xlim([0.00625, 0.01925])
+        plt.subplot(2, 1, 2)
+        plt.plot(time_vector, output, 'r')
+        plt.xlim([0.00625, 0.01925])
     plt.show()
-        
+    
     print('Test combinatoire')
     make_list_pq_set(lambda p, q: True, 4, True)
     print('\n\nHP')
