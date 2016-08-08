@@ -42,13 +42,21 @@ class Kernel:
       
     
     def __repr__(self):
-        repr_str = 'Volterra kernel of order {}:'.format(self.order)
-        repr_str += '\n'
-        repr_str += sp.pretty(self.symbols[0])        
+        repr_str = sp.pretty(self.symbols[0])        
         repr_str += sp.pretty(self.symbols[1:])
         repr_str += ' = '
         repr_str += sp.pretty(self.expr)
         return repr_str
+        
+    def __print__(self):
+        repr_str = 'Volterra kernel of order {}:'.format(self.order)
+        repr_str += '\n'
+        repr_str += self.__repr__()
+        return repr_str
+
+    @abstractmethod
+    def plot(self):
+        return NotImplementedError
 
     @abstractmethod
     def symmetrize(self):
