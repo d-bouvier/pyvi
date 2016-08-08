@@ -31,29 +31,24 @@ class Kernel:
         self.expr = expr
         self.order = order
 
-        if 'symmetric' in kwargs:
-            self.symmetric = kwargs['symmetric']
-        else:
-            self.symmetric = None
-        if 'symbols' in kwargs:
-            self.symbols = kwargs['symbols']
-        else:
-            self.symbols = sp.var('H{} s(1:{})'.format(self.order,
-                                                       self.order + 1))
-      
+        self.symmetric = kwargs.get('symmetric', None)
+        self.symb_name = kwargs.get('name',
+                                    sp.Function('H{}'.format(self.order)))
+        self.symb_var = kwargs.get('var',
+                                   sp.var('s(1:{})'.format(self.order + 1)))
+        
+        self.a = self.__dict__.__str__()
     
     def __repr__(self):
-        repr_str = sp.pretty(self.symbols[0])        
-        repr_str += sp.pretty(self.symbols[1:])
-        repr_str += ' = '
-        repr_str += sp.pretty(self.expr)
-        return repr_str
+        return sp.pretty(self.expr)
         
     def __str__(self):
         repr_str = 'Volterra kernel of order {}:\n'.format(self.order)
+        repr_str += sp.pretty(self.symb_name(self.symb_var))
+        repr_str += ' = '
         repr_str += self.__repr__()
         return repr_str
-
+        
     @abstractmethod
     def plot(self):
         return NotImplementedError
@@ -75,30 +70,22 @@ class Volterra:
     """ Class that defines Volterra serie of a system, described by:
     - n array of its kernels
     - its maximum order of nonlinearity
-    Also defines if its kernels are symmetric and the list of sympy symbols used 
-    in the expressions."""
+    Also defines if its kernels are symmetric."""
     
     def __init__(self, kernels=[Kernel()], **kwargs):
         self.kernels = kernels
         self.list_kernels = []
         for idx, kernel in enumerate(self.kernels):
             self.list_kernels.append(kernel.order)
-                
-        if 'order_max' in kwargs:
-            self.order_max = kwargs['order_max']
-        else:
-            self.order_max = max(self.list_kernels)    
-        if 'symmetric' in kwargs:
-            self.symmetric = kwargs['symmetric']
-        else:
+        
+        self.order_max = kwargs.get('order_max', max(self.list_kernels))
+        self.symmetric = kwargs.get('symmetric')
+        if self.symmetric is None:
             self.symmetric = True
             for idx, kernel in enumerate(self.kernels):
                 self.symmetric = self.symmetric and kernel.symmetric
-        if 'symbols' in kwargs:
-            self.symbols = kwargs['symbols']
-        else:
-            self.symbols = sp.var('H s(1:{})'.format(self.order_max + 1))
-      
+
+        self.a = self.__dict__.__str__()
     
     def __repr__(self):
         repr_str = ''
