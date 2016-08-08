@@ -14,7 +14,6 @@ Developed for Python 3.5.1
 #==============================================================================
 
 import sympy as sp
-import numpy as np
 from kernel import Kernel
 from abc import abstractmethod
 
@@ -24,10 +23,10 @@ from abc import abstractmethod
 
 class Volterra:
     """ Class that defines Volterra serie of a system, described by:
-    - its expression
-    - its order of nonlinearity
-    Also defines if it's a symmetric kernel and the list of sympy symbols used 
-    in the expression."""
+    - n array of its kernels
+    - its maximum order of nonlinearity
+    Also defines if its kernels are symmetric and the list of sympy symbols used 
+    in the expressions."""
     
     def __init__(self, kernels=[Kernel()], **kwargs):
         self.kernels = kernels
@@ -65,16 +64,29 @@ class Volterra:
 
     @abstractmethod
     def symmetrize(self):
-        return NotImplementedError
+        for idx, kernel in enumerate(self.kernels):
+            print('a')
+            self.list_kernels[idx] = kernel.symmetrize()
+            print('b')
 
     @abstractmethod
     def regularize(self):
-        return NotImplementedError
+        for idx, kernel in enumerate(self.kernels):
+            self.list_kernels[idx] = kernel.regularize()
 
     @abstractmethod
     def triangularize(self):
-        return NotImplementedError
+        for idx, kernel in enumerate(self.kernels):
+            self.list_kernels[idx] = kernel.triangularize()
 
+    @abstractmethod
+    def inverse(self):
+        return NotImplementedError
+        
+    @abstractmethod
+    def composition(self, volterra):
+        return NotImplementedError
+        
 #==============================================================================
 # Functions
 #==============================================================================
