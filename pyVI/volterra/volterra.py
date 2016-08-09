@@ -27,15 +27,16 @@ class Kernel:
     Also defines if it's a symmetric kernel and the list of sympy symbols used 
     in the expression."""
     
-    def __init__(self, expr=sp.Integer(1), order=1, **kwargs):
+    def __init__(self, expr=sp.zeros(1), order=1, **kwargs):
         self.expr = expr
         self.order = order
-
+        self.dim_input = self.expr.shape[1]
+        self.dim_output = self.expr.shape[0]
+        
         self.symmetric = kwargs.get('symmetric', None)
         self.symb_name = kwargs.get('name',
                                     sp.Function('H{}'.format(self.order)))
-        self.symb_var = kwargs.get('var',
-                                   sp.var('s(1:{})'.format(self.order + 1)))
+        self.symb_var = kwargs.get('var', None)
         
         self.a = self.__dict__.__str__()
     
@@ -44,15 +45,15 @@ class Kernel:
         
     def __str__(self):
         repr_str = 'Volterra kernel of order {}:\n'.format(self.order)
-        repr_str += sp.pretty(self.symb_name(self.symb_var))
+        repr_str += sp.pretty(self.symb_name(*self.symb_var))
         repr_str += ' = '
         repr_str += self.__repr__()
         return repr_str
-        
+       
     @abstractmethod
     def plot(self):
         return NotImplementedError
-
+        
     @abstractmethod
     def symmetrize(self):
         return NotImplementedError
