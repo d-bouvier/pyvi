@@ -23,15 +23,24 @@ from abc import abstractmethod
 class StateSpace:
     
     def __init__(self, Am, Bm, Cm, Dm, mpq_dict={}, npq_dict={}, **kwargs):
+        # Linear part
         self.Am = Am        
         self.Bm = Bm
         self.Cm = Cm
         self.Dm = Dm        
 
+        # Compute and check system dimensions
         self.dim_state = Am.shape[0]
         self.dim_input = Bm.shape[1]
         self.dim_output = Cm.shape[0]
         self._check_dim_matrices()
+        
+        # Nonlinear part
+        self.mpq = mpq_dict
+        self.npq = npq_dict
+        self._check_dim_tensor()
+        
+        self.linear = self._is_linear()
         
     def _check_dim_matrices(self):
         def check_equal(iterator, value):
@@ -50,11 +59,17 @@ class StateSpace:
     
     @abstractmethod
     def _check_dim_tensor(self):
-        raise NotImplementedError
+        # not finished
+        # must also check good size of inputs and outputs
+        for (p, q), mpq in self.mpq.items():
+            if mpq.__code__.co_argcount != p + q:
+                raise NameError('Wrong number of input arguments for a Mpq ' + \
+                                'lambda function\n (got ' + \
+                                '{}'.format(mpq.__code__.co_argcount) + \
+                                ', expected {})'.format(p + q))
         
-    @abstractmethod
-    def _check_is_linear(self):
-        raise NotImplementedError
+    def _is_linear(self):
+        return len(self.mpq) == 0 and len(self.npq) == 0
         
     @abstractmethod
     def __repr__(self):
