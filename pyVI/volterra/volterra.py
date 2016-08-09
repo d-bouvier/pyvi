@@ -14,6 +14,7 @@ Developed for Python 3.5.1
 #==============================================================================
 
 import sympy as sp
+import sympy.combinatorics as spP
 from abc import abstractmethod
 
 #==============================================================================
@@ -56,8 +57,21 @@ class Kernel:
         
     @abstractmethod
     def symmetrize(self):
-        return NotImplementedError
+        ### To optimize ###
+        def kernel_expr(expr, var_old, var_new):
+            dict_subs = {}
+            for idx, val in enumerate(var_old):
+                dict_subs[val] = var_new[idx]
+            return expr.subs(dict_subs, simultaneous=True)
 
+        result_tmp = sp.zeros(self.dim_output, self.dim_input)
+        perm = spP.Permutation(range(self.order))
+        for idx in range(perm.cardinality):
+            result_tmp += kernel_expr(self.expr, self.symb_var, 
+                                      (perm + idx)(self.symb_var))      
+        self.expr = result_tmp/perm.cardinality
+        self.symmetric = True
+        
     @abstractmethod
     def regularize(self):
         return NotImplementedError
@@ -104,6 +118,7 @@ class Volterra:
     def symmetrize(self):
         for idx, kernel in enumerate(self.kernels):
             self.list_kernels[idx] = kernel.symmetrize()
+        self.symmetric = True
 
     @abstractmethod
     def regularize(self):
