@@ -34,14 +34,21 @@ class StateSpace:
         self.dim_state = Am.shape[0]
         self.dim_input = Bm.shape[1]
         self.dim_output = Cm.shape[0]
-        self._check_dim_matrices()
         
         # Nonlinear part
         self.mpq = mpq_dict
         self.npq = npq_dict
-        self._check_dim_tensor()
-        
+              
+        self._dim_ok = self._check_dim()
         self.linear = self._is_linear()
+        
+    def _check_dim(self):
+        self._check_dim_matrices()
+        for (p, q), fct in self.mpq.items():
+            self._check_dim_nonlinear_fct(p, q, fct, 'M', self.dim_state)
+        for (p, q), fct in self.npq.items():
+            self._check_dim_nonlinear_fct(p, q, fct, 'N', self.dim_output)
+        return True
         
     def _check_dim_matrices(self):
         def check_equal(iterator, value):
@@ -58,16 +65,26 @@ class StateSpace:
         if not check_equal(list_dim_output, self.dim_output):
             raise NameError('Output dimension not consistent')
     
-    @abstractmethod
-    def _check_dim_tensor(self):
-        # not finished
-        # must also check good size of inputs and outputs
-        for (p, q), mpq in self.mpq.items():
-            if mpq.__code__.co_argcount != p + q:
-                raise NameError('Wrong number of input arguments for a Mpq ' + \
-                                'lambda function\n (got ' + \
-                                '{}'.format(mpq.__code__.co_argcount) + \
-                                ', expected {})'.format(p + q))
+    def _check_dim_nonlinear_fct(self, p, q, fct, name, dim_result):
+        if fct.__code__.co_argcount != p + q:
+            raise NameError('{}_{}{} function: '.format(name, p, q) + \
+                            'wrong number of input arguments ' + \
+                            'got {}, '.format(fct.__code__.co_argcount) + \
+                            'expected {}).'.format(p + q))
+        else:
+            try:
+                state_vectors = (sp.ones(self.dim_state),)*p
+                input_vectors = (sp.ones(self.dim_input),)*q
+                result_vector = fct(*state_vectors, *input_vectors)
+            except IndexError:
+                raise IndexError('{}_{}{} function: '.format(name, p, q) + \
+                                 'some index exceeds dimension of ' + \
+                                 'input and/or state vectors.')
+            if result_vector.shape != (dim_result, 1):
+                raise NameError('{}_{}{} function: '.format(name, p, q) + \
+                                'wrong shape for the output ' + \
+                                '(got {}, '.format(result_vector.shape) + \
+                                'expected {}).'.format((dim_result,1)))
         
     def _is_linear(self):
         return len(self.mpq) == 0 and len(self.npq) == 0
