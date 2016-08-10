@@ -15,6 +15,7 @@ Developed for Python 3.5.1
 
 import sympy as sp
 from abc import abstractmethod
+from colorama import Fore, Back, Style
 
 #==============================================================================
 # Functions
@@ -72,12 +73,40 @@ class StateSpace:
         return len(self.mpq) == 0 and len(self.npq) == 0
         
     @abstractmethod
+    def _is_passive(self):
+        raise NotImplementedError
+            
     def __repr__(self):
-        raise NotImplementedError
-    
-    @abstractmethod
+        repr_str = ''
+        for attribute in ['dim_input', 'dim_state', 'dim_output',
+                          'Am', 'Bm', 'Cm', 'Dm', 'mpq', 'npq',
+                          'linear']:
+            repr_str += attribute + ' : ' + self.__dict__[attribute].__str__()
+            repr_str += '\n'
+        return repr_str
+        
     def __str__(self):
-        raise NotImplementedError
+        print_str = Back.RED + Fore.GREEN + Style.BRIGHT + \
+                    'Space_state representation :' + Style.RESET_ALL + '\n'
+        for name, matrice in iter([('State-to-state', self.Am),
+                                   ('Input-to-state', self.Bm),
+                                   ('State-to-output', self.Cm),
+                                   ('Input-to-output', self.Dm)]):
+            print_str += Fore.GREEN + Style.BRIGHT + name + ' :' + \
+                         Style.RESET_ALL + '\n' + \
+                         sp.pretty(matrice) + '\n'
+        if not self.linear:
+            print_str += Fore.GREEN + Style.BRIGHT + \
+                         'List of non-null Mpq functions :' + \
+                         Style.RESET_ALL + '\n' 
+            for idx in iter(self.mpq.keys()):
+                print_str += idx.__repr__() + ', '
+            print_str += '\n' + Fore.GREEN + Style.BRIGHT + \
+                         'List of non-null Npq functions :' + \
+                         Style.RESET_ALL + '\n' 
+            for idx in iter(self.npq.keys()):
+                print_str += idx.__repr__() + ', '
+        return print_str
     
     # Print 2 LaTeX
     @abstractmethod
