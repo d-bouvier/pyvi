@@ -45,9 +45,9 @@ class StateSpace:
     def _check_dim(self):
         self._check_dim_matrices()
         for (p, q), fct in self.mpq.items():
-            self._check_dim_nonlinear_fct(p, q, fct, 'M', self.dim_state)
+            self._check_dim_nl_fct(p, q, fct, 'M', self.dim_state)
         for (p, q), fct in self.npq.items():
-            self._check_dim_nonlinear_fct(p, q, fct, 'N', self.dim_output)
+            self._check_dim_nl_fct(p, q, fct, 'N', self.dim_output)
         return True
         
     def _check_dim_matrices(self):
@@ -65,7 +65,7 @@ class StateSpace:
         if not check_equal(list_dim_output, self.dim_output):
             raise NameError('Output dimension not consistent')
     
-    def _check_dim_nonlinear_fct(self, p, q, fct, name, dim_result):
+    def _check_dim_nl_fct(self, p, q, fct, name, dim_result):
         if fct.__code__.co_argcount != p + q:
             raise NameError('{}_{}{} function: '.format(name, p, q) + \
                             'wrong number of input arguments ' + \
@@ -80,6 +80,9 @@ class StateSpace:
                 raise IndexError('{}_{}{} function: '.format(name, p, q) + \
                                  'some index exceeds dimension of ' + \
                                  'input and/or state vectors.')
+            except:
+                raise NameError('{}_{}{} function: '.format(name, p, q) + \
+                                 'creates a {}.'.format(sys.exc_info()[0]))
             if result_vector.shape != (dim_result, 1):
                 raise NameError('{}_{}{} function: '.format(name, p, q) + \
                                 'wrong shape for the output ' + \
