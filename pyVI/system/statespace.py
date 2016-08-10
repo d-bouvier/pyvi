@@ -56,6 +56,7 @@ class StateSpace:
         Tells if the system is linear.
     """
     
+    
     def __init__(self, Am, Bm, Cm, Dm, mpq_dict={}, npq_dict={}, **kwargs):
         """Initialize the representation of the system.
         
@@ -89,33 +90,40 @@ class StateSpace:
         
         """
         
-        # Linear part
+        # Initialize the linear part
         self.Am = Am        
         self.Bm = Bm
         self.Cm = Cm
         self.Dm = Dm        
 
-        # Compute and check system dimensions
+        # Extrapolate system dimensions
         self.dim_state = Am.shape[0]
         self.dim_input = Bm.shape[1]
         self.dim_output = Cm.shape[0]
         
-        # Nonlinear part
+        # Initialize the nonlinear part
         self.mpq = mpq_dict
         self.npq = npq_dict
-              
+        
+        # CHeck dimension and linearity
         self._dim_ok = self._check_dim()
         self.linear = self._is_linear()
         
+
     def _check_dim(self):
-        """Verify that input, state and output dimensions are respected.""" 
+        """Verify that input, state and output dimensions are respected."""
+        # Check matrices shape
         self._check_dim_matrices()
+        
+        # Check that all nonlinear lambda functions works correctly
         for (p, q), fct in self.mpq.items():
             self._check_dim_nl_fct(p, q, fct, 'M', self.dim_state)
         for (p, q), fct in self.npq.items():
             self._check_dim_nl_fct(p, q, fct, 'N', self.dim_output)
+        # If no error is raised, return True
         return True
-        
+
+
     def _check_dim_matrices(self):
         """Verify shape of the matrices used in the linear part.""" 
         def check_equal(iterator, value):
@@ -131,10 +139,13 @@ class StateSpace:
             raise NameError('Input dimension not consistent')
         if not check_equal(list_dim_output, self.dim_output):
             raise NameError('Output dimension not consistent')
-    
+
+
     def _check_dim_nl_fct(self, p, q, fct, name, dim_result):
         """Verify shape and functionnality of the multilinear functions."""
+        # Check that each nonlinear lambda functions:
         if fct.__code__.co_argcount != p + q:
+            # - accepts the good number of input arguments
             raise NameError('{}_{}{} function: '.format(name, p, q) + \
                             'wrong number of input arguments ' + \
                             'got {}, '.format(fct.__code__.co_argcount) + \
@@ -145,39 +156,48 @@ class StateSpace:
                 input_vectors = (sp.ones(self.dim_input),)*q
                 result_vector = fct(*state_vectors, *input_vectors)
             except IndexError:
+                # - accepts vectors of appropriate shapes
                 raise IndexError('{}_{}{} function: '.format(name, p, q) + \
                                  'some index exceeds dimension of ' + \
                                  'input and/or state vectors.')
             except:
+                # - does not cause error
                 raise NameError('{}_{}{} function: '.format(name, p, q) + \
                                  'creates a {}.'.format(sys.exc_info()[0]))
             if result_vector.shape != (dim_result, 1):
+                # - returns a vector of appropriate shape
                 raise NameError('{}_{}{} function: '.format(name, p, q) + \
                                 'wrong shape for the output ' + \
                                 '(got {}, '.format(result_vector.shape) + \
                                 'expected {}).'.format((dim_result,1)))
-        
+
+
     def _is_linear(self):
         """Check if the system is linear."""
         return len(self.mpq) == 0 and len(self.npq) == 0
-        
+
+
     @abstractmethod
     def _is_passive(self):
         """Check if the system is passive."""
         raise NotImplementedError
+
             
     def __repr__(self):
         """Lists all attributes and their values."""
         repr_str = ''
+        # Print one attribute per line, in a defined order
         for attribute in ['dim_input', 'dim_state', 'dim_output',
                           'Am', 'Bm', 'Cm', 'Dm', 'mpq', 'npq',
                           'linear', '_dim_ok']:
             repr_str += attribute + ' : ' + self.__dict__[attribute].__str__()
             repr_str += '\n'
         return repr_str
+
         
     def __str__(self):
         """Prints the system's equation."""
+        # Not yet implemented as wanted
         print_str = '\033[4m' + Fore.RED + Style.BRIGHT + \
                     'State-space representation :' + Style.RESET_ALL + '\n'
         for name, matrice in iter([('State-to-state', self.Am),
@@ -199,15 +219,18 @@ class StateSpace:
             for idx in iter(self.npq.keys()):
                 print_str += idx.__repr__() + ', '
         return print_str
-    
+ 
+        
     # Print 2 LaTeX
     @abstractmethod
     def _print(self):
-        raise NotImplementedError        
+        raise NotImplementedError
+
         
     @abstractmethod
     def simulation(self):
         raise NotImplementedError
+
 
     
 #==============================================================================
