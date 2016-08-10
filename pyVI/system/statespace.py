@@ -190,7 +190,7 @@ class StateSpace:
         for attribute in ['dim_input', 'dim_state', 'dim_output',
                           'Am', 'Bm', 'Cm', 'Dm', 'mpq', 'npq',
                           'linear', '_dim_ok']:
-            repr_str += attribute + ' : ' + self.__dict__[attribute].__str__()
+            repr_str += attribute + ' : ' + getattr(self, attribute).__str__()
             repr_str += '\n'
         return repr_str
 
