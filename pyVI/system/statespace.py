@@ -197,27 +197,30 @@ class StateSpace:
         
     def __str__(self):
         """Prints the system's equation."""
+        def list_nl_fct(dict_fct, name):
+            temp_str = Fore.GREEN + Style.BRIGHT + \
+                       'List of non-zero {}pq functions'.format(name) + \
+                       Style.RESET_ALL + '\n' 
+            for key in dict_fct.keys():
+                temp_str += key.__repr__() + ', '
+            temp_str = temp_str[0:-2] + '\n'
+            return temp_str
+        
         # Not yet implemented as wanted
         print_str = '\033[4m' + Fore.RED + Style.BRIGHT + \
                     'State-space representation :' + Style.RESET_ALL + '\n'
-        for name, matrice in iter([('State-to-state', self.Am),
+        for name, matrice in [('State-to-state', self.Am),
                                    ('Input-to-state', self.Bm),
                                    ('State-to-output', self.Cm),
-                                   ('Input-to-output', self.Dm)]):
+                                   ('Input-to-output', self.Dm)]:
             print_str += Fore.GREEN + Style.BRIGHT + name + ' matrice' + \
                          Style.RESET_ALL + '\n' + \
                          sp.pretty(matrice) + '\n'
         if not self.linear:
-            print_str += Fore.GREEN + Style.BRIGHT + \
-                         'List of non-null Mpq functions' + \
-                         Style.RESET_ALL + '\n' 
-            for idx in iter(self.mpq.keys()):
-                print_str += idx.__repr__() + ', '
-            print_str += '\n' + Fore.GREEN + Style.BRIGHT + \
-                         'List of non-null Npq functions' + \
-                         Style.RESET_ALL + '\n' 
-            for idx in iter(self.npq.keys()):
-                print_str += idx.__repr__() + ', '
+            if len(self.mpq):
+                print_str += list_nl_fct(self.mpq, 'M')            
+            if len(self.npq):
+                print_str += list_nl_fct(self.npq, 'N')            
         return print_str
  
         
