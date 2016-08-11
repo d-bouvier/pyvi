@@ -43,10 +43,10 @@ class Symbols:
 
     def _update(self, n):
         if n > self.order:
-            self.order = n
             for var in self._list:
                 setattr(self, var, getattr(self, var) + \
                         sp.symbols('{}({}:{})'.format(var, self.order, n+1)))            
+            self.order = n
 
     def __repr__(self):
         repr_str = ''
