@@ -21,31 +21,36 @@ from abc import abstractmethod
 #==============================================================================
 
 class Symbols:
-    _exists = False
+    _first_init = True
+    _instance = None
+    _list = ['t', 'tau', 's', 'w', 'f']
     
-    def __new__(cls, order):
-        if cls._exists:
-            cls._instance._update(order)
-        else:
+    def __new__(cls, order=0):
+        if cls._first_init:
             cls._instance = object.__new__(cls)
-            cls._exists = True
+        else:
+            cls._instance._update(order)            
         return cls._instance 
-        
-    def __init__(self, n):
-        self.order = n
-        for var in ['t', 'tau', 's', 'w', 'f']:
-            setattr(self, var, sp.symbols('{} {}(1:{})'.format(var, var, n+1)))
-    
+            
+    def __init__(self, order=0):
+        if Symbols._first_init:
+            print('Je ne pass pas par la')
+            self.order = order
+            Symbols._first_init = False
+            for var in self._list:
+                setattr(self, var,
+                        sp.symbols('{} {}(1:{})'.format(var, var, order+1)))
+
     def _update(self, n):
         if n > self.order:
             self.order = n
-            for var in ['t', 'tau', 's', 'w', 'f']:
+            for var in self._list:
                 setattr(self, var, getattr(self, var) + \
-                        sp.symbols('{}({}:{})'.format(var, self.order, n+1)))
+                        sp.symbols('{}({}:{})'.format(var, self.order, n+1)))            
 
     def __repr__(self):
         repr_str = ''
-        for var in ['t', 'tau', 's', 'w', 'f']:
+        for var in self._list:
             repr_str += sp.pretty(getattr(self, var)) + '\n'
         return repr_str
 
