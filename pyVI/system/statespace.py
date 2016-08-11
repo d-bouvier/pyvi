@@ -187,11 +187,8 @@ class StateSpace:
         """Lists all attributes and their values."""
         repr_str = ''
         # Print one attribute per line, in a defined order
-        for attribute in ['dim_input', 'dim_state', 'dim_output',
-                          'Am', 'Bm', 'Cm', 'Dm', 'mpq', 'npq',
-                          'linear', '_dim_ok']:
-            repr_str += attribute + ' : ' + getattr(self, attribute).__str__()
-            repr_str += '\n'
+        for name in sorted(self.__dict__):
+            repr_str += name + ' : ' + getattr(self, name).__str__() + '\n'
         return repr_str
 
         
@@ -236,6 +233,9 @@ class StateSpace:
         raise NotImplementedError
 
 
+    def _compute_linear_filter(self):
+        self.W_filter = Filter(self.Am, self.dim_state)
+    
 
 class Filter:
     
