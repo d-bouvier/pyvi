@@ -236,6 +236,22 @@ class StateSpace:
         raise NotImplementedError
 
 
+
+class Filter:
+    
+    def __init__(self, Am, state_size):
+        from symbols.symbols import Symbols
+        self.symb_var = Symbols(1).s[0]
+        temp_mat = self.symb_var * sp.eye(state_size) - Am
+        self.expr = temp_mat.inv()
+        self.common_den = temp_mat.det()
+        self.mat = sp.simplify(self.expr * self.common_den)
+
+    def __str__(self):
+        expr = sp.Mul(self.mat, sp.Pow(self.common_den, sp.Integer(-1)),
+                      evaluate=False)
+        print_str = '\n' + sp.pretty( expr )
+        return print_str
     
 #==============================================================================
 # Functions
