@@ -22,14 +22,15 @@ from abc import abstractmethod
 #==============================================================================
 
 class Kernel:
-    """ Class that defines a Volterra kernel described by:
-    - its expression
-    - its order of nonlinearity
-    Also defines if it's a symmetric kernel and the list of sympy symbols used 
-    in the expression."""
+    """Symbolic representation of a transfer Volterra kernel."""
     
-    def __init__(self, expr=sp.zeros(1), order=1, **kwargs):
-        self.expr = expr
+    def __init__(self, expression=sp.zeros(1), order=1, **kwargs):
+        """Initialize the kernel with its formula and order.
+        
+        If neither the expression or the order are given, it is supposed that
+        it is a null kernel of order 1."""
+
+        self.expr = expression
         self.order = order
         self.dim_input = self.expr.shape[1]
         self.dim_output = self.expr.shape[0]
@@ -39,24 +40,28 @@ class Kernel:
                                     sp.Function('H{}'.format(self.order)))
         self.symb_var = kwargs.get('var', None)
         
-        self.a = self.__dict__.__str__()
-    
+        
     def __repr__(self):
-        return sp.pretty(self.expr)
+        """Represents the kernel as its Sympy expression."""
+        return sp.srepr(self.expr)
+        
         
     def __str__(self):
-        repr_str = 'Volterra kernel of order {}:\n'.format(self.order)
-        repr_str += sp.pretty(self.symb_name(*self.symb_var))
-        repr_str += ' = '
-        repr_str += self.__repr__()
-        return repr_str
-       
+        """Print the kernel expression using Sympy pretty printing.""" 
+        return sp.pretty(self.symb_name(*self.symb_var)) + ' = \n' + \
+               sp.pretty(self.expr)
+    
+    #=============================================#
+    
     @abstractmethod
     def plot(self):
+        """Plots kernels of order 1 and 2."""
         return NotImplementedError
+        
         
     @abstractmethod
     def symmetrize(self):
+        """Put the kernel expression into its symmetric form."""
         ### To optimize ###
         def kernel_expr(expr, var_old, var_new):
             dict_subs = {}
@@ -72,22 +77,28 @@ class Kernel:
         self.expr = result_tmp/perm.cardinality
         self.symmetric = True
         
+        
     @abstractmethod
     def regularize(self):
+        """Put the kernel expression into its regular form."""
         return NotImplementedError
+
 
     @abstractmethod
     def triangularize(self):
+        """Put the kernel expression into its triangular form."""
         return NotImplementedError
 
 
+
 class Volterra:
-    """ Class that defines Volterra serie of a system, described by:
-    - n array of its kernels
-    - its maximum order of nonlinearity
-    Also defines if its kernels are symmetric."""
+    """SYmbolic representation of a Volterra serie of a system."""
     
     def __init__(self, kernels=[Kernel()], **kwargs):
+        """Initialize the Volterra series.
+        
+        If no arguments are given, the Volterra serie is limited to a null
+        kernel of order 1."""
         self.kernels = kernels
         self.list_kernels = []
         for idx, kernel in enumerate(self.kernels):
@@ -100,45 +111,52 @@ class Volterra:
             for idx, kernel in enumerate(self.kernels):
                 self.symmetric = self.symmetric and kernel.symmetric
 
-        self.a = self.__dict__.__str__()
     
     def __repr__(self):
-        repr_str = ''
-        for idx, kernel in enumerate(self.kernels):
-            repr_str += kernel.__repr__()
-            repr_str += '\n'
-        return repr_str
+        repr_str = '{\n'
+        for name, attribute in self.__dict__.items():
+            repr_str += name + ' : ' + attribute.__repr__() + '\n'
+        return repr_str + '}'
+    
     
     def __str__(self):
-        repr_str = 'Volterra serie up to order {}:\n'.format(self.order_max)
-        repr_str += self.__repr__()
-        return repr_str
+        print_str = 'Volterra serie up to order {}:\n'.format(self.order_max)
+        for kernel in self.kernels:
+            print_str += kernel.__str__() + '\n'
+        return print_str
+
+    #=============================================#
 
     @abstractmethod
+    def plot(self):
+        """Plots kernels of order 1 and 2."""
+        return NotImplementedError
+    
+    
+    @abstractmethod
     def symmetrize(self):
+        """Put all kernel expression into their symmetric form."""
         for idx, kernel in enumerate(self.kernels):
             self.list_kernels[idx] = kernel.symmetrize()
         self.symmetric = True
 
+
     @abstractmethod
     def regularize(self):
+        """Put all kernel expression into their regular form."""
         for idx, kernel in enumerate(self.kernels):
             self.list_kernels[idx] = kernel.regularize()
 
+
     @abstractmethod
     def triangularize(self):
+        """Put all kernel expression into their triangular form."""
         for idx, kernel in enumerate(self.kernels):
             self.list_kernels[idx] = kernel.triangularize()
 
+
     @abstractmethod
     def inverse(self):
-        return NotImplementedError
-        
-    @abstractmethod
-    def composition(self, volterra):
+        """Gives the inverse Volterra series of the system."""
         return NotImplementedError
 
-
-#==============================================================================
-# Functions
-#==============================================================================
