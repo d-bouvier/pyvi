@@ -14,11 +14,11 @@ Developed for Python 3.5.1
 #==============================================================================
 
 import sympy as sp
-from abc import abstractmethod
 from tools.tools import Style
+from abc import abstractmethod
 
 #==============================================================================
-# Functions
+# Class
 #==============================================================================
 
 class StateSpace:
@@ -110,6 +110,46 @@ class StateSpace:
         self.linear = self._is_linear()
         
 
+    def __repr__(self):
+        """Lists all attributes and their values."""
+        repr_str = ''
+        # Print one attribute per line, in a alphabetical order
+        for name in sorted(self.__dict__):
+            repr_str += name + ' : ' + getattr(self, name).__str__() + '\n'
+        return repr_str
+
+        
+    def __str__(self):
+        """Prints the system's equation."""
+        def list_nl_fct(dict_fct, name):
+            temp_str = Style.PURPLE + \
+                       'List of non-zero {}pq functions'.format(name) + \
+                       Style.RESET + '\n' 
+            for key in dict_fct.keys():
+                temp_str += key.__repr__() + ', '
+            temp_str = temp_str[0:-2] + '\n'
+            return temp_str
+        
+        # Not yet implemented as wanted
+        print_str = Style.UNDERLINE + Style.BLUE + Style.BRIGHT + \
+                    'State-space representation :' + Style.RESET + '\n'
+        for name, desc, mat in [ \
+                    ('State {} A', 'state-to-state', self.Am),
+                    ('Input {} B', 'input-to-state', self.Bm),
+                    ('Output {} C', 'state-to-output', self.Cm),
+                    ('Feedthrough {} D', 'input-to-output', self.Dm)]:
+            print_str += Style.BLUE + Style.BRIGHT + name.format('matrice') + \
+                        ' (' + desc + ')' + Style.RESET + '\n' + \
+                         sp.pretty(mat) + '\n'
+        if not self.linear:
+            if len(self.mpq):
+                print_str += list_nl_fct(self.mpq, 'M')            
+            if len(self.npq):
+                print_str += list_nl_fct(self.npq, 'N')            
+        return print_str
+        
+    #=============================================#
+        
     def _check_dim(self):
         """Verify that input, state and output dimensions are respected."""
         # Check matrices shape
@@ -145,7 +185,7 @@ class StateSpace:
         """Verify shape and functionnality of the multilinear functions."""
         # Check that each nonlinear lambda functions:
         if fct.__code__.co_argcount != p + q:
-            # - accepts the good number of input arguments
+            # accepts the good number of input arguments
             raise NameError('{}_{}{} function: '.format(name, p, q) + \
                             'wrong number of input arguments ' + \
                             'got {}, '.format(fct.__code__.co_argcount) + \
@@ -156,16 +196,16 @@ class StateSpace:
                 input_vectors = (sp.ones(self.dim_input),)*q
                 result_vector = fct(*state_vectors, *input_vectors)
             except IndexError:
-                # - accepts vectors of appropriate shapes
+                # accepts vectors of appropriate shapes
                 raise IndexError('{}_{}{} function: '.format(name, p, q) + \
                                  'some index exceeds dimension of ' + \
                                  'input and/or state vectors.')
             except:
-                # - does not cause error
+                # does not cause error
                 raise NameError('{}_{}{} function: '.format(name, p, q) + \
                                  'creates a {}.'.format(sys.exc_info()[0]))
             if result_vector.shape != (dim_result, 1):
-                # - returns a vector of appropriate shape
+                # returns a vector of appropriate shape
                 raise NameError('{}_{}{} function: '.format(name, p, q) + \
                                 'wrong shape for the output ' + \
                                 '(got {}, '.format(result_vector.shape) + \
@@ -182,62 +222,28 @@ class StateSpace:
         """Check if the system is passive."""
         raise NotImplementedError
 
-            
-    def __repr__(self):
-        """Lists all attributes and their values."""
-        repr_str = ''
-        # Print one attribute per line, in a defined order
-        for name in sorted(self.__dict__):
-            repr_str += name + ' : ' + getattr(self, name).__str__() + '\n'
-        return repr_str
-
-        
-    def __str__(self):
-        """Prints the system's equation."""
-        def list_nl_fct(dict_fct, name):
-            temp_str = Style.PURPLE + \
-                       'List of non-zero {}pq functions'.format(name) + \
-                       Style.RESET + '\n' 
-            for key in dict_fct.keys():
-                temp_str += key.__repr__() + ', '
-            temp_str = temp_str[0:-2] + '\n'
-            return temp_str
-        
-        # Not yet implemented as wanted
-        print_str = Style.UNDERLINE + Style.BLUE + Style.BRIGHT + \
-                    'State-space representation :' + Style.RESET + '\n'
-        for name, desc, mat in [ \
-                    ('State {} A', 'state-to-state', self.Am),
-                    ('Input {} B', 'input-to-state', self.Bm),
-                    ('Output {} C', 'state-to-output', self.Cm),
-                    ('Feedthrough {} D', 'input-to-output', self.Dm)]:
-            print_str += Style.BLUE + Style.BRIGHT + name.format('matrice') + \
-                        ' (' + desc + ')' + Style.RESET + '\n' + \
-                         sp.pretty(mat) + '\n'
-        if not self.linear:
-            if len(self.mpq):
-                print_str += list_nl_fct(self.mpq, 'M')            
-            if len(self.npq):
-                print_str += list_nl_fct(self.npq, 'N')            
-        return print_str
- 
-        
-    # Print 2 LaTeX
+    #=============================================#
+     
     @abstractmethod
-    def _print(self):
+    def print2latex(self):
+        """Create a LaTex document with the state-space representation."""
         raise NotImplementedError
 
-        
-    @abstractmethod
-    def simulation(self):
-        raise NotImplementedError
-
-
-    def _compute_linear_filter(self):
+    
+    def compute_linear_filter(self):
+        """Compute the multi-dimensional filter of the system."""
         self.W_filter = Filter(self.Am, self.dim_state)
     
+    
+    @abstractmethod
+    def simulation(self):
+        """Compute the output of the system for a given input."""
+        raise NotImplementedError
+
+   
 
 class Filter:
+    """Multidimensional filter of a system in its state-sapce representation."""
     
     def __init__(self, Am, state_size):
         from symbols.symbols import Symbols
@@ -247,13 +253,9 @@ class Filter:
         self.common_den = temp_mat.det()
         self.mat = sp.simplify(self.expr * self.common_den)
 
+
     def __str__(self):
         expr = sp.Mul(self.mat, sp.Pow(self.common_den, sp.Integer(-1)),
                       evaluate=False)
         print_str = '\n' + sp.pretty( expr )
         return print_str
-    
-#==============================================================================
-# Functions
-#==============================================================================
-
