@@ -15,7 +15,7 @@ Developed for Python 3.5.1
 
 import sympy as sp
 from abc import abstractmethod
-from colorama import Fore, Back, Style
+from tools.tools import Style
 
 #==============================================================================
 # Functions
@@ -198,24 +198,25 @@ class StateSpace:
     def __str__(self):
         """Prints the system's equation."""
         def list_nl_fct(dict_fct, name):
-            temp_str = Fore.GREEN + Style.BRIGHT + \
+            temp_str = Style.PURPLE + \
                        'List of non-zero {}pq functions'.format(name) + \
-                       Style.RESET_ALL + '\n' 
+                       Style.RESET + '\n' 
             for key in dict_fct.keys():
                 temp_str += key.__repr__() + ', '
             temp_str = temp_str[0:-2] + '\n'
             return temp_str
         
         # Not yet implemented as wanted
-        print_str = '\033[4m' + Fore.RED + Style.BRIGHT + \
-                    'State-space representation :' + Style.RESET_ALL + '\n'
-        for name, matrice in [('State-to-state', self.Am),
-                                   ('Input-to-state', self.Bm),
-                                   ('State-to-output', self.Cm),
-                                   ('Input-to-output', self.Dm)]:
-            print_str += Fore.GREEN + Style.BRIGHT + name + ' matrice' + \
-                         Style.RESET_ALL + '\n' + \
-                         sp.pretty(matrice) + '\n'
+        print_str = Style.UNDERLINE + Style.BLUE + Style.BRIGHT + \
+                    'State-space representation :' + Style.RESET + '\n'
+        for name, desc, mat in [ \
+                    ('State {} A', 'state-to-state', self.Am),
+                    ('Input {} B', 'input-to-state', self.Bm),
+                    ('Output {} C', 'state-to-output', self.Cm),
+                    ('Feedthrough {} D', 'input-to-output', self.Dm)]:
+            print_str += Style.BLUE + Style.BRIGHT + name.format('matrice') + \
+                        ' (' + desc + ')' + Style.RESET + '\n' + \
+                         sp.pretty(mat) + '\n'
         if not self.linear:
             if len(self.mpq):
                 print_str += list_nl_fct(self.mpq, 'M')            
