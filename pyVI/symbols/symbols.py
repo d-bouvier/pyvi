@@ -14,7 +14,6 @@ Developed for Python 3.5.1
 #==============================================================================
 
 import sympy as sp
-from abc import abstractmethod
 
 #==============================================================================
 # Class
@@ -37,19 +36,19 @@ class Symbols:
             self.order = order
             Symbols._first_init = False
             for var in self._list:
-                setattr(self, var,
-                        sp.symbols('{} {}(1:{})'.format(var, var, order+1)))
+                str_symb = '{} {}(1:{})'.format(var, var, order+1)
+                setattr(self, var, sp.symbols(str_symb, seq=True))
 
-    def _update(self, n):
-        if n > self.order:
+    def _update(self, order):
+        if order > self.order:
             for var in self._list:
-                setattr(self, var, getattr(self, var) + \
-                        sp.symbols('{}({}:{})'.format(var, self.order, n+1)))            
-            self.order = n
+                str_symb = '{}({}:{})'.format(var, self.order, order+1)
+                setattr(self, var, getattr(self, var) + sp.symbols(str_symb,
+                                                                   seq=True))            
+            self.order = order
 
     def __repr__(self):
         repr_str = ''
         for var in self._list:
             repr_str += sp.pretty(getattr(self, var)) + '\n'
         return repr_str
-
