@@ -17,11 +17,11 @@ import sympy as sp
 from abc import abstractmethod
 
 #==============================================================================
-# Functions
+# Class
 #==============================================================================
 
 class System:
-    """Object-oriented symbolic representation of a system
+    """Object-oriented symbolic representation of a system.
     
     This class represents a system (linear or nonlinear) using either its
     state-space representation (mathematical representation used in control
@@ -35,29 +35,21 @@ class System:
 
     """
     
-    
     def __init__(self, label='Test', *args, **kwargs):
         """Initialize the system."""
+        # Label/name of the system        
         self.label = label
+        # Representations available for the system
+        self._has_state_space_repr = False
+        self._has_volterra = False
+        # Input and output dimensions
         self.dim_input = kwargs.get('dim_input', None)
         self.dim_output = kwargs.get('dim_output', None)
         
-        self._has_state_space_repr = False
-        self._has_volterra = False
-        
         from symbols.symbols import Symbols
-        self.symbols = Symbols(3)
+        self.symbols = Symbols()
     
-    
-    def add_state_space_repr(self, Am, Bm, Cm, Dm, mpq={}, npq={}):
-        from system.statespace import StateSpace
-        self.state_space = StateSpace(Am, Bm, Cm, Dm, mpq, npq)
 
-        self.dim_input = self.state_space.dim_input
-        self.dim_output = self.state_space.dim_output
-        self._has_state_space_repr = True
-        
-    
     def __repr__(self):
         repr_str = ''
         if self._has_state_space_repr:
@@ -68,29 +60,36 @@ class System:
             repr_str += self.volterra.__repr__()
         return repr_str
     
-    
+    #=============================================#
+
     @abstractmethod    
     def _is_linear(self):
         """Check if the system is linear."""
         raise NotImplementedError
 
+
     @abstractmethod
     def _is_passive(self):
         """Check if the system is passive."""
         raise NotImplementedError
+
+    #=============================================#
+    
+    def add_state_space_repr(self, Am, Bm, Cm, Dm, mpq={}, npq={}):
+        from system.statespace import StateSpace
+        self.state_space = StateSpace(Am, Bm, Cm, Dm, mpq, npq)
+
+        self.dim_input = self.state_space.dim_input
+        self.dim_output = self.state_space.dim_output
+        self._has_state_space_repr = True
+   
         
-    # Print 2 LaTeX
     @abstractmethod
-    def _print(self):
+    def print2latex(self):
+        """Create a LaTex document describing the system."""
         raise NotImplementedError
         
     @abstractmethod
     def simulation(self):
+        """Compute the output of the system for a given input."""
         raise NotImplementedError
-
-
-    
-#==============================================================================
-# Functions
-#==============================================================================
-
