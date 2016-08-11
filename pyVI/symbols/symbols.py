@@ -34,7 +34,6 @@ class Symbols:
             
     def __init__(self, order=0):
         if Symbols._first_init:
-            print('Je ne pass pas par la')
             self.order = order
             Symbols._first_init = False
             for var in self._list:
