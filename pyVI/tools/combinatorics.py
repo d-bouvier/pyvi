@@ -51,7 +51,6 @@ def multilinear_combinatorics(used_pq, order_max=3):
     # Compute, for a given order and (p, q) function, the set of possible input
     for n in sorted(dict_pq_by_order):
         dict_sets[n] = dict()
-        print(list_orders)
         # Loop on all (p, q) functions for this order
         for (p, q) in dict_pq_by_order[n]:
             dict_sets[n][(p, q)] = set()
