@@ -173,43 +173,38 @@ class StateSpace:
                           self.Bm.shape[0], self.Cm.shape[1]]     
         list_dim_input = [self.Bm.shape[1], self.Dm.shape[1]]     
         list_dim_output = [self.Cm.shape[0], self.Dm.shape[0]]
-        if not check_equal(list_dim_state, self.dim_state):
-            raise NameError('State dimension not consistent')
-        if not check_equal(list_dim_input, self.dim_input):
-            raise NameError('Input dimension not consistent')
-        if not check_equal(list_dim_output, self.dim_output):
-            raise NameError('Output dimension not consistent')
+        assert check_equal(list_dim_state, self.dim_state), \
+               'State dimension not consistent'
+        assert check_equal(list_dim_input, self.dim_input), \
+               'Input dimension not consistent'
+        assert check_equal(list_dim_output, self.dim_output), \
+               'Output dimension not consistent'
 
 
     def _check_dim_nl_fct(self, p, q, fct, name, dim_result):
         """Verify shape and functionnality of the multilinear functions."""
+        str_fct = '{}_{}{} function: '.format(name, p, q)
         # Check that each nonlinear lambda functions:
-        if fct.__code__.co_argcount != p + q:
-            # accepts the good number of input arguments
-            raise NameError('{}_{}{} function: '.format(name, p, q) + \
-                            'wrong number of input arguments ' + \
-                            'got {}, '.format(fct.__code__.co_argcount) + \
-                            'expected {}).'.format(p + q))
-        else:
-            try:
-                state_vectors = (sp.ones(self.dim_state),)*p
-                input_vectors = (sp.ones(self.dim_input),)*q
-                result_vector = fct(*state_vectors, *input_vectors)
-            except IndexError:
-                # accepts vectors of appropriate shapes
-                raise IndexError('{}_{}{} function: '.format(name, p, q) + \
-                                 'some index exceeds dimension of ' + \
-                                 'input and/or state vectors.')
-            except:
-                # does not cause error
-                raise NameError('{}_{}{} function: '.format(name, p, q) + \
-                                 'creates a {}.'.format(sys.exc_info()[0]))
-            if result_vector.shape != (dim_result, 1):
-                # returns a vector of appropriate shape
-                raise NameError('{}_{}{} function: '.format(name, p, q) + \
-                                'wrong shape for the output ' + \
-                                '(got {}, '.format(result_vector.shape) + \
-                                'expected {}).'.format((dim_result,1)))
+        # - accepts the good number of input arguments
+        assert fct.__code__.co_argcount != p + q, \
+               str_fct + 'wrong number of input arguments ' + \
+               'got {}, expected {}).'.format(fct.__code__.co_argcount, p + q)
+        try:
+            state_vectors = (sp.ones(self.dim_state),)*p
+            input_vectors = (sp.ones(self.dim_input),)*q
+            result_vector = fct(*state_vectors, *input_vectors)
+        # - accepts vectors of appropriate shapes
+        except IndexError:
+            raise IndexError(str_fct + 'some index exceeds dimension of ' + \
+                             'input and/or state vectors.')
+        # - does not cause error
+        except:
+            raise NameError(str_fct + 'creates a ' + \
+                            '{}.'.format(sys.exc_info()[0]))
+        # - returns a vector of appropriate shape
+        assert result_vector.shape != (dim_result, 1), \
+               str_fct + 'wrong shape for the output (got ' + \
+               '{}, expected {}).'.format(result_vector.shape, (dim_result,1))
 
 
     def _is_linear(self):

@@ -81,13 +81,13 @@ class Kernel:
     @abstractmethod
     def regularize(self):
         """Put the kernel expression into its regular form."""
-        return NotImplementedError
+        raise NotImplementedError
 
 
     @abstractmethod
     def triangularize(self):
         """Put the kernel expression into its triangular form."""
-        return NotImplementedError
+        raise NotImplementedError
 
 
 
