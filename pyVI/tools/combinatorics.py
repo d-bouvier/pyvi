@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 """
-Description
+Tools for combinatorics.
 
 @author: bouvier (bouvier@ircam.fr)
          Damien Bouvier, IRCAM, Paris
 
-Created on Fri Aug 12 10:46:46 2016
+Last modified on 12 Sept. 2016
 Developed for Python 3.5.1
 """
 
@@ -20,7 +20,7 @@ import itertools as itertbx
 # Functions
 #==============================================================================
 
-def multilinear_combinatorics(used_pq, order_max=3):
+def multilinear_combinatorics(used_pq={}, order_max=3):
     """Returns combinatorics for a given set of multilinear functions.
     
     This function takes a set of (p, q) values (p and q being integers) and an
@@ -36,9 +36,9 @@ def multilinear_combinatorics(used_pq, order_max=3):
     dict_sets = dict()
     list_orders = [1]
     
-    # Compute, for each order of onlinearity, the set of (p, q) functions
+    # Compute, for each order of nonlinearity, the set of (p, q) functions
     for n in range(2, order_max+1):
-        # Take the (p, q) functions of previous order (if exists)
+        # Take the (p, q) functions of previous order (if it exists)
         dict_pq_by_order[n] = dict_pq_by_order.get(n-1, set()).copy()
         # Discard the (0, n-1) function for the order n
         dict_pq_by_order[n].discard((0, n-1))

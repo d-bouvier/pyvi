@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 """
-Description
+Module for simulation of linear and nonlinear system.
 
 @author: bouvier (bouvier@ircam.fr)
          Damien Bouvier, IRCAM, Paris
 
-Created on Wed Aug 10 16:31:01 2016
+Last modified on 12 Sept. 2016
 Developed for Python 3.5.1
 """
 

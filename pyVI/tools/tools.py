@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 """
-Description
+Class for color in terminal.
 
 @author: bouvier (bouvier@ircam.fr)
          Damien Bouvier, IRCAM, Paris
 
-Created on Thu Aug 11 13:53:40 2016
+Last modified on 12 Sept. 2016
 Developed for Python 3.5.1
 """
 

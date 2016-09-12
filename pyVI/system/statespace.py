@@ -1,11 +1,15 @@
 # -*- coding: utf-8 -*-
 """
-Description
+Module for state-space representation.
+
+This package creates classes that allows use of state-space
+representation for linear and nonlinear systems (see
+https://en.wikipedia.org/wiki/State-space_representation).
 
 @author: bouvier (bouvier@ircam.fr)
          Damien Bouvier, IRCAM, Paris
 
-Created on Tue Aug  9 16:03:09 2016
+Last modified on 12 Sept. 2016
 Developed for Python 3.5.1
 """
 
@@ -16,6 +20,7 @@ Developed for Python 3.5.1
 import sympy as sp
 from tools.tools import Style
 from abc import abstractmethod
+import sys as sys
 
 #==============================================================================
 # Class

@@ -1,11 +1,14 @@
 # -*- coding: utf-8 -*-
 """
-Description
+Module for Volterra systems.
+
+This package creates classes that allows use of the Volterra representation of
+a system (see https://en.wikipedia.org/wiki/Volterra_series).
 
 @author: bouvier (bouvier@ircam.fr)
          Damien Bouvier, IRCAM, Paris
 
-Created on Mon Aug  8 12:10:11 2016
+Last modified on 12 Sept. 2016
 Developed for Python 3.5.1
 """
 

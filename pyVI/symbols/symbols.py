@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 """
-Description
+Module for handling sympy symbols.
 
 @author: bouvier (bouvier@ircam.fr)
          Damien Bouvier, IRCAM, Paris
 
-Created on Thu Aug 11 10:16:25 2016
+Last modified on 12 Sept. 2016
 Developed for Python 3.5.1
 """
 
@@ -39,6 +39,14 @@ class Symbols:
                 str_symb = '{} {}(1:{})'.format(var, var, order+1)
                 setattr(self, var, sp.symbols(str_symb, seq=True))
 
+    def __repr__(self):
+        repr_str = ''
+        for var in self._list:
+            repr_str += sp.pretty(getattr(self, var)) + '\n'
+        return repr_str
+
+    #=============================================#
+
     def _update(self, order):
         if order > self.order:
             for var in self._list:
@@ -47,8 +55,3 @@ class Symbols:
                                                                    seq=True))            
             self.order = order
 
-    def __repr__(self):
-        repr_str = ''
-        for var in self._list:
-            repr_str += sp.pretty(getattr(self, var)) + '\n'
-        return repr_str
