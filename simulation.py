@@ -183,7 +183,7 @@ def simulation(input_sig, matrices,
                m_pq=(lambda p,q: False, lambda p,q: None),
                n_pq=(lambda p,q: False, lambda p,q: None),
                sizes=(1, 1, 1), sym_bool=True, fs=44100,
-               nl_order_max=1, hold_opt=1):
+               nl_order_max=1, hold_opt=1, dtype='float'):
     """
     Comupte the simulation of a nonlinear system for a given input.
     """
@@ -217,8 +217,8 @@ def simulation(input_sig, matrices,
         input_sig.shape = (input_dim, sig_len)
 
     # By-order state and output initialization
-    state_by_order = np.zeros((nl_order_max+1, state_dim, sig_len))
-    output_by_order = np.zeros((nl_order_max, output_dim, sig_len))
+    state_by_order = np.zeros((nl_order_max+1, state_dim, sig_len), dtype)
+    output_by_order = np.zeros((nl_order_max, output_dim, sig_len), dtype)
     # Put the input signal as order-zero state
     state_by_order[0,:,:] = np.dot(B_m, input_sig)
     
