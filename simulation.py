@@ -327,3 +327,31 @@ def simulation(input_sig, matrices,
         return output_sig, state_by_order, output_by_order
     else:
         return output_sig
+
+
+def plot_sig(dic_sig, time_vec):
+    
+    for key, elt in dic_sig.items():
+        if len(elt.shape) == 2:
+            plot_by_order = False
+        elif len(elt.shape) == 3:
+            plot_by_order = True
+
+        plt.figure(key)
+        plt.clf()
+        nb_subplot = elt.shape[1]
+        if plot_by_order:
+            nb_order = elt.shape[2]
+
+        for idx in range(elt.shape[1]):
+            plt.subplot(nb_subplot, 1, idx+1)
+            if plot_by_order:
+                plt.plot(time_vec, elt[:, idx, :])
+                plt.legend(['Order {}'.format(i+1) for i in range(nb_order)])
+            else:
+                plt.plot(time_vec, elt[:, idx])
+            plt.title(key + ' #{}'.format(idx+1))
+        plt.xlabel('Time (s)')
+        
+    plt.show()
+
