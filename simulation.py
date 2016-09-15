@@ -184,9 +184,10 @@ def simulation(input_sig, matrices,
                m_pq=(lambda p,q: False, lambda p,q: None),
                n_pq=(lambda p,q: False, lambda p,q: None),
                sizes=(1, 1, 1), sym_bool=True, fs=44100,
-               nl_order_max=1, hold_opt=1, dtype='float'):
+               nl_order_max=1, hold_opt=1, dtype='float',
+               out='output'):
     """
-    Comupte the simulation of a nonlinear system for a given input.
+    Compute the simulation of a nonlinear system for a given input.
     """
     
     ## Init ##
@@ -313,5 +314,16 @@ def simulation(input_sig, matrices,
     output_sig = output_by_order.sum(0)
     
     # Function outputs
-    input_sig.shape = (sig_len, input_dim)
-    return output_sig.transpose()
+    input_sig = input_sig.transpose()
+    output_sig = output_sig.transpose()
+    state_by_order = state_by_order[1:,:,:].transpose(2, 1, 0)
+    output_by_order = output_by_order.transpose(2, 1, 0)
+    
+    if out == 'output':
+        return output_sig
+    elif out == 'output_by_order':
+        return output_by_order
+    elif out == 'all':
+        return output_sig, state_by_order, output_by_order
+    else:
+        return output_sig
