@@ -191,9 +191,9 @@ class StateSpace:
         str_fct = '{}_{}{} function: '.format(name, p, q)
         # Check that each nonlinear lambda functions:
         # - accepts the good number of input arguments
-        assert fct.__code__.co_argcount != p + q, \
+        assert fct.__code__.co_argcount == p + q, \
                str_fct + 'wrong number of input arguments ' + \
-               'got {}, expected {}).'.format(fct.__code__.co_argcount, p + q)
+               '(got {}, expected {}).'.format(fct.__code__.co_argcount, p + q)
         try:
             state_vectors = (sp.ones(self.dim_state),)*p
             input_vectors = (sp.ones(self.dim_input),)*q
@@ -207,7 +207,7 @@ class StateSpace:
             raise NameError(str_fct + 'creates a ' + \
                             '{}.'.format(sys.exc_info()[0]))
         # - returns a vector of appropriate shape
-        assert result_vector.shape != (dim_result, 1), \
+        assert result_vector.shape == (dim_result, 1), \
                str_fct + 'wrong shape for the output (got ' + \
                '{}, expected {}).'.format(result_vector.shape, (dim_result,1))
 
@@ -243,7 +243,7 @@ class StateSpace:
    
 
 class Filter:
-    """Multidimensional filter of a system in its state-sapce representation."""
+    """Multidimensional filter of a system in its state-space representation."""
     
     def __init__(self, Am, state_size):
         from symbols.symbols import Symbols
