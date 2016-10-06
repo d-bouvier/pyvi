@@ -310,7 +310,7 @@ def simulation(input_sig, matrices,
             for order in elt[3]:
                 temp_array = np.dot(temp_array,
                                     state_by_order[order,:,k])
-                output_by_order[n-1,:,k] += temp_array
+            output_by_order[n-1,:,k] += temp_array
     output_sig = output_by_order.sum(0)
     
     # Function outputs
