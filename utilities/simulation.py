@@ -16,7 +16,71 @@ Developed for Python 3.5.1
 
 import numpy as np
 from scipy import linalg
-from matplotlib import pyplot as plt
+
+
+#==============================================================================
+# System parameters
+#==============================================================================
+
+def loudspeaker_sica():
+    """
+    SICA Z000900 (http://www.sica.it/media/Z000900C.pdf551d31b7b491e.pdf).
+    """ 
+
+    state_dim = 3
+    input_dim = 1
+    output_dim = 1
+    sym_bool = True
+    
+    ## Linear part ##
+
+    # Electric parameters
+    Bl = 2.99 # Electodynamic driving parameter [T.m]
+    Re = 5.7 # Electrical resistance of voice coil   [Ohm]
+    Le  =   0.11e-3 # Coil inductance [H]
+    # Mechanical parameters
+    Mms = 1.9e-3; # Mechanical mass [kg]
+    Cms = 544e-6; # Mechanical compliance [m.N-1]
+    Qms = 4.6;
+    k = 1 / Cms # Suspension stiffness [N.m-1]
+    Rms = np.sqrt(k * Mms)/Qms; # Mechanical damping and drag force [kg.s-1]   
+    
+    # State-space matrices
+    A_m = np.array([[-Re/Le, 0, -Bl/Le],
+                    [0, 0, 1],
+                    [Bl/Mms, -k/Mms, -Rms/Mms]]) # State-to-state matrix
+    B_m = np.array([1/Le, 0, 0]); # Input-to-state matrix
+    C_m = np.array([[1, 0, 0]]) # State-to-output matrix  
+    D_m = np.zeros((output_dim, input_dim)) # Input-to-output matrix    
+
+    ## Nonlinear part ##
+    
+    # Suspension stiffness polynomial expansion
+    k_poly_coeff_v = np.array([k, -554420.0, 989026000])
+    mpq_coeff = k_poly_coeff_v/Mms
+    # Handles for fonction saying if Mpq and Npq functions are used
+    h_mpq_bool = (lambda p, q: q==0)
+    h_npq_bool = (lambda p, q: False)
+    # Handles for fonction giving the Mpq tensor
+    h_mpq = (lambda p, q: hp_mpq_tensor(p, q, state_dim,  mpq_coeff[p-1]))
+    h_npq = (lambda p, q: None)  
+
+    def hp_mpq_tensor(p, q, state_dim, coeff_value):
+        """
+        Gives the tensor form of the Mpq function (with q = 0).
+        """ 
+        if q==0:
+            mpq_tensor = np.zeros((state_dim,)*(p+1))
+            idx = np.concatenate((np.array([2], dtype=int),
+                                  np.ones(p, dtype=int)))
+            mpq_tensor[tuple(idx)] = coeff_value
+            return mpq_tensor
+        else:
+            return None
+            
+    return (A_m, B_m, C_m, D_m), (h_mpq_bool, h_mpq), (h_npq_bool, h_npq), \
+    (input_dim, state_dim, output_dim), sym_bool
+    
 
 
 #==============================================================================
@@ -315,3 +379,30 @@ def simulation(input_sig, matrices,
     # Function outputs
     input_sig.shape = (sig_len, input_dim)
     return output_sig.transpose()
+
+
+#==============================================================================
+# Main script
+#==============================================================================
+
+if __name__ == '__main__':
+    """
+    Main script for testing.
+    """
+
+    # System    
+    matrices, h_mpq, h_npq, sizes, sym_bool = loudspeaker_sica()
+    
+    # Input signal
+    fs = 44100
+    T = 1
+    f1 = 140
+    f2 = 220
+    amp = 10   
+    time_vector = np.arange(0, T, step=1/fs)
+    f0_vector = np.linspace(f1, f2, num=len(time_vector))
+    sig = amp * np.cos(np.pi * f0_vector * time_vector)
+    
+    # Simulation
+    out = simulation(sig, matrices,h_mpq, h_npq, sizes, sym_bool=sym_bool,
+                     fs=fs, nl_order_max=3, hold_opt=1, dtype='float')
