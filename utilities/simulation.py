@@ -6,7 +6,7 @@ its state-space representation.
 @author:    bouvier@ircam.fr
             Damien Bouvier, IRCAM, Paris
 
-Last modified on 15 Sept. 2016
+Last modified on 26 Oct. 2016
 Developed for Python 3.5.1
 """
 
@@ -276,6 +276,8 @@ def simulation(input_sig, matrices,
     w_filter = linalg.expm(A_m*sampling_time)
     A_inv = np.linalg.inv(A_m) 
     
+    input_sig = input_sig.copy()
+    
     # Enforce good shape when dimension is 1
     if input_dim == 1:
         B_m.shape = (state_dim, input_dim)
@@ -378,7 +380,6 @@ def simulation(input_sig, matrices,
     output_sig = output_by_order.sum(0)
     
     # Function outputs
-    input_sig = input_sig.transpose()
     output_sig = output_sig.transpose()
     state_by_order = state_by_order[1:,:,:].transpose(2, 1, 0)
     output_by_order = output_by_order.transpose(2, 1, 0)
@@ -391,9 +392,6 @@ def simulation(input_sig, matrices,
         return output_sig, state_by_order, output_by_order
     else:
         return output_sig
-    input_sig.shape = (sig_len, input_dim)
-    return output_sig.transpose()
-
 
 #==============================================================================
 # Main script
@@ -409,14 +407,14 @@ if __name__ == '__main__':
     
     # Input signal
     fs = 44100
-    T = 1
-    f1 = 140
-    f2 = 220
+    T = 2
+    f1 = 100
+    f2 = 300
     amp = 10   
     time_vector = np.arange(0, T, step=1/fs)
     f0_vector = np.linspace(f1, f2, num=len(time_vector))
     sig = amp * np.cos(np.pi * f0_vector * time_vector)
     
     # Simulation
-    out = simulation(sig, matrices,h_mpq, h_npq, sizes, sym_bool=sym_bool,
-                     fs=fs, nl_order_max=3, hold_opt=1, dtype='float')
+    out = simulation(sig.copy(), matrices,h_mpq, h_npq, sizes,
+                     sym_bool=sym_bool, fs=fs, nl_order_max=3, hold_opt=1)
