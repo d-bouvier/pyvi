@@ -24,20 +24,20 @@ from scipy import linalg
 
 class System:
     
-    def __init__(self, Am, Bm, Cm, Dm,
+    def __init__(self, A_m, B_m, C_m, D_m,
                  h_mpq_bool, h_npq_bool, mpq_dict, npq_dict,
                  sym_bool=False):
         
         # Initialize the linear part
-        self.Am = Am        
-        self.Bm = Bm
-        self.Cm = Cm
-        self.Dm = Dm        
+        self.A_m = A_m        
+        self.B_m = B_m
+        self.C_m = C_m
+        self.D_m = D_m        
 
         # Extrapolate system dimensions
-        self.dim = {'input': Bm.shape[1],
-                    'state': Am.shape[0],
-                    'output': Cm.shape[0]}
+        self.dim = {'input': B_m.shape[1],
+                    'state': A_m.shape[0],
+                    'output': C_m.shape[0]}
         
         # Initialize the nonlinear part
         self.is_mpq_used = h_mpq_bool
@@ -251,82 +251,56 @@ def make_list_pq_set(h_mpq_bool, nl_order_max, print_opt=False):
     return mpq_sets
 
 
-def simulation(input_sig, matrices,
-               m_pq=(lambda p,q: False, lambda p,q: None),
-               n_pq=(lambda p,q: False, lambda p,q: None),
-               sizes=(1, 1, 1), sym_bool=True, fs=44100,
-               nl_order_max=1, hold_opt=1, dtype='float',
-               out='output'):
+def simulation(input_sig, system, fs=44100, nl_order_max=1, hold_opt=1,
+               dtype='float', out='output'):
     """
     Compute the simulation of a nonlinear system for a given input.
     """
     
     ## Init ##
-    # Unpack values
-    A_m = matrices[0]
-    B_m = matrices[1]
-    C_m = matrices[2]
-    D_m = matrices[3]
-
-    input_dim = sizes[0]
-    state_dim = sizes[1]
-    output_dim = sizes[2]
-
-    h_mpq_bool = m_pq[0]
-    h_mpq = m_pq[1]
-    h_npq_bool = n_pq[0]
-    h_npq = n_pq[1]
-    
     # Compute parameters
     sig_len = max(input_sig.shape)
     sampling_time = 1/fs
-    w_filter = linalg.expm(A_m*sampling_time)
-    A_inv = np.linalg.inv(A_m) 
+    w_filter = linalg.expm(system.A_m * sampling_time)
+    A_inv = np.linalg.inv(system.A_m) 
     
     input_sig = input_sig.copy()
     
     # Enforce good shape when dimension is 1
-    if input_dim == 1:
-        B_m.shape = (state_dim, input_dim)
-        D_m.shape = (output_dim, input_dim)
-        input_sig.shape = (input_dim, sig_len)
+    if system.dim['input'] == 1:
+        B_m.shape = (system.dim['state'], system.dim['input'])
+        D_m.shape = (system.dim['output'], system.dim['input'])
+        input_sig.shape = (system.dim['input'], sig_len)
 
     # By-order state and output initialization
-    state_by_order = np.zeros((nl_order_max+1, state_dim, sig_len), dtype)
-    output_by_order = np.zeros((nl_order_max, output_dim, sig_len), dtype)
+    state_by_order = np.zeros((nl_order_max+1, system.dim['state'], sig_len),
+                              dtype)
+    output_by_order = np.zeros((nl_order_max, system.dim['output'], sig_len),
+                               dtype)
     # Put the input signal as order-zero state
-    state_by_order[0,:,:] = np.dot(B_m, input_sig)
+    state_by_order[0,:,:] = np.dot(system.B_m, input_sig)
     
-    holder0_bias = np.dot(A_inv, w_filter - np.identity(state_dim))
+    holder0_bias = np.dot(A_inv, w_filter - np.identity(system.dim['state']))
     if hold_opt == 1:
         holder1_bias = \
                 np.dot(A_inv, w_filter) -\
                 fs * np.dot(np.dot(A_inv, A_inv),
-                            w_filter - np.identity(state_dim))
+                            w_filter - np.identity(system.dim['state']))
 
     # Compute list of Mpq combinations and tensors
     list_mpq_set = make_list_pq_set(h_mpq_bool, nl_order_max)
-    dict_mpq = {}
-    for idx, elt in enumerate(list_mpq_set):
-        if (elt[1], elt[2]) not in dict_mpq:
-            dict_mpq[elt[1], elt[2]] = h_mpq(elt[1], elt[2])
-    # Add the linear part (the B matrix)
+    # Add the linear part (the B matrix) to the mpq dict
     list_mpq_set.insert(0, [1, 0, 0, [0]])
-    dict_mpq[0, 0] = np.identity(state_dim)
+    system.mpq[0, 0] = np.identity(system.dim['state'])
     
     # Compute list of Npq combinations and tensors
-    list_npq_set = make_list_pq_set(h_npq_bool, nl_order_max)
-    dict_npq = {}
-    for idx, elt in enumerate(list_npq_set):
-        if (elt[1], elt[2]) not in dict_npq:
-            dict_npq[elt[1], elt[2]] = h_npq(elt[1], elt[2])
-
-    # Add the linear part (respectively the D and C matrices)
+    list_npq_set = make_list_pq_set(system.is_npq_used, nl_order_max)
+    # Add the linear part (respectively the D and C matrices) to the npq dict
     list_npq_set.insert(0, [1, 0, 1, []])
-    dict_npq[0, 1] = D_m
+    system.npq[0, 1] = system.D_m
     for n in range(1, nl_order_max+1):
         list_npq_set.insert(0, [n, n, 0, [n]])
-        dict_npq[n, 0] = C_m
+        system.npq[n, 0] = system.C_m
     
 
     ## Numerical simulation ##
@@ -339,7 +313,7 @@ def simulation(input_sig, matrices,
                 n = elt[0]
                 p = elt[1]
                 q = elt[2]
-                temp_array = dict_mpq[(p, q)].copy()
+                temp_array = system.mpq[(p, q)].copy()
                 for order in range(q):
                     temp_array = np.dot(temp_array, input_sig[:,k])
                 for order in elt[3]:
@@ -356,8 +330,8 @@ def simulation(input_sig, matrices,
                 n = elt[0]
                 p = elt[1]
                 q = elt[2]                       
-                temp_array1 = dict_mpq[(p, q)].copy()
-                temp_array2 = dict_mpq[(p, q)].copy()
+                temp_array1 = system.mpq[(p, q)].copy()
+                temp_array2 = system.mpq[(p, q)].copy()
                 for order in range(q):
                     temp_array1 = np.dot(temp_array1, input_sig[:,k])
                     temp_array2 = np.dot(temp_array2, input_sig[:,k+1])
@@ -377,7 +351,7 @@ def simulation(input_sig, matrices,
             n = elt[0]
             p = elt[1]
             q = elt[2]
-            temp_array = dict_npq[(p, q)].copy()
+            temp_array = system.npq[(p, q)].copy()
             for order in range(q):
                 temp_array = np.dot(temp_array, input_sig[:,k])
             for order in elt[3]:
@@ -409,9 +383,6 @@ if __name__ == '__main__':
     Main script for testing.
     """
 
-    # System    
-    matrices, h_mpq, h_npq, sizes, sym_bool = loudspeaker_sica()
-    
     # Input signal
     fs = 44100
     T = 2
@@ -423,5 +394,5 @@ if __name__ == '__main__':
     sig = amp * np.cos(np.pi * f0_vector * time_vector)
     
     # Simulation
-    out = simulation(sig.copy(), matrices,h_mpq, h_npq, sizes,
-                     sym_bool=sym_bool, fs=fs, nl_order_max=3, hold_opt=1)
+    out = simulation(sig.copy(), loudspeaker_sica,
+                     fs=fs, nl_order_max=3, hold_opt=1)
