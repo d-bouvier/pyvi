@@ -312,16 +312,26 @@ def simulation(input_sig, system, fs=44100, nl_order_max=1, hold_opt=1,
     list_mpq_set = make_list_pq_set(system.is_mpq_used, nl_order_max)
     # Add the linear part (the B matrix) to the mpq dict
     list_mpq_set.insert(0, [1, 0, 0, [0]])
-    system.mpq[0, 0] = np.identity(system.dim['state'])
+    if system.nl_mode == 'tensor':
+        system.mpq[0, 0] = np.identity(system.dim['state'])
+    elif system.nl_mode == 'function':
+        system.mpq[0, 0] = lambda u: u
     
     # Compute list of Npq combinations and tensors
     list_npq_set = make_list_pq_set(system.is_npq_used, nl_order_max)
     # Add the linear part (respectively the D and C matrices) to the npq dict
     list_npq_set.insert(0, [1, 0, 1, []])
-    system.npq[0, 1] = system.D_m
+    if system.nl_mode == 'tensor':
+        system.npq[0, 1] = system.D_m
+    elif system.nl_mode == 'function':
+        system.npq[0, 1] = lambda u: np.dot(system.D_m, u)
     for n in range(1, nl_order_max+1):
         list_npq_set.insert(0, [n, n, 0, [n]])
-        system.npq[n, 0] = system.C_m
+        if system.nl_mode == 'tensor':
+            system.npq[n, 0] = system.C_m
+        elif system.nl_mode == 'function':
+            system.npq[n, 0] = lambda u: np.dot(system.C_m, u)
+
     
     ## Dynamical equation - Numerical simulation ##
 
@@ -366,26 +376,62 @@ def simulation(input_sig, system, fs=44100, nl_order_max=1, hold_opt=1,
     
     # Simulation in tensor mode for ADC converter with holder of order 0
     if (hold_opt == 0) & (system.nl_mode == 'function'):
-        print('Not yet implemented.')
+        for k in np.arange(sig_len-1):
+            for idx, elt in enumerate(list_mpq_set):
+                n = elt[0]
+                p = elt[1]
+                q = elt[2]
+                temp_arg = (input_sig[:, k],)*q + \
+                           tuple(state_by_order[elt[3], :, k])
+                temp_array = system.mpq[(p, q)](*temp_arg)
+                state_by_order[n,:,k+1] = \
+                        np.dot(w_filter, state_by_order[n,:,k]) +\
+                        np.dot(holder0_bias, temp_array)
 
     # Simulation in tensor mode for ADC converter with holder of order 1
     elif (hold_opt == 1) & (system.nl_mode == 'function'):
-        print('Not yet implemented.')
+        for k in np.arange(sig_len-1):        
+            for idx, elt in enumerate(list_mpq_set):
+                n = elt[0]
+                p = elt[1]
+                q = elt[2]
+                temp_arg1 = (input_sig[:, k],)*q + \
+                            tuple(state_by_order[elt[3], :, k])
+                temp_arg2 = (input_sig[:, k+1],)*q + \
+                            tuple(state_by_order[elt[3], :, k+1])
+                temp_array1 = system.mpq[(p, q)](*temp_arg1)
+                temp_array2 = system.mpq[(p, q)](*temp_arg2)
+                state_by_order[n,:,k+1] = \
+                        np.dot(w_filter, state_by_order[n,:,k]) +\
+                        np.dot(holder1_bias, temp_array1) +\
+                        np.dot(holder0_bias - holder1_bias, temp_array2)
    
     ## Dynamical equation - Output simulation ##
     
-    for k in np.arange(sig_len):
-        for idx, elt in enumerate(list_npq_set):
-            n = elt[0]
-            p = elt[1]
-            q = elt[2]
-            temp_array = system.npq[(p, q)].copy()
-            for order in range(q):
-                temp_array = np.dot(temp_array, input_sig[:,k])
-            for order in elt[3]:
-                temp_array = np.dot(temp_array,
-                                    state_by_order[order,:,k])
-            output_by_order[n-1,:,k] += temp_array
+    if system.nl_mode == 'tensor':
+        for k in np.arange(sig_len):
+            for idx, elt in enumerate(list_npq_set):
+                n = elt[0]
+                p = elt[1]
+                q = elt[2]
+                temp_array = system.npq[(p, q)].copy()
+                for order in range(q):
+                    temp_array = np.dot(temp_array, input_sig[:,k])
+                for order in elt[3]:
+                    temp_array = np.dot(temp_array,
+                                        state_by_order[order,:,k])
+                output_by_order[n-1,:,k] += temp_array
+    
+    elif system.nl_mode == 'function':
+        for k in np.arange(sig_len):
+            for idx, elt in enumerate(list_npq_set):
+                n = elt[0]
+                p = elt[1]
+                q = elt[2]
+                temp_arg = (input_sig[:, k],)*q + \
+                           tuple(state_by_order[elt[3], :, k])
+                output_by_order[n-1,:,k] += system.npq[(p, q)](*temp_arg)
+    
     output_sig = output_by_order.sum(0)
     
     ## Function outputs ##
@@ -412,6 +458,9 @@ if __name__ == '__main__':
     Main script for testing.
     """
 
+    from matplotlib import pyplot as plt
+    import time
+    
     # Input signal
     fs = 44100
     T = 2
@@ -420,8 +469,29 @@ if __name__ == '__main__':
     amp = 10   
     time_vector = np.arange(0, T, step=1/fs)
     f0_vector = np.linspace(f1, f2, num=len(time_vector))
-    sig = amp * np.cos(np.pi * f0_vector * time_vector)
-    
+    sig = amp * np.sin(np.pi * f0_vector * time_vector)
+
     # Simulation
+    plt.figure()
+    start1 = time.time()
     out = simulation(sig.copy(), loudspeaker_sica,
                      fs=fs, nl_order_max=3, hold_opt=1)
+    end1 = time.time()
+    plt.subplot(2, 1, 1)
+    plt.plot(sig)
+    plt.subplot(2, 1, 2)
+    plt.plot(out)
+    
+    plt.figure()
+    start2 = time.time()
+    out = simulation(sig.copy(), loudspeaker_sica_2,
+                     fs=fs, nl_order_max=3, hold_opt=1) 
+    end2 = time.time()
+    plt.subplot(2, 1, 1)
+    plt.plot(sig)
+    plt.subplot(2, 1, 2)
+    plt.plot(out)
+    
+    print('"tensor" mode: {}s'.format(end1-start1))
+    print('"function" mode: {}s'.format(end2-start2))
+    
