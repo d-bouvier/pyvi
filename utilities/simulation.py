@@ -289,8 +289,8 @@ def simulation(input_sig, system, fs=44100, nl_order_max=1, hold_opt=1,
     
     # Enforce good shape when dimension is 1
     if system.dim['input'] == 1:
-        B_m.shape = (system.dim['state'], system.dim['input'])
-        D_m.shape = (system.dim['output'], system.dim['input'])
+        system.B_m.shape = (system.dim['state'], system.dim['input'])
+        system.D_m.shape = (system.dim['output'], system.dim['input'])
         input_sig.shape = (system.dim['input'], sig_len)
 
     # By-order state and output initialization
@@ -309,7 +309,7 @@ def simulation(input_sig, system, fs=44100, nl_order_max=1, hold_opt=1,
                             w_filter - np.identity(system.dim['state']))
 
     # Compute list of Mpq combinations and tensors
-    list_mpq_set = make_list_pq_set(h_mpq_bool, nl_order_max)
+    list_mpq_set = make_list_pq_set(system.is_mpq_used, nl_order_max)
     # Add the linear part (the B matrix) to the mpq dict
     list_mpq_set.insert(0, [1, 0, 0, [0]])
     system.mpq[0, 0] = np.identity(system.dim['state'])
