@@ -115,8 +115,8 @@ test_system = System(np.array([[-1, 0], [1/2, 1/2]]), np.array([[1], [0]]),
 # Functions
 #==============================================================================
 
-## Auxiliary function for make_list_pq_set ##
-def make_list_mpq(nl_order_max):
+## Auxiliary function for make_dict_pq_set ##
+def make_list_pq(nl_order_max):
     """
     Compute the list of Mpq functions used in each order of nonlinearity.
     
@@ -127,88 +127,91 @@ def make_list_mpq(nl_order_max):
     
     Returns
     -------
-    list_mpq : ndarray
+    list_pq : ndarray
         Array of shape (N, 3), where N is the number of sets, and each set
         is [n, p, q]
     """
     
     # Initialisation
-    list_mpq = np.empty((0, 3), dtype=int)
+    list_pq = np.empty((0, 3), dtype=int)
     # Variable for reporting sets from the previous order
     nb_set_2_report = 0
     
     # Loop on order of nonlinearity
     for n in range(2, nl_order_max+1):
         # Report previous sets and change the corresponding order
-        list_mpq = np.concatenate((list_mpq, list_mpq[-nb_set_2_report-1:-1,:]))
-        list_mpq[-nb_set_2_report:,0] += 1
+        list_pq = np.concatenate((list_pq, list_pq[-nb_set_2_report-1:-1,:]))
+        list_pq[-nb_set_2_report:,0] += 1
         # Loop on all new combination (p,q)
         for q in range(n+1):
             array_tmp = np.array([n, n-q, q])
             array_tmp.shape = (1, 3)
-            list_mpq = np.concatenate((list_mpq, array_tmp))
-            # We don't report the use of the Mpq function for p = 0
+            list_pq = np.concatenate((list_pq, array_tmp))
+            # We don't report the use of the pq-function for p = 0
             if not (n == q):
                 nb_set_2_report += 1
 
-    return list_mpq
+    return list_pq
 
-def elimination(h_mpq_bool, list_mpq):
+def elimination(h_pq_bool, list_pq):
     """
     Eliminates the unused Mpq in the system.
     
     Parameters
     ----------
-    h_mpq_bool : lambda function
+    h_pq_bool : lambda function
         Returns if the Mpq function is used for a given (p,q)
-    list_mpq : ndarray
+    list_pq : ndarray
         Array of all combination [n, p, q]
     
     Outputs
     -------
-    list_mpq : ndarray
+    list_pq : ndarray
         Same array as the input array with unused lines deleted
     """
 
     # Initialisation
-    mask_pq = np.empty(list_mpq.shape[0], dtype=bool)
+    mask_pq = np.empty(list_pq.shape[0], dtype=bool)
     # Loop on all set combination    
-    for idx in range(list_mpq.shape[0]):
+    for idx in range(list_pq.shape[0]):
         # In the following:
-        # list_mpq[idx,0] represents n
-        # list_mpq[idx,1] represents p
-        # list_mpq[idx,2] represents q
-        mask_pq[idx] = h_mpq_bool(list_mpq[idx,1], list_mpq[idx,2])
+        # list_pq[idx,0] represents n
+        # list_pq[idx,1] represents p
+        # list_pq[idx,2] represents q
+        mask_pq[idx] = h_pq_bool(list_pq[idx,1], list_pq[idx,2])
     
-    return list_mpq[mask_pq]
+    return list_pq[mask_pq]
 
-def state_combinatorics(list_mpq, print_opt=False):
+def state_combinatorics(list_pq, nl_order_max, print_opt=False):
     """
     Compute, for each Mpq function at a given order n, the different sets of
     # state-homogenous-order that are the inputs of the Mpq function
     # (all sets are created, even those equals in respect to the order, so, if
-    # the Mpq function are symmetric, there is redudancy)
+    # the pq-function are symmetric, there is redudancy)
     
     Parameters
     ----------
-    list_mpq : ndarray
+    list_pq : ndarray
         Array of all combination [n, p, q]
     
     Outputs
     -------
-    mpq_sets : list
-        List of sets [n, p, q, k]
+    pq_sets : dict
+        Dict of all sets [p, q, k] for each order n
     """
     
     # Initialisation
-    mpq_sets = []
-    for elt in list_mpq:
+    pq_sets = {}
+    for n in range(2, nl_order_max+1):
+        pq_sets[n] = []
+    
+    for elt in list_pq:
         # In the following:
         # elt[0] represents n
         # elt[1] represents p
         # elt[2] represents q
     
-        # Maximum value possiblee for a state order
+        # Maximum value possible for a state order
         k_sum = elt[0] - elt[2]
         # Value needed for the sum of all state order
         k_max = k_sum - elt[1] + 1
@@ -223,14 +226,12 @@ def state_combinatorics(list_mpq, print_opt=False):
                       sum(index) == k_sum))
             # Check if the corresponds to the current (n,p,q) combination
             if sum(index) == k_sum:
-                elt_bis = list(elt)
-                elt_bis.append(index)
-                mpq_sets.append(elt_bis)
+                pq_sets[elt[0]].append((elt[1], elt[2], index))
     
-    return mpq_sets
+    return pq_sets
     
 
-def make_list_pq_set(h_mpq_bool, nl_order_max, print_opt=False):
+def make_dict_pq_set(h_pq_bool, nl_order_max, print_opt=False):
     """
     Return the list of sets characterising Mpq functions used in a system.
 
@@ -259,17 +260,17 @@ def make_list_pq_set(h_mpq_bool, nl_order_max, print_opt=False):
     """
     
     ## Main ##
-    list_mpq = make_list_mpq(nl_order_max)
-    list_mpq = elimination(h_mpq_bool, list_mpq)
-    mpq_sets = state_combinatorics(list_mpq, print_opt)
+    list_pq = make_list_pq(nl_order_max)
+    list_pq = elimination(h_pq_bool, list_pq)
+    pq_sets = state_combinatorics(list_pq, nl_order_max, print_opt)
     
     # Optional printing
     if print_opt: 
         print('')
-        for elt in mpq_sets:
+        for elt in pq_sets:
             print(elt)
-            
-    return mpq_sets
+    
+    return pq_sets
 
 
 def simulation(input_sig, system, fs=44100, nl_order_max=1, hold_opt=1,
