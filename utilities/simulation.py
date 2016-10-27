@@ -26,7 +26,7 @@ class System:
     
     def __init__(self, A_m, B_m, C_m, D_m,
                  h_mpq_bool, h_npq_bool, mpq_dict, npq_dict,
-                 sym_bool=False):
+                 sym_bool=False, nl_mode='tensor'):
         
         # Initialize the linear part
         self.A_m = A_m        
@@ -46,7 +46,8 @@ class System:
         self.npq = npq_dict
         
         self.sym_bool = sym_bool
-
+        self.nl_mode = nl_mode
+        
 #==============================================================================
 # System parameters
 #==============================================================================
@@ -79,16 +80,36 @@ D_m = np.zeros((1, 1)) # Input-to-output matrix
 h_mpq_bool = (lambda p, q: (p<=3) & (q==0))
 h_npq_bool = (lambda p, q: False)
 
-# Dictionnaries of Mpq tensor
-m20 = np.zeros((3, 3, 3))
-m20[2, 1, 1] = k[1]/Mms
-m30 = np.zeros((3, 3, 3, 3))
-m30[2, 1, 1, 1] = k[2]/Mms
-mpq_dict = {(2, 0): m20, (3, 0): m30}
-npq_dict = dict()
+# Dictionnaries of Mpq & Npq tensors
+m20_t = np.zeros((3, 3, 3))
+m20_t[2, 1, 1] = k[1]/Mms
+m30_t = np.zeros((3, 3, 3, 3))
+m30_t[2, 1, 1, 1] = k[2]/Mms
+mpq_t_dict = {(2, 0): m20_t, (3, 0): m30_t}
+npq_t_dict = dict()
 
 loudspeaker_sica = System(A_m, B_m, C_m, D_m, h_mpq_bool, h_npq_bool,
-                          mpq_dict, npq_dict, sym_bool=True)
+                          mpq_t_dict, npq_t_dict, sym_bool=True)
+
+# Dictionaries of Mpq & Npq functions
+m20_f = lambda x1, x2: np.array([0, 0, k[1]/Mms * x1[1] * x2[1] ])
+m30_f = lambda x1, x2, x3: np.array([0, 0, k[2]/Mms * x1[1] * x2[1] * x3[1] ])
+mpq_f_dict = {(2, 0): m20_f, (3, 0): m30_f}
+npq_f_dict = dict()
+
+loudspeaker_sica_2 = System(A_m, B_m, C_m, D_m, h_mpq_bool, h_npq_bool,
+                          mpq_f_dict, npq_f_dict, sym_bool=True,
+                          nl_mode='function')
+
+
+""" Simple system for simulation test. """
+test_system = System(np.array([[-1, 0], [1/2, 1/2]]), np.array([[1], [0]]),
+                     np.array([[1, 0]]), np.zeros((1, 1)),
+                     (lambda p, q: (p+q)<3), (lambda p, q: False),
+                     {(2, 0): (lambda x1, x2: np.array([0, x1[0] * x2[0]])),
+                      (1, 1): (lambda u, x: np.array([0, u * x[0]])),
+                      (0, 2): (lambda u1, u2: np.array([0, u1 * u2]))}, dict(),
+                     sym_bool=True, nl_mode='function')
 
 #==============================================================================
 # Functions
@@ -302,12 +323,10 @@ def simulation(input_sig, system, fs=44100, nl_order_max=1, hold_opt=1,
         list_npq_set.insert(0, [n, n, 0, [n]])
         system.npq[n, 0] = system.C_m
     
+    ## Dynamical equation - Numerical simulation ##
 
-    ## Numerical simulation ##
-
-    # Dynamical equation
-    if hold_opt == 0: # Simulation for ADC converter with holder of order 0
-        # Main loop (on time indexes)
+    # Simulation in tensor mode for ADC converter with holder of order 0
+    if (hold_opt == 0) & (system.nl_mode == 'tensor'):
         for k in np.arange(sig_len-1):        
             for idx, elt in enumerate(list_mpq_set):
                 n = elt[0]
@@ -323,8 +342,8 @@ def simulation(input_sig, system, fs=44100, nl_order_max=1, hold_opt=1,
                         np.dot(w_filter, state_by_order[n,:,k]) +\
                         np.dot(holder0_bias, temp_array)
 
-    elif hold_opt == 1: # Simulation for ADC converter with holder of order 1
-        # Main loop (on time indexes)
+    # Simulation in tensor mode for ADC converter with holder of order 1
+    elif (hold_opt == 1) & (system.nl_mode == 'tensor'):
         for k in np.arange(sig_len-1):        
             for idx, elt in enumerate(list_mpq_set):
                 n = elt[0]
@@ -344,8 +363,17 @@ def simulation(input_sig, system, fs=44100, nl_order_max=1, hold_opt=1,
                         np.dot(w_filter, state_by_order[n,:,k]) +\
                         np.dot(holder1_bias, temp_array1) +\
                         np.dot(holder0_bias - holder1_bias, temp_array2)
+    
+    # Simulation in tensor mode for ADC converter with holder of order 0
+    if (hold_opt == 0) & (system.nl_mode == 'function'):
+        print('Not yet implemented.')
+
+    # Simulation in tensor mode for ADC converter with holder of order 1
+    elif (hold_opt == 1) & (system.nl_mode == 'function'):
+        print('Not yet implemented.')
    
-    # Output equation
+    ## Dynamical equation - Output simulation ##
+    
     for k in np.arange(sig_len):
         for idx, elt in enumerate(list_npq_set):
             n = elt[0]
@@ -360,7 +388,8 @@ def simulation(input_sig, system, fs=44100, nl_order_max=1, hold_opt=1,
             output_by_order[n-1,:,k] += temp_array
     output_sig = output_by_order.sum(0)
     
-    # Function outputs
+    ## Function outputs ##
+    
     output_sig = output_sig.transpose()
     state_by_order = state_by_order[1:,:,:].transpose(2, 1, 0)
     output_by_order = output_by_order.transpose(2, 1, 0)
