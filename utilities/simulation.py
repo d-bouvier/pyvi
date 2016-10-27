@@ -81,9 +81,9 @@ h_npq_bool = (lambda p, q: False)
 
 # Dictionnaries of Mpq tensor
 m20 = np.zeros((3, 3, 3))
-m20[2, 1, 1] = k[1]
+m20[2, 1, 1] = k[1]/Mms
 m30 = np.zeros((3, 3, 3, 3))
-m30[2, 1, 1, 1] = k[2]
+m30[2, 1, 1, 1] = k[2]/Mms
 mpq_dict = {(2, 0): m20, (3, 0): m30}
 npq_dict = dict()
 
