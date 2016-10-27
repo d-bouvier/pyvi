@@ -19,69 +19,76 @@ from scipy import linalg
 
 
 #==============================================================================
+# Class
+#==============================================================================
+
+class System:
+    
+    def __init__(self, Am, Bm, Cm, Dm,
+                 h_mpq_bool, h_npq_bool, mpq_dict, npq_dict,
+                 sym_bool=False):
+        
+        # Initialize the linear part
+        self.Am = Am        
+        self.Bm = Bm
+        self.Cm = Cm
+        self.Dm = Dm        
+
+        # Extrapolate system dimensions
+        self.dim = {'input': Bm.shape[1],
+                    'state': Am.shape[0],
+                    'output': Cm.shape[0]}
+        
+        # Initialize the nonlinear part
+        self.is_mpq_used = h_mpq_bool
+        self.is_npq_used = h_npq_bool
+        self.mpq = mpq_dict
+        self.npq = npq_dict
+        
+        self.sym_bool = sym_bool
+
+#==============================================================================
 # System parameters
 #==============================================================================
 
-def loudspeaker_sica():
-    """
-    SICA Z000900 (http://www.sica.it/media/Z000900C.pdf551d31b7b491e.pdf).
-    """ 
+""" Loudspeaker SICA Z000900
+(http://www.sica.it/media/Z000900C.pdf551d31b7b491e.pdf).
+"""
 
-    state_dim = 3
-    input_dim = 1
-    output_dim = 1
-    sym_bool = True
-    
-    ## Linear part ##
+## Physical parameters ##
+# Electric parameters
+Bl = 2.99 # Electodynamic driving parameter [T.m]
+Re = 5.7 # Electrical resistance of voice coil   [Ohm]
+Le  =   0.11e-3 # Coil inductance [H]
+# Mechanical parameters
+Mms = 1.9e-3; # Mechanical mass [kg]
+Cms = 544e-6; # Mechanical compliance [m.N-1]
+Qms = 4.6;
+k = [1/Cms, -554420.0, 989026000] # Suspension stiffness [N.m-1]
+Rms = np.sqrt(k[0] * Mms)/Qms; # Mechanical damping and drag force [kg.s-1]   
 
-    # Electric parameters
-    Bl = 2.99 # Electodynamic driving parameter [T.m]
-    Re = 5.7 # Electrical resistance of voice coil   [Ohm]
-    Le  =   0.11e-3 # Coil inductance [H]
-    # Mechanical parameters
-    Mms = 1.9e-3; # Mechanical mass [kg]
-    Cms = 544e-6; # Mechanical compliance [m.N-1]
-    Qms = 4.6;
-    k = 1 / Cms # Suspension stiffness [N.m-1]
-    Rms = np.sqrt(k * Mms)/Qms; # Mechanical damping and drag force [kg.s-1]   
-    
-    # State-space matrices
-    A_m = np.array([[-Re/Le, 0, -Bl/Le],
-                    [0, 0, 1],
-                    [Bl/Mms, -k/Mms, -Rms/Mms]]) # State-to-state matrix
-    B_m = np.array([1/Le, 0, 0]); # Input-to-state matrix
-    C_m = np.array([[1, 0, 0]]) # State-to-output matrix  
-    D_m = np.zeros((output_dim, input_dim)) # Input-to-output matrix    
+# State-space matrices
+A_m = np.array([[-Re/Le, 0, -Bl/Le],
+                [0, 0, 1],
+                [Bl/Mms, -k[0]/Mms, -Rms/Mms]]) # State-to-state matrix
+B_m = np.array([[1/Le], [0], [0]]); # Input-to-state matrix
+C_m = np.array([[1, 0, 0]]) # State-to-output matrix  
+D_m = np.zeros((1, 1)) # Input-to-output matrix    
 
-    ## Nonlinear part ##
-    
-    # Suspension stiffness polynomial expansion
-    k_poly_coeff_v = np.array([k, -554420.0, 989026000])
-    mpq_coeff = k_poly_coeff_v/Mms
-    # Handles for fonction saying if Mpq and Npq functions are used
-    h_mpq_bool = (lambda p, q: q==0)
-    h_npq_bool = (lambda p, q: False)
-    # Handles for fonction giving the Mpq tensor
-    h_mpq = (lambda p, q: hp_mpq_tensor(p, q, state_dim,  mpq_coeff[p-1]))
-    h_npq = (lambda p, q: None)  
+# Handles for fonction saying if Mpq and Npq functions are used
+h_mpq_bool = (lambda p, q: (p<=3) & (q==0))
+h_npq_bool = (lambda p, q: False)
 
-    def hp_mpq_tensor(p, q, state_dim, coeff_value):
-        """
-        Gives the tensor form of the Mpq function (with q = 0).
-        """ 
-        if q==0:
-            mpq_tensor = np.zeros((state_dim,)*(p+1))
-            idx = np.concatenate((np.array([2], dtype=int),
-                                  np.ones(p, dtype=int)))
-            mpq_tensor[tuple(idx)] = coeff_value
-            return mpq_tensor
-        else:
-            return None
-            
-    return (A_m, B_m, C_m, D_m), (h_mpq_bool, h_mpq), (h_npq_bool, h_npq), \
-    (input_dim, state_dim, output_dim), sym_bool
-    
+# Dictionnaries of Mpq tensor
+m20 = np.zeros((3, 3, 3))
+m20[2, 1, 1] = k[1]
+m30 = np.zeros((3, 3, 3, 3))
+m30[2, 1, 1, 1] = k[2]
+mpq_dict = {(2, 0): m20, (3, 0): m30}
+npq_dict = dict()
 
+loudspeaker_sica = System(A_m, B_m, C_m, D_m, h_mpq_bool, h_npq_bool,
+                          mpq_dict, npq_dict, sym_bool=True)
 
 #==============================================================================
 # Functions
