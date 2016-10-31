@@ -52,64 +52,65 @@ class System:
 # System parameters
 #==============================================================================
 
-""" Loudspeaker SICA Z000900
-(http://www.sica.it/media/Z000900C.pdf551d31b7b491e.pdf).
-"""
+def loudspeaker_sica(mode='tensor'):
+    """
+    Loudspeaker SICA Z000900
+    (http://www.sica.it/media/Z000900C.pdf551d31b7b491e.pdf).
+    """
 
-## Physical parameters ##
-# Electric parameters
-Bl = 2.99 # Electodynamic driving parameter [T.m]
-Re = 5.7 # Electrical resistance of voice coil   [Ohm]
-Le  =   0.11e-3 # Coil inductance [H]
-# Mechanical parameters
-Mms = 1.9e-3; # Mechanical mass [kg]
-Cms = 544e-6; # Mechanical compliance [m.N-1]
-Qms = 4.6;
-k = [1/Cms, -554420.0, 989026000] # Suspension stiffness [N.m-1]
-Rms = np.sqrt(k[0] * Mms)/Qms; # Mechanical damping and drag force [kg.s-1]   
+    ## Physical parameters ##
+    # Electric parameters
+    Bl = 2.99 # Electodynamic driving parameter [T.m]
+    Re = 5.7 # Electrical resistance of voice coil   [Ohm]
+    Le  =   0.11e-3 # Coil inductance [H]
+    # Mechanical parameters
+    Mms = 1.9e-3; # Mechanical mass [kg]
+    Cms = 544e-6; # Mechanical compliance [m.N-1]
+    Qms = 4.6;
+    k = [1/Cms, -554420.0, 989026000] # Suspension stiffness [N.m-1]
+    Rms = np.sqrt(k[0] * Mms)/Qms; # Mechanical damping and drag force [kg.s-1]   
+    
+    # State-space matrices
+    A_m = np.array([[-Re/Le, 0, -Bl/Le],
+                    [0, 0, 1],
+                    [Bl/Mms, -k[0]/Mms, -Rms/Mms]]) # State-to-state matrix
+    B_m = np.array([[1/Le], [0], [0]]); # Input-to-state matrix
+    C_m = np.array([[1, 0, 0]]) # State-to-output matrix  
+    D_m = np.zeros((1, 1)) # Input-to-output matrix    
+    
+    # Handles for fonction saying if Mpq and Npq functions are used
+    h_mpq_bool = (lambda p, q: (p<=3) & (q==0))
+    h_npq_bool = (lambda p, q: False)
 
-# State-space matrices
-A_m = np.array([[-Re/Le, 0, -Bl/Le],
-                [0, 0, 1],
-                [Bl/Mms, -k[0]/Mms, -Rms/Mms]]) # State-to-state matrix
-B_m = np.array([[1/Le], [0], [0]]); # Input-to-state matrix
-C_m = np.array([[1, 0, 0]]) # State-to-output matrix  
-D_m = np.zeros((1, 1)) # Input-to-output matrix    
+     # Dictionnaries of Mpq & Npq tensors
+    if mode == 'tensor':
+        m20 = np.zeros((3, 3, 3))
+        m20[2, 1, 1] = -k[1]/Mms
+        m30 = np.zeros((3, 3, 3, 3))
+        m30[2, 1, 1, 1] = -k[2]/Mms
+    elif mode == 'function':
+        m20 = lambda x1, x2: np.array([0, 0, -k[1]/Mms * x1[1] * x2[1] ])
+        m30 = lambda x1, x2, x3: np.array([0, 0, -k[2]/Mms * x1[1] * \
+                                                 x2[1] * x3[1] ])
+    
+    mpq_dict = {(2, 0): m20, (3, 0): m30}
+    npq_dict = dict()
 
-# Handles for fonction saying if Mpq and Npq functions are used
-h_mpq_bool = (lambda p, q: (p<=3) & (q==0))
-h_npq_bool = (lambda p, q: False)
+    return System(A_m, B_m, C_m, D_m, h_mpq_bool, h_npq_bool,
+                  mpq_dict, npq_dict, sym_bool=True, nl_mode=mode)
 
-# Dictionnaries of Mpq & Npq tensors
-m20_t = np.zeros((3, 3, 3))
-m20_t[2, 1, 1] = k[1]/Mms
-m30_t = np.zeros((3, 3, 3, 3))
-m30_t[2, 1, 1, 1] = k[2]/Mms
-mpq_t_dict = {(2, 0): m20_t, (3, 0): m30_t}
-npq_t_dict = dict()
+def simple_system():
+    """
+    Simple system for simulation test.
+    """
+    return System(np.array([[-1, 0], [1/2, 1/2]]), np.array([[1], [0]]),
+                  np.array([[1, 0]]), np.zeros((1, 1)),
+                  (lambda p, q: (p+q)<3), (lambda p, q: False),
+                  {(2, 0): (lambda x1, x2: np.array([0, x1[0] * x2[0]])),
+                   (1, 1): (lambda u, x: np.array([0, u * x[0]])),
+                   (0, 2): (lambda u1, u2: np.array([0, u1 * u2]))}, dict(),
+                  sym_bool=True, nl_mode='function')
 
-loudspeaker_sica = System(A_m, B_m, C_m, D_m, h_mpq_bool, h_npq_bool,
-                          mpq_t_dict, npq_t_dict, sym_bool=True)
-
-# Dictionaries of Mpq & Npq functions
-m20_f = lambda x1, x2: np.array([0, 0, k[1]/Mms * x1[1] * x2[1] ])
-m30_f = lambda x1, x2, x3: np.array([0, 0, k[2]/Mms * x1[1] * x2[1] * x3[1] ])
-mpq_f_dict = {(2, 0): m20_f, (3, 0): m30_f}
-npq_f_dict = dict()
-
-loudspeaker_sica_2 = System(A_m, B_m, C_m, D_m, h_mpq_bool, h_npq_bool,
-                          mpq_f_dict, npq_f_dict, sym_bool=True,
-                          nl_mode='function')
-
-
-""" Simple system for simulation test. """
-test_system = System(np.array([[-1, 0], [1/2, 1/2]]), np.array([[1], [0]]),
-                     np.array([[1, 0]]), np.zeros((1, 1)),
-                     (lambda p, q: (p+q)<3), (lambda p, q: False),
-                     {(2, 0): (lambda x1, x2: np.array([0, x1[0] * x2[0]])),
-                      (1, 1): (lambda u, x: np.array([0, u * x[0]])),
-                      (0, 2): (lambda u1, u2: np.array([0, u1 * u2]))}, dict(),
-                     sym_bool=True, nl_mode='function')
 
 #==============================================================================
 # Functions
@@ -462,7 +463,7 @@ if __name__ == '__main__':
 
     # Simulation
     start1 = time.time()
-    out_t = simulation(sig.copy(), loudspeaker_sica,
+    out_t = simulation(sig.copy(), loudspeaker_sica('tensor'),
                        fs=fs, nl_order_max=3, hold_opt=1)
     end1 = time.time()
     plt.figure('Input- Output (1)')
@@ -472,7 +473,7 @@ if __name__ == '__main__':
     plt.plot(out_t)
     
     start2 = time.time()
-    out_f = simulation(sig.copy(), loudspeaker_sica_2,
+    out_f = simulation(sig.copy(), loudspeaker_sica('function'),
                        fs=fs, nl_order_max=3, hold_opt=1) 
     end2 = time.time()
     plt.figure('Input- Output (2)')
