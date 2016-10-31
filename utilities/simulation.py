@@ -101,6 +101,44 @@ loudspeaker_sica_2 = System(A_m, B_m, C_m, D_m, h_mpq_bool, h_npq_bool,
                           mpq_f_dict, npq_f_dict, sym_bool=True,
                           nl_mode='function')
 
+def loudspeaker_tristan():
+    """
+    Loudspeaker SICA Z000900 with Tristan's parameters
+    (recap_hp_sica.txt)
+    """
+    
+    ## Physical parameters ##
+    # Electric parameters
+    Bl = 2.9 # Electodynamic driving parameter [T.m]
+    Re = 5.7 # Electrical resistance of voice coil   [Ohm]
+    Le = 0.11e-3 # Coil inductance [H]
+    # Mechanical parameters
+    Mms = 1.9e-3; # Mechanical mass [kg]
+    Rms = 0.406 # Mechanical damping and drag force [kg.s-1]
+    k = [912.2789, 611.4570, 8e07] # Suspension stiffness [N.m-1]
+    
+    # State-space matrices
+    A_m = np.array([[-Re/Le, 0, -Bl/Le],
+                    [0, 0, 1],
+                    [Bl/Mms, -k[0]/Mms, -Rms/Mms]]) # State-to-state matrix
+    B_m = np.array([[1/Le], [0], [0]]); # Input-to-state matrix
+    C_m = np.array([[1, 0, 0]]) # State-to-output matrix  
+    D_m = np.zeros((1, 1)) # Input-to-output matrix    
+    
+    # Handles for fonction saying if Mpq and Npq functions are used
+    h_mpq_bool = (lambda p, q: (p<=3) & (q==0))
+    h_npq_bool = (lambda p, q: False)
+    
+    # Dictionnaries of Mpq & Npq tensors
+    m20 = np.zeros((3, 3, 3))
+    m20[2, 1, 1] = -k[1]/Mms
+    m30 = np.zeros((3, 3, 3, 3))
+    m30[2, 1, 1, 1] = -k[2]/Mms
+    mpq_dict = {(2, 0): m20, (3, 0): m30}
+    npq_dict = dict()
+    
+    return System(A_m, B_m, C_m, D_m, h_mpq_bool, h_npq_bool,
+                  mpq_dict, npq_dict, sym_bool=True)
 
 """ Simple system for simulation test. """
 test_system = System(np.array([[-1, 0], [1/2, 1/2]]), np.array([[1], [0]]),
