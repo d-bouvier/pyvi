@@ -1,13 +1,52 @@
 # -*- coding: utf-8 -*-
 """
+Summary
+-------
 Set of functions for the numerical simulation of a nonlinear systems given
 its state-space representation.
 
+
+
+Class
+-----
+System :
+    Defines physical systems by their state-space representations parameters.
+
+System parameters
+-----------------
+loudspeaker_sica :
+    Returns a System object corresponding to the SICA Z000900 loudspeaker.
+simple_system :
+    Returns a System object corresponding to a simple system for simulation
+    test.
+
+Multilinear combinatorics
+-------------------------
+make_list_pq :
+    Compute the list of multilinear pq-functions used in each order of
+    nonlinearity.
+elimination :
+    Eliminates the multilinear pq-functions unused in the system.
+state_combinatorics :
+    Compute, for each Mpq function at a given order n, the different sets of
+    state-homogenous-order that are the inputs of the multilinear pq-function.
+make_dict_pq_set :
+    Return the list of sets characterising multilinear pq-functions used in a
+    system.
+
+System simulation
+-----------------
+simulation :
+    Compute the simulation of a nonlinear system for a given input.
+
+Notes
+-----
 @author:    bouvier@ircam.fr
             Damien Bouvier, IRCAM, Paris
 
-Last modified on 26 Oct. 2016
+Last modified on 2 Nov. 2016
 Developed for Python 3.5.1
+
 """
 
 #==============================================================================
@@ -23,45 +62,120 @@ from scipy import linalg
 #==============================================================================
 
 class System:
-    
+    """Defines physical systems by their state-space representations parameters.
+
+    Attributes
+    ----------
+    A_m : numpy.ndarray
+        State-to-state matrix
+    B_m : numpy.ndarray
+        Input-to-state matrix
+    C_m : numpy.ndarray
+        State-to-output matrix
+    D_m : numpy.ndarray
+        Input-to-output matrix (feedtrhough matrix)
+    dim : dict
+        Dictionnaries with 3 entries giving respectively the dimension of:
+        - the input
+        - the state
+        - the output
+    is_mpq_used, is_npq_used : function (int, int: boolean)
+        Indicates, for given p & q, if the Mpq and Npq function is used in the
+        system.
+    mpq, npq : dict
+        Store multilinear Mpq and Npq functions, in one of the two following
+        forms:
+        - numpy.ndarray in 'tensor' mode;
+        - function (int, numpy.ndarray, ..., numpy.ndarray: numpy.ndarray) in
+        'function' mode.
+    sym_bool : boolean
+        Indicates if multilinear Mpq and Npq functions are symmetric.
+    mode : {'tensor', 'function'}
+        Define in which mode multilinear Mpq and Npq functions are stored.
+    """
+
     def __init__(self, A_m, B_m, C_m, D_m,
                  h_mpq_bool, h_npq_bool, mpq_dict, npq_dict,
                  sym_bool=False, mode='tensor'):
-        
+        """
+        Initialisation function for System object.
+
+        Parameters
+        ----------
+        A_m : numpy.ndarray
+            State-to-state matrix
+        B_m : numpy.ndarray
+            Input-to-state matrix
+        C_m : numpy.ndarray
+            State-to-output matrix
+        D_m : numpy.ndarray
+            Input-to-output matrix (feedtrhough matrix)
+        h_mpq_bool, npq : function (int, int: boolean)
+            Indicates, for given p & q, if the Mpq and Npq function is used in
+            the system.
+        mpq_dict, npq_dict : dict
+            Store multilinear Mpq and Npq functions, in one of the two following
+            forms:
+            - numpy.ndarray in 'tensor' mode;
+            - function (int, numpy.ndarray, ..., numpy.ndarray: numpy.ndarray)
+            in 'function' mode.
+        sym_bool : boolean, optional
+            Indicates if multilinear Mpq and Npq functions are symmetric.
+        mode : {'tensor', 'function'}, optional
+            Define in which mode multilinear Mpq and Npq functions are stored.
+
+        """
+
         # Initialize the linear part
-        self.A_m = A_m        
+        self.A_m = A_m
         self.B_m = B_m
         self.C_m = C_m
-        self.D_m = D_m        
+        self.D_m = D_m
 
         # Extrapolate system dimensions
         self.dim = {'input': B_m.shape[1],
                     'state': A_m.shape[0],
                     'output': C_m.shape[0]}
-        
+
         # Initialize the nonlinear part
         self.is_mpq_used = h_mpq_bool
         self.is_npq_used = h_npq_bool
         self.mpq = mpq_dict
         self.npq = npq_dict
-        
+
         self.sym_bool = sym_bool
         self.mode = mode
-        
+
+
 #==============================================================================
 # System parameters
 #==============================================================================
 
 def loudspeaker_sica(version='tristan', output='pos', mode='tensor'):
     """
-    Loudspeaker SICA Z000900
+    Function that create and returns the System object corresponding to the
+    SICA Z000900 loudspeaker
     (http://www.sica.it/media/Z000900C.pdf551d31b7b491e.pdf).
+
+    Parameters
+    ----------
+    version : {'tristan', 'CFA'}, optional
+        Version to simulate.
+    output : {'pos', 'current'}, optional
+        Defines the output of the system
+    mode : {'tensor', 'function'}, optional
+        Mode in which are stored Mpq and Npq multilinear functions
+
+    Returns
+    -------
+    Object of class System.
+
     """
 
     ## Physical parameters ##
     # Electric parameters
     if version == 'tristan': # Electodynamic driving parameter [T.m]
-        Bl = 2.9 
+        Bl = 2.9
     elif version == 'CFA':
         Bl = 2.99
     Re = 5.7 # Electrical resistance of voice coil   [Ohm]
@@ -76,8 +190,8 @@ def loudspeaker_sica(version='tristan', output='pos', mode='tensor'):
         Qms = 4.6;
         k = [1/Cms, -554420.0, 989026000] # Suspension stiffness [N.m-1]
         # Mechanical damping and drag force [kg.s-1]
-        Rms = np.sqrt(k[0] * Mms)/Qms;    
-    
+        Rms = np.sqrt(k[0] * Mms)/Qms;
+
     # State-space matrices
     A_m = np.array([[-Re/Le, 0, -Bl/Le],
                     [0, 0, 1],
@@ -88,8 +202,8 @@ def loudspeaker_sica(version='tristan', output='pos', mode='tensor'):
         C_m = np.array([[0, 1, 0]])
     elif output == 'current':
         C_m = np.array([[1, 0, 0]])
-    D_m = np.zeros((1, 1)) # Input-to-output matrix    
-    
+    D_m = np.zeros((1, 1)) # Input-to-output matrix
+
     # Handles for fonction saying if Mpq and Npq functions are used
     h_mpq_bool = (lambda p, q: (p<=3) & (q==0))
     h_npq_bool = (lambda p, q: False)
@@ -104,7 +218,7 @@ def loudspeaker_sica(version='tristan', output='pos', mode='tensor'):
         m20 = lambda x1, x2: np.array([0, 0, -k[1]/Mms * x1[1] * x2[1] ])
         m30 = lambda x1, x2, x3: np.array([0, 0, -k[2]/Mms * x1[1] * \
                                                  x2[1] * x3[1] ])
-    
+
     mpq_dict = {(2, 0): m20, (3, 0): m30}
     npq_dict = dict()
 
@@ -113,7 +227,13 @@ def loudspeaker_sica(version='tristan', output='pos', mode='tensor'):
 
 def simple_system():
     """
-    Simple system for simulation test.
+    Function that create and returns the System object corresponding to a
+    simple system for simulation test.
+
+    Returns
+    -------
+    Object of class System.
+
     """
     return System(np.array([[-1, 0], [1/2, 1/2]]), np.array([[1], [0]]),
                   np.array([[1, 0]]), np.zeros((1, 1)),
@@ -131,25 +251,26 @@ def simple_system():
 ## Auxiliary function for make_dict_pq_set ##
 def make_list_pq(nl_order_max):
     """
-    Compute the list of Mpq functions used in each order of nonlinearity.
-    
+    Compute the list of multilinear pq-functions used in each order of
+    nonlinearity.
+
     Parameters
     ----------
     nl_order_max : int
         Maximum order of nonlinearity
-    
+
     Returns
     -------
-    list_pq : ndarray
-        Array of shape (N, 3), where N is the number of sets, and each set
-        is [n, p, q]
+    list_pq : numpy.ndarray
+        Array of shape (N, 3), where N is the number of sets, each of the from
+        [n, p, q].
     """
-    
+
     # Initialisation
     list_pq = np.empty((0, 3), dtype=int)
     # Variable for reporting sets from the previous order
     nb_set_2_report = 0
-    
+
     # Loop on order of nonlinearity
     for n in range(2, nl_order_max+1):
         # Report previous sets and change the corresponding order
@@ -168,62 +289,66 @@ def make_list_pq(nl_order_max):
 
 def elimination(h_pq_bool, list_pq):
     """
-    Eliminates the unused Mpq in the system.
-    
+    Eliminates the multilinear pq-functions unused in the system.
+
     Parameters
     ----------
-    h_pq_bool : lambda function
-        Returns if the Mpq function is used for a given (p,q)
-    list_pq : ndarray
-        Array of all combination [n, p, q]
-    
+    h_pq_bool : function (int, int: boolean)
+        Indicates, for given p & q, if the multilinear pq-function is used in
+        the system.
+    list_pq : numpy.ndarray
+        Array of all combination [n, p, q].
+
     Outputs
     -------
-    list_pq : ndarray
-        Same array as the input array with unused lines deleted
+    list_pq : numpy.ndarray
+        Same array as the ``list_pq`` input array with unused lines deleted.
     """
 
     # Initialisation
     mask_pq = np.empty(list_pq.shape[0], dtype=bool)
-    # Loop on all set combination    
+    # Loop on all set combination
     for idx in range(list_pq.shape[0]):
         # In the following:
         # list_pq[idx,0] represents n
         # list_pq[idx,1] represents p
         # list_pq[idx,2] represents q
         mask_pq[idx] = h_pq_bool(list_pq[idx,1], list_pq[idx,2])
-    
+
     return list_pq[mask_pq]
 
 def state_combinatorics(list_pq, nl_order_max, print_opt=False):
     """
     Compute, for each Mpq function at a given order n, the different sets of
-    # state-homogenous-order that are the inputs of the Mpq function
-    # (all sets are created, even those equals in respect to the order, so, if
-    # the pq-function are symmetric, there is redudancy)
-    
+    state-homogenous-order that are the inputs of the multilinear pq-function.
+    All sets are created, even those identical in respect to the order (so, if
+    the multilinear pq-function are symmetric, there is redudancy).
+
     Parameters
     ----------
-    list_pq : ndarray
-        Array of all combination [n, p, q]
-    
+    list_pq : numpy.ndarray
+        Array of all combination [n, p, q].
+    print_opt : boolean, optional
+        Intermediate results printing option.
+
     Outputs
     -------
     pq_sets : dict
-        Dict of all sets [p, q, k] for each order n
+        Dict of all sets [p, q, k] for each order n, where k are the sets
+        state-homogenous-order.
     """
-    
+
     # Initialisation
     pq_sets = {}
     for n in range(2, nl_order_max+1):
         pq_sets[n] = []
-    
+
     for elt in list_pq:
         # In the following:
         # elt[0] represents n
         # elt[1] represents p
         # elt[2] represents q
-    
+
         # Maximum value possible for a state order
         k_sum = elt[0] - elt[2]
         # Value needed for the sum of all state order
@@ -240,49 +365,51 @@ def state_combinatorics(list_pq, nl_order_max, print_opt=False):
             # Check if the corresponds to the current (n,p,q) combination
             if sum(index) == k_sum:
                 pq_sets[elt[0]].append((elt[1], elt[2], index))
-    
+
     return pq_sets
-    
+
 
 def make_dict_pq_set(h_pq_bool, nl_order_max, print_opt=False):
     """
-    Return the list of sets characterising Mpq functions used in a system.
+    Return the list of sets characterising multilinear pq-functions used in a
+    system.
 
     Parameters
     ----------
-    h_mpq_bool : lambda function
-        Function that take two ints (p and q) and returns if the Mpq function
-        is used for a given (p,q)
+    h_pq_bool : function (int, int: boolean)
+        Indicates, for given p & q, if the multilinear pq-function is used in
+        the system.
     nl_order_max : int
-        Maximum order of nonlinearity
-    print_opt : boolean, optional (defaul=False)
-        Iintermediate results printing option
+        Maximum order of nonlinearity.
+    print_opt : boolean, optional
+        Intermediate results printing option.
 
     Returns
     -------
     mpq_sets : list
-        List of the [n, p, q, k] sets, where
-    n : int
-        Order of nonlinearity where the Mpq function is used
-    p : int
-        Number of state-entry for the Mpq multilinear function
-    q : int
-        Number of input-entry for the Mpq multilinear function
-    k : list (of length p)
-        Homogenous orders for the state-entry
+        List of the [n, p, q, k] sets, with:
+    - n : int
+        Order of nonlinearity where the multilinear pq-function is used.
+    - p : int
+        Number of state-entry for the multilinear pq-function.
+    - q : int
+        Number of input-entry for the multilinear pq-function.
+    - k : list (of length p)
+        Homogenous orders for the state-entries.
+
     """
-    
+
     ## Main ##
     list_pq = make_list_pq(nl_order_max)
     list_pq = elimination(h_pq_bool, list_pq)
     pq_sets = state_combinatorics(list_pq, nl_order_max, print_opt)
-    
+
     # Optional printing
-    if print_opt: 
+    if print_opt:
         print('')
         for elt in pq_sets:
             print(elt)
-    
+
     return pq_sets
 
 
@@ -290,17 +417,50 @@ def simulation(input_sig, system, fs=44100, nl_order_max=1, hold_opt=1,
                dtype='float', out='output'):
     """
     Compute the simulation of a nonlinear system for a given input.
+
+    Parameters
+    ----------
+    input_sig : numpy.ndarray
+        Input signal.
+    system : System
+        Parameters of the system to simulate.
+    fs : int, optional
+        Sampling frequency.
+    nl_order_max : int, optional
+        Maximum order of nonlinearity to take into account.
+    hold_opt : {0, 1}, optional
+        Type of sample-holder to simulate.
+    dtype : {'float', 'complex'}, optional
+        Data type of the input signal.
+    out : {'output', 'output_by_order', 'all'}, optional
+        Option to choose the output.
+
+    Returns
+    -------
+    output_sig : numpy.ndarray
+        Output of the system.
+    output_by_order : numpy.ndarray
+        Output of the system, separated in each order of nonlinearity.
+    state_by_order : numpy.ndarray
+        States of the system, separated in each order of nonlinearity.
+
+    In function of the ``out`` option, this function returns:
+        - ``output_sig`` (if ``out`` == 'output')
+        - ``output_by_order`` (if ``out`` == 'output_by_order')
+        - ``output_sig``, ``state_by_order``, and ``output_by_order`` (if \
+        ``out`` == 'all')
+
     """
-    
+
     ## Init ##
     # Compute parameters
     sig_len = max(input_sig.shape)
     sampling_time = 1/fs
     w_filter = linalg.expm(system.A_m * sampling_time)
-    A_inv = np.linalg.inv(system.A_m) 
-    
+    A_inv = np.linalg.inv(system.A_m)
+
     input_sig = input_sig.copy()
-    
+
     # Enforce good shape when dimension is 1
     if system.dim['input'] == 1:
         system.B_m.shape = (system.dim['state'], system.dim['input'])
@@ -314,7 +474,7 @@ def simulation(input_sig, system, fs=44100, nl_order_max=1, hold_opt=1,
                                dtype)
     # Put the input signal as order-zero state
     state_by_order[0,:,:] = np.dot(system.B_m, input_sig)
-    
+
     holder0_bias = np.dot(A_inv, w_filter - np.identity(system.dim['state']))
     if hold_opt == 1:
         holder1_bias = \
@@ -330,7 +490,7 @@ def simulation(input_sig, system, fs=44100, nl_order_max=1, hold_opt=1,
         system.mpq[0, 0] = np.identity(system.dim['state'])
     elif system.mode == 'function':
         system.mpq[0, 0] = lambda u: u
-    
+
     # Compute list of Npq combinations and tensors
     dict_npq_set = make_dict_pq_set(system.is_npq_used, nl_order_max)
     # Add the linear part (respectively the D and C matrices) to the npq dict
@@ -345,12 +505,12 @@ def simulation(input_sig, system, fs=44100, nl_order_max=1, hold_opt=1,
             system.npq[n, 0] = system.C_m
         elif system.mode == 'function':
             system.npq[n, 0] = lambda u: np.dot(system.C_m, u)
-    
+
     ## Dynamical equation - Numerical simulation ##
-    
+
     # Simulation in tensor mode for ADC converter with holder of order 0
     if (hold_opt == 0) & (system.mode == 'tensor'):
-        for k in np.arange(sig_len-1):     
+        for k in np.arange(sig_len-1):
             for n, elt in dict_mpq_set.items():
                 state_by_order[n,:,k+1] += np.dot(w_filter,
                                                   state_by_order[n,:,k])
@@ -383,7 +543,7 @@ def simulation(input_sig, system, fs=44100, nl_order_max=1, hold_opt=1,
                     state_by_order[n,:,k+1] += \
                         np.dot(holder1_bias, temp_array1) +\
                         np.dot(holder0_bias - holder1_bias, temp_array2)
-    
+
     # Simulation in tensor mode for ADC converter with holder of order 0
     if (hold_opt == 0) & (system.mode == 'function'):
         for k in np.arange(sig_len-1):
@@ -411,9 +571,9 @@ def simulation(input_sig, system, fs=44100, nl_order_max=1, hold_opt=1,
                     state_by_order[n,:,k+1] += \
                             np.dot(holder1_bias, temp_array1) +\
                             np.dot(holder0_bias - holder1_bias, temp_array2)
-    
+
     ## Output equation - Numerical simulation ##
-    
+
     if system.mode == 'tensor':
         for k in np.arange(sig_len):
             for n, elt in dict_npq_set.items():
@@ -425,7 +585,7 @@ def simulation(input_sig, system, fs=44100, nl_order_max=1, hold_opt=1,
                         temp_array = np.dot(temp_array,
                                             state_by_order[order,:,k])
                     output_by_order[n-1,:,k] += temp_array
-    
+
     elif system.mode == 'function':
         for k in np.arange(sig_len):
             for n, elt in dict_npq_set.items():
@@ -433,15 +593,15 @@ def simulation(input_sig, system, fs=44100, nl_order_max=1, hold_opt=1,
                     temp_arg = (input_sig[:, k],)*q + \
                                tuple(state_by_order[state_set, :, k])
                     output_by_order[n-1,:,k] += system.npq[(p, q)](*temp_arg)
-    
+
     output_sig = output_by_order.sum(0)
-    
+
     ## Function outputs ##
-    
+
     output_sig = output_sig.transpose()
     state_by_order = state_by_order[1:,:,:].transpose(2, 1, 0)
     output_by_order = output_by_order.transpose(2, 1, 0)
-    
+
     if out == 'output':
         return output_sig
     elif out == 'output_by_order':
