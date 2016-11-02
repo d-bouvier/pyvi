@@ -26,7 +26,7 @@ class System:
     
     def __init__(self, A_m, B_m, C_m, D_m,
                  h_mpq_bool, h_npq_bool, mpq_dict, npq_dict,
-                 sym_bool=False, nl_mode='tensor'):
+                 sym_bool=False, mode='tensor'):
         
         # Initialize the linear part
         self.A_m = A_m        
@@ -46,13 +46,13 @@ class System:
         self.npq = npq_dict
         
         self.sym_bool = sym_bool
-        self.nl_mode = nl_mode
+        self.mode = mode
         
 #==============================================================================
 # System parameters
 #==============================================================================
 
-def loudspeaker_sica(mode='tensor'):
+def loudspeaker_sica(version='tristan', output='pos', mode='tensor'):
     """
     Loudspeaker SICA Z000900
     (http://www.sica.it/media/Z000900C.pdf551d31b7b491e.pdf).
@@ -60,22 +60,34 @@ def loudspeaker_sica(mode='tensor'):
 
     ## Physical parameters ##
     # Electric parameters
-    Bl = 2.99 # Electodynamic driving parameter [T.m]
+    if version == 'tristan': # Electodynamic driving parameter [T.m]
+        Bl = 2.9 
+    elif version == 'CFA':
+        Bl = 2.99
     Re = 5.7 # Electrical resistance of voice coil   [Ohm]
-    Le  =   0.11e-3 # Coil inductance [H]
+    Le = 0.11e-3 # Coil inductance [H]
     # Mechanical parameters
     Mms = 1.9e-3; # Mechanical mass [kg]
-    Cms = 544e-6; # Mechanical compliance [m.N-1]
-    Qms = 4.6;
-    k = [1/Cms, -554420.0, 989026000] # Suspension stiffness [N.m-1]
-    Rms = np.sqrt(k[0] * Mms)/Qms; # Mechanical damping and drag force [kg.s-1]   
+    if version == 'tristan':
+        Rms = 0.406 # Mechanical damping and drag force [kg.s-1]
+        k = [912.2789, 611.4570, 8e07] # Suspension stiffness [N.m-1]
+    elif version == 'CFA':
+        Cms = 544e-6; # Mechanical compliance [m.N-1]
+        Qms = 4.6;
+        k = [1/Cms, -554420.0, 989026000] # Suspension stiffness [N.m-1]
+        # Mechanical damping and drag force [kg.s-1]
+        Rms = np.sqrt(k[0] * Mms)/Qms;    
     
     # State-space matrices
     A_m = np.array([[-Re/Le, 0, -Bl/Le],
                     [0, 0, 1],
                     [Bl/Mms, -k[0]/Mms, -Rms/Mms]]) # State-to-state matrix
     B_m = np.array([[1/Le], [0], [0]]); # Input-to-state matrix
-    C_m = np.array([[1, 0, 0]]) # State-to-output matrix  
+    # State-to-output matrix
+    if output == 'pos':
+        C_m = np.array([[0, 1, 0]])
+    elif output == 'current':
+        C_m = np.array([[1, 0, 0]])
     D_m = np.zeros((1, 1)) # Input-to-output matrix    
     
     # Handles for fonction saying if Mpq and Npq functions are used
@@ -97,48 +109,7 @@ def loudspeaker_sica(mode='tensor'):
     npq_dict = dict()
 
     return System(A_m, B_m, C_m, D_m, h_mpq_bool, h_npq_bool,
-                  mpq_dict, npq_dict, sym_bool=True, nl_mode=mode)
-
-
-def loudspeaker_tristan():
-    """
-    Loudspeaker SICA Z000900 with Tristan's parameters
-    (recap_hp_sica.txt)
-    """
-    
-    ## Physical parameters ##
-    # Electric parameters
-    Bl = 2.9 # Electodynamic driving parameter [T.m]
-    Re = 5.7 # Electrical resistance of voice coil   [Ohm]
-    Le = 0.11e-3 # Coil inductance [H]
-    # Mechanical parameters
-    Mms = 1.9e-3; # Mechanical mass [kg]
-    Rms = 0.406 # Mechanical damping and drag force [kg.s-1]
-    k = [912.2789, 611.4570, 8e07] # Suspension stiffness [N.m-1]
-    
-    # State-space matrices
-    A_m = np.array([[-Re/Le, 0, -Bl/Le],
-                    [0, 0, 1],
-                    [Bl/Mms, -k[0]/Mms, -Rms/Mms]]) # State-to-state matrix
-    B_m = np.array([[1/Le], [0], [0]]); # Input-to-state matrix
-    C_m = np.array([[1, 0, 0]]) # State-to-output matrix  
-    D_m = np.zeros((1, 1)) # Input-to-output matrix    
-    
-    # Handles for fonction saying if Mpq and Npq functions are used
-    h_mpq_bool = (lambda p, q: (p<=3) & (q==0))
-    h_npq_bool = (lambda p, q: False)
-    
-    # Dictionnaries of Mpq & Npq tensors
-    m20 = np.zeros((3, 3, 3))
-    m20[2, 1, 1] = -k[1]/Mms
-    m30 = np.zeros((3, 3, 3, 3))
-    m30[2, 1, 1, 1] = -k[2]/Mms
-    mpq_dict = {(2, 0): m20, (3, 0): m30}
-    npq_dict = dict()
-    
-    return System(A_m, B_m, C_m, D_m, h_mpq_bool, h_npq_bool,
-                  mpq_dict, npq_dict, sym_bool=True)
-
+                  mpq_dict, npq_dict, sym_bool=True, mode=mode)
 
 def simple_system():
     """
@@ -150,7 +121,8 @@ def simple_system():
                   {(2, 0): (lambda x1, x2: np.array([0, x1[0] * x2[0]])),
                    (1, 1): (lambda u, x: np.array([0, u * x[0]])),
                    (0, 2): (lambda u1, u2: np.array([0, u1 * u2]))}, dict(),
-                  sym_bool=True, nl_mode='function')
+                  sym_bool=True, mode='function')
+
 
 #==============================================================================
 # Functions
@@ -354,30 +326,30 @@ def simulation(input_sig, system, fs=44100, nl_order_max=1, hold_opt=1,
     dict_mpq_set = make_dict_pq_set(system.is_mpq_used, nl_order_max)
     # Add the linear part (the B matrix) to the mpq dict
     dict_mpq_set[1] = [(0, 0, [0])]
-    if system.nl_mode == 'tensor':
+    if system.mode == 'tensor':
         system.mpq[0, 0] = np.identity(system.dim['state'])
-    elif system.nl_mode == 'function':
+    elif system.mode == 'function':
         system.mpq[0, 0] = lambda u: u
     
     # Compute list of Npq combinations and tensors
     dict_npq_set = make_dict_pq_set(system.is_npq_used, nl_order_max)
     # Add the linear part (respectively the D and C matrices) to the npq dict
     dict_npq_set[1] = [(0, 1, [])]
-    if system.nl_mode == 'tensor':
+    if system.mode == 'tensor':
         system.npq[0, 1] = system.D_m
-    elif system.nl_mode == 'function':
+    elif system.mode == 'function':
         system.npq[0, 1] = lambda u: np.dot(system.D_m, u)
     for n in range(1, nl_order_max+1):
         dict_npq_set[n].insert(0, (n, 0, [n]))
-        if system.nl_mode == 'tensor':
+        if system.mode == 'tensor':
             system.npq[n, 0] = system.C_m
-        elif system.nl_mode == 'function':
+        elif system.mode == 'function':
             system.npq[n, 0] = lambda u: np.dot(system.C_m, u)
     
     ## Dynamical equation - Numerical simulation ##
     
     # Simulation in tensor mode for ADC converter with holder of order 0
-    if (hold_opt == 0) & (system.nl_mode == 'tensor'):
+    if (hold_opt == 0) & (system.mode == 'tensor'):
         for k in np.arange(sig_len-1):     
             for n, elt in dict_mpq_set.items():
                 state_by_order[n,:,k+1] += np.dot(w_filter,
@@ -392,7 +364,7 @@ def simulation(input_sig, system, fs=44100, nl_order_max=1, hold_opt=1,
                     state_by_order[n,:,k+1] += np.dot(holder0_bias, temp_array)
 
     # Simulation in tensor mode for ADC converter with holder of order 1
-    elif (hold_opt == 1) & (system.nl_mode == 'tensor'):
+    elif (hold_opt == 1) & (system.mode == 'tensor'):
         for k in np.arange(sig_len-1):
             for n, elt in dict_mpq_set.items():
                 state_by_order[n,:,k+1] += np.dot(w_filter,
@@ -413,7 +385,7 @@ def simulation(input_sig, system, fs=44100, nl_order_max=1, hold_opt=1,
                         np.dot(holder0_bias - holder1_bias, temp_array2)
     
     # Simulation in tensor mode for ADC converter with holder of order 0
-    if (hold_opt == 0) & (system.nl_mode == 'function'):
+    if (hold_opt == 0) & (system.mode == 'function'):
         for k in np.arange(sig_len-1):
             for n, elt in dict_mpq_set.items():
                 state_by_order[n,:,k+1] += np.dot(w_filter,
@@ -424,7 +396,7 @@ def simulation(input_sig, system, fs=44100, nl_order_max=1, hold_opt=1,
                     temp_array = system.mpq[(p, q)](*temp_arg)
                     state_by_order[n,:,k+1] += np.dot(holder0_bias, temp_array)
     # Simulation in tensor mode for ADC converter with holder of order 1
-    elif (hold_opt == 1) & (system.nl_mode == 'function'):
+    elif (hold_opt == 1) & (system.mode == 'function'):
         for k in np.arange(sig_len-1):
             for n, elt in dict_mpq_set.items():
                 state_by_order[n,:,k+1] += np.dot(w_filter,
@@ -442,7 +414,7 @@ def simulation(input_sig, system, fs=44100, nl_order_max=1, hold_opt=1,
     
     ## Output equation - Numerical simulation ##
     
-    if system.nl_mode == 'tensor':
+    if system.mode == 'tensor':
         for k in np.arange(sig_len):
             for n, elt in dict_npq_set.items():
                 for p, q, state_set in elt:
@@ -454,7 +426,7 @@ def simulation(input_sig, system, fs=44100, nl_order_max=1, hold_opt=1,
                                             state_by_order[order,:,k])
                     output_by_order[n-1,:,k] += temp_array
     
-    elif system.nl_mode == 'function':
+    elif system.mode == 'function':
         for k in np.arange(sig_len):
             for n, elt in dict_npq_set.items():
                 for p, q, state_set in elt:
@@ -503,7 +475,7 @@ if __name__ == '__main__':
 
     # Simulation
     start1 = time.time()
-    out_t = simulation(sig.copy(), loudspeaker_sica('tensor'),
+    out_t = simulation(sig, loudspeaker_sica(mode='tensor'),
                        fs=fs, nl_order_max=3, hold_opt=1)
     end1 = time.time()
     plt.figure('Input- Output (1)')
@@ -513,7 +485,7 @@ if __name__ == '__main__':
     plt.plot(out_t)
     
     start2 = time.time()
-    out_f = simulation(sig.copy(), loudspeaker_sica('function'),
+    out_f = simulation(sig, loudspeaker_sica(mode='function'),
                        fs=fs, nl_order_max=3, hold_opt=1) 
     end2 = time.time()
     plt.figure('Input- Output (2)')
