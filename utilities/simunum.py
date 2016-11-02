@@ -414,7 +414,7 @@ def make_dict_pq_set(h_pq_bool, nl_order_max, print_opt=False):
 
 
 def simulation(input_sig, system, fs=44100, nl_order_max=1, hold_opt=1,
-               dtype='float', out='output'):
+               out='output'):
     """
     Compute the simulation of a nonlinear system for a given input.
 
@@ -430,8 +430,6 @@ def simulation(input_sig, system, fs=44100, nl_order_max=1, hold_opt=1,
         Maximum order of nonlinearity to take into account.
     hold_opt : {0, 1}, optional
         Type of sample-holder to simulate.
-    dtype : {'float', 'complex'}, optional
-        Data type of the input signal.
     out : {'output', 'output_by_order', 'all'}, optional
         Option to choose the output.
 
@@ -459,6 +457,7 @@ def simulation(input_sig, system, fs=44100, nl_order_max=1, hold_opt=1,
     w_filter = linalg.expm(system.A_m * sampling_time)
     A_inv = np.linalg.inv(system.A_m)
 
+    dtype = input_sig.dtype
     input_sig = input_sig.copy()
 
     # Enforce good shape when dimension is 1
@@ -514,11 +513,11 @@ def simulation(input_sig, system, fs=44100, nl_order_max=1, hold_opt=1,
             for n, elt in dict_mpq_set.items():
                 state_by_order[n,:,k+1] += np.dot(w_filter,
                                                   state_by_order[n,:,k])
-                for p, q, state_set in elt:
+                for p, q, order_set in elt:
                     temp_array = system.mpq[(p, q)].copy()
                     for u in range(q):
                         temp_array = np.dot(temp_array, input_sig[:,k])
-                    for order in state_set:
+                    for order in order_set:
                         temp_array = np.dot(temp_array,
                                         state_by_order[order,:,k])
                     state_by_order[n,:,k+1] += np.dot(holder0_bias, temp_array)
@@ -529,13 +528,13 @@ def simulation(input_sig, system, fs=44100, nl_order_max=1, hold_opt=1,
             for n, elt in dict_mpq_set.items():
                 state_by_order[n,:,k+1] += np.dot(w_filter,
                                                   state_by_order[n,:,k])
-                for p, q, state_set in elt:
+                for p, q, order_set in elt:
                     temp_array1 = system.mpq[(p, q)].copy()
                     temp_array2 = system.mpq[(p, q)].copy()
                     for u in range(q):
                         temp_array1 = np.dot(temp_array1, input_sig[:,k])
                         temp_array2 = np.dot(temp_array2, input_sig[:,k+1])
-                    for order in state_set:
+                    for order in order_set:
                         temp_array1 = np.dot(temp_array1,
                                             state_by_order[order,:,k])
                         temp_array2 = np.dot(temp_array2,
@@ -550,9 +549,9 @@ def simulation(input_sig, system, fs=44100, nl_order_max=1, hold_opt=1,
             for n, elt in dict_mpq_set.items():
                 state_by_order[n,:,k+1] += np.dot(w_filter,
                                                   state_by_order[n,:,k])
-                for p, q, state_set in elt:
+                for p, q, order_set in elt:
                     temp_arg = (input_sig[:, k],)*q + \
-                               tuple(state_by_order[state_set, :, k])
+                               tuple(state_by_order[order_set, :, k])
                     temp_array = system.mpq[(p, q)](*temp_arg)
                     state_by_order[n,:,k+1] += np.dot(holder0_bias, temp_array)
     # Simulation in tensor mode for ADC converter with holder of order 1
@@ -561,11 +560,11 @@ def simulation(input_sig, system, fs=44100, nl_order_max=1, hold_opt=1,
             for n, elt in dict_mpq_set.items():
                 state_by_order[n,:,k+1] += np.dot(w_filter,
                                                   state_by_order[n,:,k])
-                for p, q, state_set in elt:
+                for p, q, order_set in elt:
                     temp_arg1 = (input_sig[:, k],)*q + \
-                                tuple(state_by_order[state_set, :, k])
+                                tuple(state_by_order[order_set, :, k])
                     temp_arg2 = (input_sig[:, k+1],)*q + \
-                                tuple(state_by_order[state_set, :, k+1])
+                                tuple(state_by_order[order_set, :, k+1])
                     temp_array1 = system.mpq[(p, q)](*temp_arg1)
                     temp_array2 = system.mpq[(p, q)](*temp_arg2)
                     state_by_order[n,:,k+1] += \
@@ -577,11 +576,11 @@ def simulation(input_sig, system, fs=44100, nl_order_max=1, hold_opt=1,
     if system.mode == 'tensor':
         for k in np.arange(sig_len):
             for n, elt in dict_npq_set.items():
-                for p, q, state_set in elt:
+                for p, q, order_set in elt:
                     temp_array = system.npq[(p, q)].copy()
                     for u in range(q):
                         temp_array = np.dot(temp_array, input_sig[:,k])
-                    for order in state_set:
+                    for order in order_set:
                         temp_array = np.dot(temp_array,
                                             state_by_order[order,:,k])
                     output_by_order[n-1,:,k] += temp_array
@@ -589,9 +588,9 @@ def simulation(input_sig, system, fs=44100, nl_order_max=1, hold_opt=1,
     elif system.mode == 'function':
         for k in np.arange(sig_len):
             for n, elt in dict_npq_set.items():
-                for p, q, state_set in elt:
+                for p, q, order_set in elt:
                     temp_arg = (input_sig[:, k],)*q + \
-                               tuple(state_by_order[state_set, :, k])
+                               tuple(state_by_order[order_set, :, k])
                     output_by_order[n-1,:,k] += system.npq[(p, q)](*temp_arg)
 
     output_sig = output_by_order.sum(0)
