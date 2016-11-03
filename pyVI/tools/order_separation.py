@@ -15,6 +15,8 @@ Developed for Python 3.5.1
 
 import numpy as np
 from pyvi.simulation.simulation import simulation
+from pyvi.tools.paths import save_data_pickle, save_data_numpy
+
 
 #==============================================================================
 # Functions
@@ -73,7 +75,7 @@ def safe_db(num, den):
 def simu_collection(input_sig, coll_factor, system, fs=44100, N=1, hold_opt=1,
                     dtype='float'):
     """
-    Make collection of simulation with inouts derived from a based signal.
+    Make collection of simulation with inputs derived from a based signal.
     """
 
     input_one_dimensional = system.dim['input'] == 1
@@ -102,5 +104,18 @@ def simu_collection(input_sig, coll_factor, system, fs=44100, N=1, hold_opt=1,
         else:
             output[:, :, idx] = out
 
-    return output, out_by_order
+    folders = ('order_separation', 'simu_data')
+    save_data_pickle({'constrast_factor': coll_factor,
+                      'number_test': K,
+                      'fs': fs,
+                      'nonlinear_order_max': N,
+                      'sampler_holder_option': hold_opt},
+                     '{}_config', folders)
+    save_data_numpy({'input': input_sig,
+                     'output': out_by_order.sum(1),
+                     'output_by_order': out_by_order,
+                     'output_collection': output,
+                     'time': [n / fs for n in range(len_sig)]},
+                    '{}_data', folders)
 
+    return output, out_by_order

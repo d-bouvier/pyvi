@@ -60,6 +60,7 @@ def folder_str(folder):
         folder_path += os.sep + folder
         folder_check(folder_path)
 
+    return folder_path
 
 def save_data_pickle(param_dict, name, folder):
     """
