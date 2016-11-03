@@ -30,7 +30,7 @@ import numpy as np
 # System parameters
 #==============================================================================
 
-def loudspeaker_sica(version='tristan', output='pos', mode='tensor'):
+def loudspeaker_sica(version='tristan', output='pos', mode='function'):
     """
     Function that create and returns the System object corresponding to the
     SICA Z000900 loudspeaker
