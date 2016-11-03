@@ -14,7 +14,7 @@ Developed for Python 3.5.1
 #==============================================================================
 
 import numpy as np
-
+from pyvi.simulation.simulation import simulation
 
 #==============================================================================
 # Functions
@@ -68,4 +68,39 @@ def safe_db(num, den):
     if den == 0:
         return np.Inf
     return 10 * np.log10(num / den)
+
+
+def simu_collection(input_sig, coll_factor, system, fs=44100, N=1, hold_opt=1,
+                    dtype='float'):
+    """
+    Make collection of simulation with inouts derived from a based signal.
+    """
+
+    input_one_dimensional = system.dim['input'] == 1
+
+    K = len(coll_factor)
+    if input_one_dimensional:
+        len_sig = input_sig.shape[0]
+    else:
+        len_sig = input_sig.shape[1]
+
+    out_by_order = simulation(input_sig, system, fs=fs, nl_order_max=N,
+                              hold_opt=hold_opt, out='output_by_order')
+    out_by_order.dtype = dtype
+
+    if input_one_dimensional:
+        output = np.zeros((len_sig, K), dtype=dtype)
+    else:
+        output = np.zeros((len_sig, system.dim['input'], K), dtype=dtype)
+
+    for idx in range(K):
+        out = simulation(input_sig * coll_factor[idx], system, fs=fs,
+                         nl_order_max=N, hold_opt=hold_opt, out='out')
+
+        if input_one_dimensional:
+            output[:, idx] = out[:, 0]
+        else:
+            output[:, :, idx] = out
+
+    return output, out_by_order
 
