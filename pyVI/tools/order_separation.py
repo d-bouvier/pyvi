@@ -94,6 +94,7 @@ def simu_collection(input_sig, coll_factor, system, fs=44100, N=1, hold_opt=1,
     out_by_order.dtype = dtype
 
     if input_one_dimensional:
+        out_by_order = out_by_order[:, 0, :]
         output = np.zeros((len_sig, K), dtype=dtype)
     else:
         output = np.zeros((len_sig, system.dim['input'], K), dtype=dtype)
