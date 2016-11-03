@@ -6,19 +6,7 @@ Set of functions for the numerical simulation of a nonlinear systems given
 its state-space representation.
 
 
-Multilinear combinatorics
--------------------------
-make_list_pq :
-    Compute the list of multilinear pq-functions used in each order of
-    nonlinearity.
-elimination :
-    Eliminates the multilinear pq-functions unused in the system.
-state_combinatorics :
-    Compute, for each Mpq function at a given order n, the different sets of
-    state-homogenous-order that are the inputs of the multilinear pq-function.
-make_dict_pq_set :
-    Return the list of sets characterising multilinear pq-functions used in a
-    system.
+
 
 System simulation
 -----------------
@@ -41,176 +29,12 @@ Developed for Python 3.5.1
 
 import numpy as np
 from scipy import linalg
+from pyVI.tools.combinatorics import make_dict_pq_set
 
 
 #==============================================================================
 # Functions
 #==============================================================================
-
-## Auxiliary function for make_dict_pq_set ##
-def make_list_pq(nl_order_max):
-    """
-    Compute the list of multilinear pq-functions used in each order of
-    nonlinearity.
-
-    Parameters
-    ----------
-    nl_order_max : int
-        Maximum order of nonlinearity
-
-    Returns
-    -------
-    list_pq : numpy.ndarray
-        Array of shape (N, 3), where N is the number of sets, each of the from
-        [n, p, q].
-    """
-
-    # Initialisation
-    list_pq = np.empty((0, 3), dtype=int)
-    # Variable for reporting sets from the previous order
-    nb_set_2_report = 0
-
-    # Loop on order of nonlinearity
-    for n in range(2, nl_order_max+1):
-        # Report previous sets and change the corresponding order
-        list_pq = np.concatenate((list_pq, list_pq[-nb_set_2_report-1:-1,:]))
-        list_pq[-nb_set_2_report:,0] += 1
-        # Loop on all new combination (p,q)
-        for q in range(n+1):
-            array_tmp = np.array([n, n-q, q])
-            array_tmp.shape = (1, 3)
-            list_pq = np.concatenate((list_pq, array_tmp))
-            # We don't report the use of the pq-function for p = 0
-            if not (n == q):
-                nb_set_2_report += 1
-
-    return list_pq
-
-def elimination(h_pq_bool, list_pq):
-    """
-    Eliminates the multilinear pq-functions unused in the system.
-
-    Parameters
-    ----------
-    h_pq_bool : function (int, int: boolean)
-        Indicates, for given p & q, if the multilinear pq-function is used in
-        the system.
-    list_pq : numpy.ndarray
-        Array of all combination [n, p, q].
-
-    Outputs
-    -------
-    list_pq : numpy.ndarray
-        Same array as the ``list_pq`` input array with unused lines deleted.
-    """
-
-    # Initialisation
-    mask_pq = np.empty(list_pq.shape[0], dtype=bool)
-    # Loop on all set combination
-    for idx in range(list_pq.shape[0]):
-        # In the following:
-        # list_pq[idx,0] represents n
-        # list_pq[idx,1] represents p
-        # list_pq[idx,2] represents q
-        mask_pq[idx] = h_pq_bool(list_pq[idx,1], list_pq[idx,2])
-
-    return list_pq[mask_pq]
-
-def state_combinatorics(list_pq, nl_order_max, print_opt=False):
-    """
-    Compute, for each Mpq function at a given order n, the different sets of
-    state-homogenous-order that are the inputs of the multilinear pq-function.
-    All sets are created, even those identical in respect to the order (so, if
-    the multilinear pq-function are symmetric, there is redudancy).
-
-    Parameters
-    ----------
-    list_pq : numpy.ndarray
-        Array of all combination [n, p, q].
-    print_opt : boolean, optional
-        Intermediate results printing option.
-
-    Outputs
-    -------
-    pq_sets : dict
-        Dict of all sets [p, q, k] for each order n, where k are the sets
-        state-homogenous-order.
-    """
-
-    # Initialisation
-    pq_sets = {}
-    for n in range(2, nl_order_max+1):
-        pq_sets[n] = []
-
-    for elt in list_pq:
-        # In the following:
-        # elt[0] represents n
-        # elt[1] represents p
-        # elt[2] represents q
-
-        # Maximum value possible for a state order
-        k_sum = elt[0] - elt[2]
-        # Value needed for the sum of all state order
-        k_max = k_sum - elt[1] + 1
-        if print_opt: # Optional printing
-            print('(n, p, q) = {}'.format(elt))
-        # Loop on all possible sets
-        for index in np.ndindex( (k_max,)*elt[1] ):
-            index = list(map(sum, zip(index, (1,)*elt[1])))
-            # Optional printing
-            if print_opt:
-                print('        Set: {}, Used = {}'.format(index,
-                      sum(index) == k_sum))
-            # Check if the corresponds to the current (n,p,q) combination
-            if sum(index) == k_sum:
-                pq_sets[elt[0]].append((elt[1], elt[2], index))
-
-    return pq_sets
-
-
-def make_dict_pq_set(h_pq_bool, nl_order_max, print_opt=False):
-    """
-    Return the list of sets characterising multilinear pq-functions used in a
-    system.
-
-    Parameters
-    ----------
-    h_pq_bool : function (int, int: boolean)
-        Indicates, for given p & q, if the multilinear pq-function is used in
-        the system.
-    nl_order_max : int
-        Maximum order of nonlinearity.
-    print_opt : boolean, optional
-        Intermediate results printing option.
-
-    Returns
-    -------
-    mpq_sets : list
-        List of the [n, p, q, k] sets, with:
-    - n : int
-        Order of nonlinearity where the multilinear pq-function is used.
-    - p : int
-        Number of state-entry for the multilinear pq-function.
-    - q : int
-        Number of input-entry for the multilinear pq-function.
-    - k : list (of length p)
-        Homogenous orders for the state-entries.
-
-    """
-
-    ## Main ##
-    list_pq = make_list_pq(nl_order_max)
-    list_pq = elimination(h_pq_bool, list_pq)
-    pq_sets = state_combinatorics(list_pq, nl_order_max, print_opt)
-
-    # Optional printing
-    if print_opt:
-        print('')
-        for elt in pq_sets:
-            print(elt)
-
-    return pq_sets
-
 
 def simulation(input_sig, system, fs=44100, nl_order_max=1, hold_opt=1,
                out='output'):
