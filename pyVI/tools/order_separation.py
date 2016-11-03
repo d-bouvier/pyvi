@@ -38,8 +38,8 @@ def separation_measure(signals_ref, signals_est):
         Projection of estimated signal on the reference signals.
         """
         A = np.corrcoef(signals_ref, y=signal_est )
-        G = A[0:3, 0:3]
-        D = A[3, 0:3]
+        G = A[0:nb_src, 0:nb_src]
+        D = A[nb_src, 0:nb_src]
         try:
             C = np.linalg.solve(G, D).reshape(nb_src, order='F')
         except np.linalg.linalg.LinAlgError:
@@ -53,12 +53,13 @@ def separation_measure(signals_ref, signals_est):
     for i in range(nb_src):
         interference_err = sig_projection(signals_est[i]) - signals_ref[i]
         artificial_err = - signals_ref[i] - interference_err
-        sdr.append(safe_db(np.sum(signals_ref[i]**2),
-                           np.sum((interference_err + artificial_err)**2)))
-        sir.append(safe_db(np.sum(signals_ref[i]**2),
-                           np.sum((interference_err)**2)))
-        sar.append(safe_db(np.sum((signals_ref[i] + interference_err)**2),
-                           np.sum((artificial_err)**2)))
+        sdr.append(safe_db(np.sum(np.abs(signals_ref[i])**2),
+                           np.sum(np.abs(interference_err + \
+                                                 artificial_err)**2)))
+        sir.append(safe_db(np.sum(np.abs(signals_ref[i])**2),
+                           np.sum(np.abs(interference_err)**2)))
+        sar.append(safe_db(np.sum(np.abs(signals_ref[i] + interference_err)**2),
+                           np.sum(np.abs(artificial_err)**2)))
 
     return (sdr, sir, sar)
 
