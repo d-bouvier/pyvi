@@ -42,28 +42,43 @@ def folder_check(folder_abs_path):
     if not os.path.isdir(folder_abs_path):
         os.mkdir(folder_abs_path)
 
-def name_save_files(folder, name):
+
+def folder_str(folder):
     """
-    Returns two string with date and label for data saving.
+    Check existence or create folder for a given string name or tuple of
+    string name.
     """
 
-    folder_check(__data_directory__,)
-    folder_check(os.path.abspath(os.path.join(__data_directory__, folder)))
+    folder_path = __data_directory__
+    folder_check(folder_path)
 
+    if type(folder) != str:
+        for elt in folder:
+            folder_path += os.sep + elt
+            folder_check(folder_path)
+    else:
+        folder_path += os.sep + folder
+        folder_check(folder_path)
+
+
+def save_data_pickle(param_dict, name, folder):
+    """
+    Save data using pickle.
+    """
+
+    folder_path = folder_str(folder)
     date_str = datetime.datetime.now().strftime('%Y_%m_%d_%Hh%M')
-    common_name = name + '_' + date_str
-    name1 = common_name + '_config'
-    name2 = common_name + '_data.npz'
-    str1 = os.path.abspath(os.path.join(__data_directory__, folder, name1))
-    str2 = os.path.abspath(os.path.join(__data_directory__, folder, name2))
-    return str1, str2
+    full_path = folder_path + os.sep + name.format(date_str)
 
-def save_data(folder, name, param_dict, array_dict):
+    pickle.dump(param_dict, open(full_path, 'wb'))
+
+def save_data_numpy(array_dict, name, folder):
     """
-    Save parameters data and numpy arrays into 2 different files.
+    Save data using numpy savez function.
     """
 
-    str1, str2 = name_save_files(folder, name)
+    folder_path = folder_str(folder)
+    date_str = datetime.datetime.now().strftime('%Y_%m_%d_%Hh%M')
+    full_path = folder_path + os.sep + name.format(date_str) + '.npz'
 
-    pickle.dump(param_dict, open(str1, 'wb'))
-    savez(str2, **array_dict)
+    savez(full_path, **array_dict)
