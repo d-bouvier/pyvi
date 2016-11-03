@@ -73,10 +73,13 @@ def safe_db(num, den):
 
 
 def simu_collection(input_sig, coll_factor, system, fs=44100, N=1, hold_opt=1,
-                    dtype='float'):
+                    dtype='float', name=''):
     """
     Make collection of simulation with inputs derived from a based signal.
     """
+
+    if name != '':
+        name += '_'
 
     input_one_dimensional = system.dim['input'] == 1
 
@@ -110,12 +113,12 @@ def simu_collection(input_sig, coll_factor, system, fs=44100, N=1, hold_opt=1,
                       'fs': fs,
                       'nonlinear_order_max': N,
                       'sampler_holder_option': hold_opt},
-                     '{}_config', folders)
+                     name + '{}_config', folders)
     save_data_numpy({'input': input_sig,
                      'output': out_by_order.sum(1),
                      'output_by_order': out_by_order,
                      'output_collection': output,
                      'time': [n / fs for n in range(len_sig)]},
-                    '{}_data', folders)
+                    name + '{}_data', folders)
 
     return output, out_by_order
