@@ -51,8 +51,8 @@ def name_save_files(folder, name):
 
     date_str = datetime.datetime.now().strftime('%Y_%m_%d_%Hh%M')
     common_name = name + '_' + date_str
-    name1 = common_name + '.config'
-    name2 = common_name + '.npz'
+    name1 = common_name + '_config'
+    name2 = common_name + '_data.npz'
     str1 = os.path.abspath(os.path.join(__data_directory__, folder, name1))
     str2 = os.path.abspath(os.path.join(__data_directory__, folder, name2))
     return str1, str2
