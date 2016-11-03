@@ -5,7 +5,7 @@ Toolbox for nonlinear order separation.
 @author: bouvier (bouvier@ircam.fr)
          Damien Bouvier, IRCAM, Paris
 
-Last modified on 31 Oct. 2016
+Last modified on 3 Nov. 2016
 Developed for Python 3.5.1
 """
 
@@ -14,6 +14,7 @@ Developed for Python 3.5.1
 #==============================================================================
 
 import numpy as np
+
 
 #==============================================================================
 # Functions
@@ -42,7 +43,7 @@ def separation_measure(signals_ref, signals_est):
         except np.linalg.linalg.LinAlgError:
             C = np.linalg.lstsq(G, D)[0].reshape(nb_src, order='F')
         return np.dot(C, signals_ref)
-    
+
     sdr = []
     sir = []
     sar = []

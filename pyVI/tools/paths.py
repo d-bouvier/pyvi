@@ -25,8 +25,9 @@ from numpy import savez
 # Global variables
 #==============================================================================
 
-__data_directory__ = os.path.abspath(os.path.join(os.path.dirname( \
-                        os.path.dirname(os.path.realpath(__file__))), 'data'))
+__pivy_directory__ = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
+__parent_directory__ = os.path.abspath(os.path.dirname(__pivy_directory__))
+__data_directory__ = os.path.abspath(os.path.join(__parent_directory__, 'data'))
 
 
 #==============================================================================
