@@ -38,7 +38,6 @@ def folder_check(folder_abs_path):
     Check if the given path indicates a folder, and creates it if not.
     """
 
-    print(folder_abs_path)
     if not os.path.isdir(folder_abs_path):
         os.mkdir(folder_abs_path)
 
