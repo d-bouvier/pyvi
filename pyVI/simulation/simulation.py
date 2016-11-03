@@ -5,9 +5,6 @@ Summary
 Set of functions for the numerical simulation of a nonlinear systems given
 its state-space representation.
 
-
-
-
 System simulation
 -----------------
 simulation :
@@ -29,7 +26,7 @@ Developed for Python 3.5.1
 
 import numpy as np
 from scipy import linalg
-from pyVI.tools.combinatorics import make_dict_pq_set
+from pyvi.tools.combinatorics import make_dict_pq_set
 
 
 #==============================================================================
@@ -240,7 +237,7 @@ if __name__ == '__main__':
     Main script for testing.
     """
 
-    from pyVI.statespace.statespace import loudspeaker_sica
+    from pyvi.systems import loudspeaker_sica
     from matplotlib import pyplot as plt
     import time
 

@@ -19,7 +19,7 @@ from abc import abstractmethod
 # Class
 #==============================================================================
 
-class System:
+class SystemObject:
     """Object-oriented symbolic representation of a system.
 
     This class represents a system (linear or nonlinear) using either its

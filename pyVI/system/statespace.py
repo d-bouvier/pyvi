@@ -13,14 +13,6 @@ StateSpace :
 SymbolicStateSpace :
     Characterize a system by its symbolic state-space representation.
 
-System parameters
------------------
-loudspeaker_sica :
-    Returns a System object corresponding to the SICA Z000900 loudspeaker.
-simple_system :
-    Returns a System object corresponding to a simple system for simulation
-    test.
-
 Notes
 -----
 @author: bouvier (bouvier@ircam.fr)
@@ -34,7 +26,7 @@ Developed for Python 3.5.1
 # Importations
 #==============================================================================
 
-from pyVI.tools.tools import Style
+from pyvi.tools.utilities import Style
 from abc import abstractmethod
 import sys as sys
 import sympy as sp
