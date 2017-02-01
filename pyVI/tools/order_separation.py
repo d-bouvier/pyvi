@@ -48,7 +48,7 @@ def rms(sig):
     """
     Computation of the root-mean-square of a vector.
     """
-    return np.sqrt( np.mean(sig**2) )
+    return np.sqrt( np.mean(np.abs(sig)**2) )
 
 
 def safe_db(num, den):
