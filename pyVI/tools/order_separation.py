@@ -29,7 +29,7 @@ def estimation_measure(signals_ref, signals_est, mode='default'):
     this function returns - np.Inf.
     """
     nb_sig = signals_est.shape[1]
-    error_sig = signals_ref - signals_est
+    error_sig = np.abs(signals_ref - signals_est)
     error_measure = []
 
     for n in range(nb_sig):
