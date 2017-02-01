@@ -41,6 +41,8 @@ def estimation_measure(signals_ref, signals_est, mode='default'):
             val = safe_db(rms_ref, rms_ref + rms_error)
         error_measure.append(val)
 
+    return error_measure
+
 
 def rms(sig):
     """
