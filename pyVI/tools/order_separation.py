@@ -33,8 +33,8 @@ def estimation_measure(signals_ref, signals_est, mode='default'):
     error_measure = []
 
     for n in range(nb_sig):
-        rms_error = rms(error_sig)
-        rms_ref = rms(signals_ref)
+        rms_error = rms(error_sig[:,n])
+        rms_ref = rms(signals_ref[:,n])
         if mode == 'default':
             val = safe_db(rms_error, rms_ref)
         elif mode == 'normalized':
