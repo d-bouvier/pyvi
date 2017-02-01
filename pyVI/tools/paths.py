@@ -68,9 +68,7 @@ def save_data_pickle(param_dict, name, folder):
     """
 
     folder_path = folder_str(folder)
-    date_str = datetime.datetime.now().strftime('%Y_%m_%d_%Hh%M')
-    full_path = folder_path + os.sep + name.format(date_str)
-
+    full_path = folder_path + os.sep + name
     pickle.dump(param_dict, open(full_path, 'wb'))
 
 def save_data_numpy(array_dict, name, folder):
@@ -79,7 +77,5 @@ def save_data_numpy(array_dict, name, folder):
     """
 
     folder_path = folder_str(folder)
-    date_str = datetime.datetime.now().strftime('%Y_%m_%d_%Hh%M')
-    full_path = folder_path + os.sep + name.format(date_str) + '.npz'
-
+    full_path = folder_path + os.sep + name + '.npz'
     savez(full_path, **array_dict)

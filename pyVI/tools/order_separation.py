@@ -16,6 +16,7 @@ Developed for Python 3.5.1
 import numpy as np
 from pyvi.simulation.simulation import simulation
 from pyvi.tools.paths import save_data_pickle, save_data_numpy
+import datetime
 
 
 #==============================================================================
@@ -63,54 +64,75 @@ def safe_db(num, den):
     return 20 * np.log10(num / den)
 
 
-def simu_collection(input_sig, coll_factor, system, fs=44100, N=1, hold_opt=1,
-                    dtype='float', name=''):
+def simu_collection(input_sig, system, fs=44100, N=1, hold_opt=1,
+                    name='unknown', method='boyd', param={'nl_order_max' :1}):
     """
     Make collection of simulation with inputs derived from a based signal.
+    (only works with SISO system)
     """
 
-    if name != '':
-        name += '_'
+    def update_parameters():
+        if method == 'boyd':
+            param.update({'dtype': 'float64',
+                          'K': param['nl_order_max']})
+            if not 'coeff' in param:
+                param['coeff'] = np.zeros((param['K']))
+                for idx in range(param['K']):
+                    param['coeff'][idx] = (-1)**idx * (np.pi/2)**(int(idx/2))
+        elif method == 'complex':
+            param.update({'dtype': 'complex128',
+                          'K': param['nl_order_max']})
+            if not 'w' in param:
+                param['w'] = np.exp(1j * 2 * np.pi / param['K'])
+            if not 'rho' in param:
+                param['rho'] = 1
+        return param
 
-    input_one_dimensional = system.dim['input'] == 1
+    def create_input_coll(input_coll):
+        if method == 'boyd':
+            for idx in range(param['K']):
+                input_coll[idx, :] = param['coeff'][idx] * input_sig
+        elif method == 'complex':
+            for idx in range(param['K']):
+                input_coll[idx, :] = param['rho'] * (param['w']**idx) * \
+                                     input_sig
+        return input_coll
 
-    K = len(coll_factor)
-    if input_one_dimensional:
-        len_sig = input_sig.shape[0]
-    else:
-        len_sig = input_sig.shape[1]
+    name += '_' + datetime.datetime.now().strftime('%Y_%m_%d')
+    len_sig = input_sig.shape[0]
+    param = update_parameters()
 
+    # Simulation for the basic input
     out_by_order = simulation(input_sig, system, fs=fs, nl_order_max=N,
                               hold_opt=hold_opt, out='output_by_order')
-    out_by_order.dtype = dtype
+    out_by_order = out_by_order[:, 0, :]
+    out_by_order.dtype = param['dtype']
 
-    if input_one_dimensional:
-        out_by_order = out_by_order[:, 0, :]
-        output = np.zeros((len_sig, K), dtype=dtype)
-    else:
-        output = np.zeros((len_sig, system.dim['input'], K), dtype=dtype)
+    # Initialization
+    input_coll = create_input_coll(np.zeros((param['K'], len_sig),
+                                             dtype=param['dtype']))
+    output_coll = np.zeros((param['K'], len_sig), dtype=param['dtype'])
 
-    for idx in range(K):
-        out = simulation(input_sig * coll_factor[idx], system, fs=fs,
+    # Simulation for the different inputs of input_coll
+    for idx in range(param['K']):
+        out = simulation(input_coll[idx, :], system, fs=fs,
                          nl_order_max=N, hold_opt=hold_opt, out='out')
+        output_coll[idx, :] = out[:, 0]
 
-        if input_one_dimensional:
-            output[:, idx] = out[:, 0]
-        else:
-            output[:, :, idx] = out
+    # Saving data
+    folders = ('order_separation', name)
+    simu_param = {'fs': fs,
+                  'nl_order_max': N,
+                  'sampler_holder_option': hold_opt}
 
-    folders = ('order_separation', 'simu_data')
-    save_data_pickle({'constrast_factor': coll_factor,
-                      'number_test': K,
-                      'fs': fs,
-                      'nonlinear_order_max': N,
-                      'sampler_holder_option': hold_opt},
-                     name + '{}_config', folders)
+    save_data_pickle({'sep_method': method,
+                      'sep_param': param,
+                      'simu_param': simu_param},
+                     'config', folders)
     save_data_numpy({'input': input_sig,
+                     'input_collection': input_coll,
                      'output': out_by_order.sum(1),
                      'output_by_order': out_by_order,
-                     'output_collection': output,
+                     'output_collection': output_coll,
                      'time': [n / fs for n in range(len_sig)]},
-                    name + '{}_data', folders)
-
-    return output, out_by_order
+                    'data', folders)
