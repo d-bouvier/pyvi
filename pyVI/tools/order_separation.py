@@ -22,55 +22,43 @@ from pyvi.tools.paths import save_data_pickle, save_data_numpy
 # Functions
 #==============================================================================
 
-def separation_measure(signals_ref, signals_est):
+def estimation_measure(signals_ref, signals_est, mode='default'):
     """
-    Measure the efficiency of source separation using SDR, SIR and SAR metrics
-    defined in:
-    [#vincent2006performance] Emmanuel Vincent, Rémi Gribonval, and Cédric
-    Févotte, "Performance measurement in blind audio source separation," IEEE
-    Trans. on Audio, Speech and Language Processing, 14(4):1462-1469, 2006.
+    Measure the estimation of a signal, in dB. The lower the value returned is,
+    the better the estimation is. If the signal and its estimation are equal,
+    this function returns - np.Inf.
     """
+    nb_sig = signals_est.shape[1]
+    error_sig = signals_ref - signals_est
+    error_measure = []
 
-    nb_src = signals_est.shape[0]
+    for n in range(nb_sig):
+        rms_error = rms(error_sig)
+        rms_ref = rms(signals_ref)
+        if mode == 'default':
+            val = safe_db(rms_error, rms_ref)
+        elif mode == 'normalized':
+            val = safe_db(rms_ref, rms_ref + rms_error)
+        error_measure.append(val)
 
-    def sig_projection(signal_est):
-        """
-        Projection of estimated signal on the reference signals.
-        """
-        A = np.corrcoef(signals_ref, y=signal_est )
-        G = A[0:nb_src, 0:nb_src]
-        D = A[nb_src, 0:nb_src]
-        try:
-            C = np.linalg.solve(G, D).reshape(nb_src, order='F')
-        except np.linalg.linalg.LinAlgError:
-            C = np.linalg.lstsq(G, D)[0].reshape(nb_src, order='F')
-        return np.dot(C, signals_ref)
 
-    sdr = []
-    sir = []
-    sar = []
-
-    for i in range(nb_src):
-        interference_err = sig_projection(signals_est[i]) - signals_ref[i]
-        artificial_err = - signals_ref[i] - interference_err
-        sdr.append(safe_db(np.sum(np.abs(signals_ref[i])**2),
-                           np.sum(np.abs(interference_err + \
-                                                 artificial_err)**2)))
-        sir.append(safe_db(np.sum(np.abs(signals_ref[i])**2),
-                           np.sum(np.abs(interference_err)**2)))
-        sar.append(safe_db(np.sum(np.abs(signals_ref[i] + interference_err)**2),
-                           np.sum(np.abs(artificial_err)**2)))
-
-    return (sdr, sir, sar)
+def rms(sig):
+    """
+    Computation of the root-mean-square of a vector.
+    """
+    return np.sqrt( np.mean(sig**2) )
 
 
 def safe_db(num, den):
     """
-    dB computation with verification that the denominator is not zero.
+    dB computation with verification that neither the denominator or numerator
+    are equal to zero.
     """
     if den == 0:
         return np.Inf
-    return 10 * np.log10(num / den)
+    if num == 0:
+        return - np.Inf
+    return 20 * np.log10(num / den)
 
 
 def simu_collection(input_sig, coll_factor, system, fs=44100, N=1, hold_opt=1,
