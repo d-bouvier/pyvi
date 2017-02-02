@@ -16,7 +16,7 @@ Developed for Python 3.5.1
 import numpy as np
 from pyvi.simulation.simulation import simulation
 from pyvi.tools.paths import save_data_pickle, save_data_numpy
-import datetime
+from datetime import datetime
 
 
 #==============================================================================
@@ -98,7 +98,6 @@ def simu_collection(input_sig, system, fs=44100, N=1, hold_opt=1,
                                      input_sig
         return input_coll
 
-    name += '_' + datetime.datetime.now().strftime('%Y_%m_%d')
     len_sig = input_sig.shape[0]
     param = update_parameters()
 
@@ -127,7 +126,8 @@ def simu_collection(input_sig, system, fs=44100, N=1, hold_opt=1,
 
     save_data_pickle({'sep_method': method,
                       'sep_param': param,
-                      'simu_param': simu_param},
+                      'simu_param': simu_param,
+                      'time': datetime.now().strftime('%d_%m_%Y_%Hh%M')},
                      'config', folders)
     save_data_numpy({'input': input_sig,
                      'input_collection': input_coll,
