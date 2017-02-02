@@ -154,5 +154,7 @@ def order_separation(output_coll, method, param):
             return np.dot(np.linalg.inv(np.dot(mixing_mat.T, mixing_mat)),
                           np.dot(mixing_mat.T, output_coll))
     elif method == 'complex':
-        return fftpack.ifft(output_coll, n=param['nl_order_max'],
-                            axis=0)[::-1, :]
+        estimation = fftpack.ifft(output_coll, n=param['nl_order_max'], axis=0)
+        demixing_vec = np.vander([1/param['rho']], N=param['K'], increasing=True)
+        return demixing_vec.T * estimation[::-1, :]
+
