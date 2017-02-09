@@ -131,7 +131,7 @@ def simu_collection(input_sig, system, fs=44100, N=1, hold_opt=1,
                      'config', folders)
     save_data_numpy({'input': input_sig,
                      'input_collection': input_coll,
-                     'output': out_by_order.sum(1),
+                     'output': out_by_order.sum(0),
                      'output_by_order': out_by_order,
                      'output_collection': output_coll,
                      'time': [n / fs for n in range(len_sig)]},
