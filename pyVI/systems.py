@@ -6,6 +6,9 @@ Functions for system parameters
 -------------------------------
 loudspeaker_sica :
     Returns a StateSpace object corresponding to the SICA Z000900 loudspeaker.
+second_order :
+    Returns a StateSpace object corresponding to a second_order system with
+    nonlinear stiffness.
 simple_system :
     Returns a StateSpace object corresponding to a simple system for simulation
     test.
@@ -32,7 +35,7 @@ import numpy as np
 
 def loudspeaker_sica(version='tristan', output='pos', mode='function'):
     """
-    Function that create and returns the System object corresponding to the
+    Function that create and returns the StateSpace object corresponding to the
     SICA Z000900 loudspeaker
     (http://www.sica.it/media/Z000900C.pdf551d31b7b491e.pdf).
 
@@ -60,7 +63,7 @@ def loudspeaker_sica(version='tristan', output='pos', mode='function'):
     Re = 5.7 # Electrical resistance of voice coil   [Ohm]
     Le = 0.11e-3 # Coil inductance [H]
     # Mechanical parameters
-    Mms = 1.9e-3; # Mechanical mass [kg]
+    Mms = 1.9e-3 # Mechanical mass [kg]
     if version == 'tristan':
         Rms = 0.406 # Mechanical damping and drag force [kg.s-1]
         k = [912.2789, 611.4570, 8e07] # Suspension stiffness [N.m-1]
@@ -106,14 +109,65 @@ def loudspeaker_sica(version='tristan', output='pos', mode='function'):
                       mpq_dict, npq_dict, sym_bool=True, mode=mode)
 
 
+def second_order(gain=1, f0=100, damping=0.5, nl_coeff=[1, 1/10, 1/100]):
+    """
+    Function that create and returns the StateSpace object corresponding to a
+    second order system with nonlinear stiffness.
+
+    Parameters
+    ----------
+    gain : float, optional
+        Gain at null frequency
+    f0 : float, optional
+        Natural frequency of the system
+    damping : float, optional
+        Damping factor of the system
+    nl_coeff : [float, float, float], optional
+        Coefficient associated respectively with M20, M30 and M40 functions
+
+    Returns
+    -------
+    Object of class StateSpace.
+
+    """
+
+    w0 = 2 * np.pi * f0 # Natural pulsation
+    coeff = (damping * w0)**2 # Damping factor
+
+    nl_coeff = [1, 1/10, 1/100]
+    # State-space matrices
+    A_m = np.array([[0, 1],
+                    [- w0**2, - 2 * damping * w0]]) # State-to-state matrix
+    B_m = np.array([[0], [gain * w0**2]]); # Input-to-state matrix
+    C_m = np.array([[1, 0]]) # State-to-output matrix
+    D_m = np.zeros((1, 1)) # Input-to-output matrix
+
+    # Handles for fonction saying if Mpq and Npq functions are used
+    h_mpq_bool = (lambda p, q: (p<=4) & (q==0))
+    h_npq_bool = (lambda p, q: False)
+
+    # Dictionnaries of Mpq & Npq tensors
+    m20 = lambda a, x1, x2: np.stack((np.zeros(a), coeff * \
+                        nl_coeff[0] * x1[0] * x2[0]), axis=0)
+    m30 = lambda a, x1, x2, x3: np.stack((np.zeros(a), coeff * \
+                        nl_coeff[1] * x1[0] * x2[0] * x3[0]), axis=0)
+    m40 = lambda a, x1, x2, x3, x4: np.stack((np.zeros(a), coeff * \
+                        nl_coeff[2] * x1[0] * x2[0] * x3[0] * x4[0]), axis=0)
+    mpq_dict = {(2, 0): m20, (3, 0): m30, (4, 0): m40}
+    npq_dict = dict()
+
+    return StateSpace(A_m, B_m, C_m, D_m, h_mpq_bool, h_npq_bool,
+                      mpq_dict, npq_dict, sym_bool=True, mode='function')
+
+
 def simple_system():
     """
-    Function that create and returns the System object corresponding to a
+    Function that create and returns the StateSpace object corresponding to a
     simple system for simulation test.
 
     Returns
     -------
-    Object of class System.
+    Object of class StateSpace.
 
     """
 
