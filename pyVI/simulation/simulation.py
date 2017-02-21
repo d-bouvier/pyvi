@@ -208,18 +208,24 @@ def simulation(input_sig, system, fs=44100, nl_order_max=1, hold_opt=1,
                 temp_arg = (input_sig,)*q + tuple(state_by_order[order_set])
                 output_by_order[n-1,:,:] += system.npq[(p, q)](*temp_arg)
 
-    output_sig = output_by_order.sum(0)
-
     ## Function outputs ##
 
-    output_sig = output_sig.transpose()
-    state_by_order = state_by_order[1:,:,:].transpose(2, 1, 0)
-    output_by_order = output_by_order.transpose(2, 1, 0)
+    if system.dim['output'] == 1:
+        output_by_order = output_by_order[:, 0, :]
+    output_sig = output_by_order.sum(0)
+
+    if system.dim['state'] == 1:
+        state_by_order = state_by_order[1:,0,:]
+    else:
+        state_by_order = state_by_order[1:,:,:]
+    state_sig = state_by_order.sum(0)
 
     if out == 'output':
         return output_sig
     elif out == 'output_by_order':
         return output_by_order
+    if out == 'state':
+        return state_sig
     elif out == 'all':
         return output_sig, state_by_order, output_by_order
     else:
