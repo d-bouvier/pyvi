@@ -104,11 +104,11 @@ def simulation(input_sig, system, fs=44100, nl_order_max=1, hold_opt=1,
     # Compute list of Mpq combinations and tensors
     dict_mpq_set = make_dict_pq_set(system.is_mpq_used, nl_order_max)
     # Add the linear part (the B matrix) to the mpq dict
-    dict_mpq_set[1] = [(0, 0, [0])]
+    dict_mpq_set[1] = [(1, 0, [0])]
     if system.mode == 'tensor':
-        system.mpq[0, 0] = np.identity(system.dim['state'])
+        system.mpq[1, 0] = np.identity(system.dim['state'])
     elif system.mode == 'function':
-        system.mpq[0, 0] = lambda u: u
+        system.mpq[1, 0] = lambda u: u
 
     # Compute list of Npq combinations and tensors
     dict_npq_set = make_dict_pq_set(system.is_npq_used, nl_order_max)
@@ -129,39 +129,42 @@ def simulation(input_sig, system, fs=44100, nl_order_max=1, hold_opt=1,
 
     # Simulation in tensor mode for ADC converter with holder of order 0
     if (hold_opt == 0) & (system.mode == 'tensor'):
-        for k in np.arange(sig_len-1):
-            for n, elt in dict_mpq_set.items():
+        for n, elt in dict_mpq_set.items():
+            for p, q, order_set in elt:
+                temp_arg = ()
+                for count in range(p):
+                    temp_arg += (state_by_order[order_set[count]],)
+                    temp_arg += ([count, int(p+q)],)
+                for count in range(q):
+                    temp_arg += (input_sig, [p+count, int(p+q)])
+                temp_arg += (list(range(p+q+1)),)
+                temp_array = np.tensordot(system.mpq[(p, q)],
+                                          np.einsum(*temp_arg), p+q)
+                state_by_order[n,:,1::] += \
+                        np.dot(holder0_bias, temp_array)[:,0:-1]
+            for k in np.arange(sig_len-1):
                 state_by_order[n,:,k+1] += np.dot(w_filter,
                                                   state_by_order[n,:,k])
-                for p, q, order_set in elt:
-                    temp_array = system.mpq[(p, q)].copy()
-                    for u in range(q):
-                        temp_array = np.dot(temp_array, input_sig[:,k])
-                    for order in order_set:
-                        temp_array = np.dot(temp_array,
-                                        state_by_order[order,:,k])
-                    state_by_order[n,:,k+1] += np.dot(holder0_bias, temp_array)
 
     # Simulation in tensor mode for ADC converter with holder of order 1
     elif (hold_opt == 1) & (system.mode == 'tensor'):
-        for k in np.arange(sig_len-1):
-            for n, elt in dict_mpq_set.items():
+        for n, elt in dict_mpq_set.items():
+            for p, q, order_set in elt:
+                temp_arg = ()
+                for count in range(p):
+                    temp_arg += (state_by_order[order_set[count]],)
+                    temp_arg += ([count, int(p+q)],)
+                for count in range(q):
+                    temp_arg += (input_sig, [p+count, int(p+q)])
+                temp_arg += (list(range(p+q+1)),)
+                temp_array = np.tensordot(system.mpq[(p, q)],
+                                          np.einsum(*temp_arg), p+q)
+                state_by_order[n,:,1::] += \
+                        np.dot(holder1_bias, temp_array)[:,0:-1] +\
+                        np.dot(holder0_bias - holder1_bias, temp_array)[:,1::]
+            for k in np.arange(sig_len-1):
                 state_by_order[n,:,k+1] += np.dot(w_filter,
                                                   state_by_order[n,:,k])
-                for p, q, order_set in elt:
-                    temp_array1 = system.mpq[(p, q)].copy()
-                    temp_array2 = system.mpq[(p, q)].copy()
-                    for u in range(q):
-                        temp_array1 = np.dot(temp_array1, input_sig[:,k])
-                        temp_array2 = np.dot(temp_array2, input_sig[:,k+1])
-                    for order in order_set:
-                        temp_array1 = np.dot(temp_array1,
-                                            state_by_order[order,:,k])
-                        temp_array2 = np.dot(temp_array2,
-                                            state_by_order[order,:,k+1])
-                    state_by_order[n,:,k+1] += \
-                        np.dot(holder1_bias, temp_array1) +\
-                        np.dot(holder0_bias - holder1_bias, temp_array2)
 
     # Simulation in function mode for ADC converter with holder of order 0
     if (hold_opt == 0) & (system.mode == 'function'):
@@ -257,9 +260,10 @@ if __name__ == '__main__':
     # Simulation
     start1 = time.time()
     out_t = simulation(sig, loudspeaker_sica(mode='tensor'),
-                       fs=fs, nl_order_max=3, hold_opt=1)
+                       fs=fs, nl_order_max=3, hold_opt=0)
     end1 = time.time()
     plt.figure('Input- Output (1)')
+    plt.clf()
     plt.subplot(2, 1, 1)
     plt.plot(sig)
     plt.subplot(2, 1, 2)
@@ -267,15 +271,17 @@ if __name__ == '__main__':
 
     start2 = time.time()
     out_f = simulation(sig, loudspeaker_sica(mode='function'),
-                       fs=fs, nl_order_max=3, hold_opt=1)
+                       fs=fs, nl_order_max=3, hold_opt=0)
     end2 = time.time()
     plt.figure('Input- Output (2)')
+    plt.clf()
     plt.subplot(2, 1, 1)
     plt.plot(sig)
     plt.subplot(2, 1, 2)
     plt.plot(out_f)
 
     plt.figure('Difference')
+    plt.clf()
     plt.plot(out_t - out_f)
 
     print('"tensor" mode: {}s'.format(end1-start1))
