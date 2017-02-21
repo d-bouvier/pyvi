@@ -94,12 +94,16 @@ def simulation(input_sig, system, fs=44100, nl_order_max=1, hold_opt=1,
     # Put the input signal as order-zero state
     state_by_order[0,:,:] = np.dot(system.B_m, input_sig)
 
-    holder0_bias = np.dot(A_inv, w_filter - np.identity(system.dim['state']))
+    holder_b0 = np.dot(A_inv, w_filter - np.identity(system.dim['state']))
     if hold_opt == 1:
-        holder1_bias = \
+        holder_b1 = \
                 np.dot(A_inv, w_filter) -\
                 fs * np.dot(np.dot(A_inv, A_inv),
                             w_filter - np.identity(system.dim['state']))
+        bias_1 = holder_b1
+        bias_0 = holder_b0 - holder_b1
+    else:
+        bias_1 = holder_b0
 
     # Compute list of Mpq combinations and tensors
     dict_mpq_set = make_dict_pq_set(system.is_mpq_used, nl_order_max)
@@ -140,8 +144,7 @@ def simulation(input_sig, system, fs=44100, nl_order_max=1, hold_opt=1,
                 temp_arg += (list(range(p+q+1)),)
                 temp_array = np.tensordot(system.mpq[(p, q)],
                                           np.einsum(*temp_arg), p+q)
-                state_by_order[n,:,1::] += \
-                        np.dot(holder0_bias, temp_array)[:,0:-1]
+                state_by_order[n,:,1::] += bias_1.dot(temp_array)[:,0:-1]
             for k in np.arange(sig_len-1):
                 state_by_order[n,:,k+1] += np.dot(w_filter,
                                                   state_by_order[n,:,k])
@@ -159,9 +162,8 @@ def simulation(input_sig, system, fs=44100, nl_order_max=1, hold_opt=1,
                 temp_arg += (list(range(p+q+1)),)
                 temp_array = np.tensordot(system.mpq[(p, q)],
                                           np.einsum(*temp_arg), p+q)
-                state_by_order[n,:,1::] += \
-                        np.dot(holder1_bias, temp_array)[:,0:-1] +\
-                        np.dot(holder0_bias - holder1_bias, temp_array)[:,1::]
+                state_by_order[n,:,1::] += bias_1.dot(temp_array)[:,0:-1] + \
+                                           bias_0.dot(temp_array)[:,1::]
             for k in np.arange(sig_len-1):
                 state_by_order[n,:,k+1] += np.dot(w_filter,
                                                   state_by_order[n,:,k])
@@ -172,8 +174,7 @@ def simulation(input_sig, system, fs=44100, nl_order_max=1, hold_opt=1,
             for p, q, order_set in elt:
                 temp_arg = (input_sig,)*q + tuple(state_by_order[order_set])
                 temp_array = system.mpq[(p, q)](*temp_arg)
-                state_by_order[n,:,1::] += \
-                        np.dot(holder0_bias, temp_array)[:,0:-1]
+                state_by_order[n,:,1::] += bias_1.dot(temp_array)[:,0:-1]
             for k in np.arange(sig_len-1):
                 state_by_order[n,:,k+1] += np.dot(w_filter,
                                                   state_by_order[n,:,k])
@@ -184,9 +185,8 @@ def simulation(input_sig, system, fs=44100, nl_order_max=1, hold_opt=1,
             for p, q, order_set in elt:
                 temp_arg = (input_sig,)*q + tuple(state_by_order[order_set])
                 temp_array = system.mpq[(p, q)](*temp_arg)
-                state_by_order[n,:,1::] += \
-                        np.dot(holder1_bias, temp_array)[:,0:-1] +\
-                        np.dot(holder0_bias - holder1_bias, temp_array)[:,1::]
+                state_by_order[n,:,1::] += bias_1.dot(temp_array)[:,0:-1] + \
+                                           bias_0.dot(temp_array)[:,1::]
             for k in np.arange(sig_len-1):
                 state_by_order[n,:,k+1] += np.dot(w_filter,
                                                   state_by_order[n,:,k])
