@@ -97,10 +97,13 @@ def loudspeaker_sica(version='tristan', output='pos', mode='function'):
         m30 = np.zeros((3, 3, 3, 3))
         m30[2, 1, 1, 1] = -k[2]/Mms
     elif mode == 'function':
-        m20 = lambda a, x1, x2: np.stack((np.zeros(a), np.zeros(a), \
-                                    -k[1]/Mms * x1[1] * x2[1]), axis=0)
-        m30 = lambda a, x1, x2, x3: np.stack((np.zeros(a), np.zeros(a), \
-                                    -k[2]/Mms * x1[1] * x2[1] * x3[1]), axis=0)
+        m20 = lambda x1, x2: [0*x1[1], \
+                              0*x1[1], \
+                              -k[1]/Mms * x1[1] * x2[1]]
+        m30 = lambda x1, x2, x3: [0*x1[1], \
+                                  0*x1[1], \
+                                  -k[2]/Mms * x1[1] * x2[1] * x3[1]]
+
 
     mpq_dict = {(2, 0): m20, (3, 0): m30}
     npq_dict = dict()
@@ -147,12 +150,12 @@ def second_order(gain=1, f0=100, damping=0.5, nl_coeff=[1, 1/10, 1/100]):
     h_npq_bool = (lambda p, q: False)
 
     # Dictionnaries of Mpq & Npq tensors
-    m20 = lambda a, x1, x2: np.stack((np.zeros(a), coeff * \
-                        nl_coeff[0] * x1[0] * x2[0]), axis=0)
-    m30 = lambda a, x1, x2, x3: np.stack((np.zeros(a), coeff * \
-                        nl_coeff[1] * x1[0] * x2[0] * x3[0]), axis=0)
-    m40 = lambda a, x1, x2, x3, x4: np.stack((np.zeros(a), coeff * \
-                        nl_coeff[2] * x1[0] * x2[0] * x3[0] * x4[0]), axis=0)
+    m20 = lambda x1, x2: [0*x1[0], \
+                          nl_coeff[0] * x1[0] * x2[0]]
+    m30 = lambda x1, x2, x3: [0*x1[0], \
+                              nl_coeff[1] * x1[0] * x2[0] * x3[0]]
+    m40 = lambda x1, x2, x3, x4: [0*x1[0], \
+                                  nl_coeff[2] * x1[0] * x2[0] * x3[0] * x4[0]]
     mpq_dict = {(2, 0): m20, (3, 0): m30, (4, 0): m40}
     npq_dict = dict()
 

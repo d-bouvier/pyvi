@@ -108,7 +108,7 @@ def simulation(input_sig, system, fs=44100, nl_order_max=1, hold_opt=1,
     if system.mode == 'tensor':
         system.mpq[0, 0] = np.identity(system.dim['state'])
     elif system.mode == 'function':
-        system.mpq[0, 0] = lambda a, u: u
+        system.mpq[0, 0] = lambda u: u
 
     # Compute list of Npq combinations and tensors
     dict_npq_set = make_dict_pq_set(system.is_npq_used, nl_order_max)
@@ -117,13 +117,13 @@ def simulation(input_sig, system, fs=44100, nl_order_max=1, hold_opt=1,
     if system.mode == 'tensor':
         system.npq[0, 1] = system.D_m
     elif system.mode == 'function':
-        system.npq[0, 1] = lambda a, u: np.dot(system.D_m, u)
+        system.npq[0, 1] = lambda u: np.dot(system.D_m, u)
     for n in range(1, nl_order_max+1):
         dict_npq_set[n].insert(0, (n, 0, [n]))
         if system.mode == 'tensor':
             system.npq[n, 0] = system.C_m
         elif system.mode == 'function':
-            system.npq[n, 0] = lambda a, u: np.dot(system.C_m, u)
+            system.npq[n, 0] = lambda u: np.dot(system.C_m, u)
 
     ## Dynamical equation - Numerical simulation ##
 
@@ -167,8 +167,7 @@ def simulation(input_sig, system, fs=44100, nl_order_max=1, hold_opt=1,
     if (hold_opt == 0) & (system.mode == 'function'):
         for n, elt in dict_mpq_set.items():
             for p, q, order_set in elt:
-                temp_arg = (sig_len,) + (input_sig,)*q + \
-                           tuple(state_by_order[order_set])
+                temp_arg = (input_sig,)*q + tuple(state_by_order[order_set])
                 temp_array = system.mpq[(p, q)](*temp_arg)
                 state_by_order[n,:,1::] += \
                         np.dot(holder0_bias, temp_array)[:,0:-1]
@@ -180,8 +179,7 @@ def simulation(input_sig, system, fs=44100, nl_order_max=1, hold_opt=1,
     elif (hold_opt == 1) & (system.mode == 'function'):
         for n, elt in dict_mpq_set.items():
             for p, q, order_set in elt:
-                temp_arg = (sig_len,) + (input_sig,)*q + \
-                           tuple(state_by_order[order_set])
+                temp_arg = (input_sig,)*q + tuple(state_by_order[order_set])
                 temp_array = system.mpq[(p, q)](*temp_arg)
                 state_by_order[n,:,1::] += \
                         np.dot(holder1_bias, temp_array)[:,0:-1] +\
@@ -243,7 +241,7 @@ if __name__ == '__main__':
 
     # Input signal
     fs = 44100
-    T = 2
+    T = 1
     f1 = 100
     f2 = 300
     amp = 10
