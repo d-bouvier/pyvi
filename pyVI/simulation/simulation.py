@@ -117,13 +117,13 @@ def simulation(input_sig, system, fs=44100, nl_order_max=1, hold_opt=1,
     if system.mode == 'tensor':
         system.npq[0, 1] = system.D_m
     elif system.mode == 'function':
-        system.npq[0, 1] = lambda u: np.dot(system.D_m, u)
+        system.npq[0, 1] = lambda u: system.D_m.dot(u)
     for n in range(1, nl_order_max+1):
-        dict_npq_set[n].insert(0, (n, 0, [n]))
-        if system.mode == 'tensor':
-            system.npq[n, 0] = system.C_m
-        elif system.mode == 'function':
-            system.npq[n, 0] = lambda u: np.dot(system.C_m, u)
+        dict_npq_set[n].insert(0, (1, 0, [n]))
+    if system.mode == 'tensor':
+        system.npq[1, 0] = system.C_m
+    elif system.mode == 'function':
+        system.npq[1, 0] = lambda u: system.C_m.dot(u)
 
     ## Dynamical equation - Numerical simulation ##
 
@@ -194,17 +194,18 @@ def simulation(input_sig, system, fs=44100, nl_order_max=1, hold_opt=1,
     ## Output equation - Numerical simulation ##
 
     if system.mode == 'tensor':
-        for k in np.arange(sig_len):
-            for n, elt in dict_npq_set.items():
-                for p, q, order_set in elt:
-                    temp_array = system.npq[(p, q)].copy()
-                    for u in range(q):
-                        temp_array = np.dot(temp_array, input_sig[:,k])
-                    for order in order_set:
-                        temp_array = np.dot(temp_array,
-                                            state_by_order[order,:,k])
-                    output_by_order[n-1,:,k] += temp_array
-
+        for n, elt in dict_npq_set.items():
+            for p, q, order_set in elt:
+                temp_arg = ()
+                for count in range(p):
+                    temp_arg += (state_by_order[order_set[count]],)
+                    temp_arg += ([count, int(p+q)],)
+                for count in range(q):
+                    temp_arg += (input_sig, [p+count, int(p+q)])
+                temp_arg += (list(range(p+q+1)),)
+                output_by_order[n-1,:,:] += np.tensordot(system.npq[(p, q)],
+                                                         np.einsum(*temp_arg),
+                                                         p+q)
     elif system.mode == 'function':
         for n, elt in dict_npq_set.items():
             for p, q, order_set in elt:
