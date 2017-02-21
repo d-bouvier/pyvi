@@ -205,8 +205,7 @@ def simulation(input_sig, system, fs=44100, nl_order_max=1, hold_opt=1,
     elif system.mode == 'function':
         for n, elt in dict_npq_set.items():
             for p, q, order_set in elt:
-                temp_arg = (sig_len,) + (input_sig,)*q + \
-                           tuple(state_by_order[order_set])
+                temp_arg = (input_sig,)*q + tuple(state_by_order[order_set])
                 output_by_order[n-1,:,:] += system.npq[(p, q)](*temp_arg)
 
     output_sig = output_by_order.sum(0)
