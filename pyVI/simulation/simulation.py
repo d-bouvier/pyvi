@@ -140,21 +140,21 @@ def simulation(input_sig, system, fs=44100, nl_order_max=1, hold_opt=1,
     elif system.mode == 'function':
         def pq_computation(p, q, order_set, dict_pq):
             temp_arg = (input_sig,)*q + tuple(state_by_order[order_set])
-            return dict_pq[(p, q)](*temp_arg)
+            return np.array(dict_pq[(p, q)](*temp_arg))
 
     # Correction of the bias due to ADC converter (with holder of order 0 or 1)
     if hold_opt == 0:
         bias_1sample_lag = A_inv.dot(w_filter) - A_inv
         def holder_bias(mpq_output):
-            return bias_1sample_lag.dot(mpq_output)[:,0:-1]
+            return bias_1sample_lag.dot(mpq_output[:,0:-1])
     elif hold_opt == 1:
         A_inv_squared = A_inv.dot(A_inv)
         bias_1sample_lag = A_inv.dot(w_filter) - fs * \
                            (A_inv_squared.dot(w_filter) - A_inv_squared)
         bias_0sample_lag = A_inv.dot(w_filter) - A_inv - bias_1sample_lag
         def holder_bias(mpq_output):
-            return bias_1sample_lag.dot(mpq_output)[:,0:-1] + \
-                   bias_0sample_lag.dot(mpq_output)[:,1::]
+            return bias_1sample_lag.dot(mpq_output[:,0:-1]) + \
+                   bias_0sample_lag.dot(mpq_output[:,1::])
 
     # Filter function (simply a matrix product by 'w_filter')
     def filtering(n):
