@@ -108,7 +108,6 @@ def simu_collection(input_sig, system, fs=44100, N=1, hold_opt=1,
     # Simulation for the basic input
     out_by_order = simulation(input_sig, system, fs=fs, nl_order_max=N,
                               hold_opt=hold_opt, out='output_by_order')
-    out_by_order = out_by_order[:, 0, :].T
     out_by_order.dtype = param['dtype']
 
     # Initialization
@@ -119,8 +118,8 @@ def simu_collection(input_sig, system, fs=44100, N=1, hold_opt=1,
     # Simulation for the different inputs of input_coll
     for idx in range(param['K']):
         out = simulation(input_coll[idx, :], system, fs=fs,
-                         nl_order_max=N, hold_opt=hold_opt, out='out')
-        output_coll[idx, :] = out[:, 0]
+                         nl_order_max=N, hold_opt=hold_opt, out='output')
+        output_coll[idx, :] = out
 
     # Saving data
     folders = ('order_separation', name)

@@ -192,9 +192,7 @@ def simulation(input_sig, system, fs=44100, nl_order_max=1, hold_opt=1,
 
     # Reshaping state (if necessary)
     if system.dim['state'] == 1:
-        state_by_order = state_by_order[1:,0,:]
-    else:
-        state_by_order = state_by_order[1:,:,:]
+        state_by_order = state_by_order[:, 0, :]
 
     # Reshaping output (if necessary)
     if system.dim['output'] == 1:
