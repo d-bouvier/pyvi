@@ -7,6 +7,8 @@ Toolbox for plots.
 
 Last modified on 04 Oct. 2016
 Developed for Python 3.5.1
+Uses:
+ - matplolib 1.5.1
 """
 
 #==============================================================================

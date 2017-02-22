@@ -10,6 +10,8 @@ a system (see https://en.wikipedia.org/wiki/Volterra_series).
 
 Last modified on 12 Sept. 2016
 Developed for Python 3.5.1
+Uses:
+ - sympy 1.0
 """
 
 #==============================================================================

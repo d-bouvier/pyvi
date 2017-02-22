@@ -17,7 +17,10 @@ Notes
 
 Last modified on 3 Nov. 2016
 Developed for Python 3.5.1
-
+Uses:
+ - numpy 1.11.1
+ - pivy 0.1
+ - scipy 0.18.0
 """
 
 #==============================================================================
@@ -189,9 +192,7 @@ def simulation(input_sig, system, fs=44100, nl_order_max=1, hold_opt=1,
 
     # Reshaping state (if necessary)
     if system.dim['state'] == 1:
-        state_by_order = state_by_order[1:,0,:]
-    else:
-        state_by_order = state_by_order[1:,:,:]
+        state_by_order = state_by_order[:, 0, :]
 
     # Reshaping output (if necessary)
     if system.dim['output'] == 1:
