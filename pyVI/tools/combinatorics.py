@@ -31,6 +31,7 @@ Developed for Python 3.5.1
 
 import itertools as itertbx
 import numpy as np
+from scipy.special import binom as binomial
 
 
 #==============================================================================
@@ -159,7 +160,7 @@ def elimination(h_pq_bool, list_pq):
     return list_pq[mask_pq]
 
 
-def state_combinatorics(list_pq, nl_order_max, print_opt=False):
+def state_combinatorics(list_pq, nl_order_max, sym_bool=False):
     """
     Compute, for each Mpq function at a given order n, the different sets of
     state-homogenous-order that are the inputs of the multilinear pq-function.
@@ -170,14 +171,15 @@ def state_combinatorics(list_pq, nl_order_max, print_opt=False):
     ----------
     list_pq : numpy.ndarray
         Array of all combination [n, p, q].
-    print_opt : boolean, optional
-        Intermediate results printing option.
+    sym_bool : boolean, optional
+        If True, does not computes sets that are equals given a shuffle.
 
     Outputs
     -------
     pq_sets : dict
-        Dict of all sets [p, q, k] for each order n, where k are the sets
-        state-homogenous-order.
+        Dict of all tuple (p, q, k, nb) for each order n, where k are the sets
+        state-homogenous-order, an nb the number of unordered sets equals to k,
+        including k (equals to 1 if sym_bool is False).
     """
 
     # Initialisation
@@ -195,23 +197,32 @@ def state_combinatorics(list_pq, nl_order_max, print_opt=False):
         k_sum = elt[0] - elt[2]
         # Value needed for the sum of all state order
         k_max = k_sum - elt[1] + 1
-        if print_opt: # Optional printing
-            print('(n, p, q) = {}'.format(elt))
         # Loop on all possible sets
-        for index in np.ndindex( (k_max,)*elt[1] ):
-            index = list(map(sum, zip(index, (1,)*elt[1])))
-            # Optional printing
-            if print_opt:
-                print('        Set: {}, Used = {}'.format(index,
-                      sum(index) == k_sum))
-            # Check if the corresponds to the current (n,p,q) combination
-            if sum(index) == k_sum:
-                pq_sets[elt[0]].append((elt[1], elt[2], index))
+        if sym_bool:
+            list_idx = itertbx.combinations_with_replacement(range(1, k_max+1),
+                                                             elt[1])
+            list_idx_filtre = itertbx.filterfalse(lambda x: sum(x) != k_sum,
+                                                  list_idx)
+            for index in list_idx_filtre:
+                nb_repetitions = 1
+                current_max = 0
+                for value in set(index):
+                    nb_appearance = index.count(value)
+                    current_max += nb_appearance
+                    nb_repetitions *= int(binomial(current_max, nb_appearance))
+                pq_sets[elt[0]].append((int(elt[1]), int(elt[2]), list(index),
+                                        nb_repetitions))
+        else:
+            list_idx = itertbx.product(range(1, k_max+1), repeat=elt[1])
+            list_idx_filtre = itertbx.filterfalse(lambda x: sum(x) != k_sum,
+                                                  list_idx)
+            for index in list_idx_filtre:
+                pq_sets[elt[0]].append((elt[1], elt[2], list(index), 1))
 
     return pq_sets
 
 
-def make_dict_pq_set(h_pq_bool, nl_order_max, print_opt=False):
+def make_dict_pq_set(h_pq_bool, nl_order_max, sym_bool=False):
     """
     Return the list of sets characterising multilinear pq-functions used in a
     system.
@@ -228,8 +239,8 @@ def make_dict_pq_set(h_pq_bool, nl_order_max, print_opt=False):
 
     Returns
     -------
-    mpq_sets : list
-        List of the [n, p, q, k] sets, with:
+    mpq_sets : dict of lists
+        Dict of keys n, each associated to a list of tuple (p, q, k, nb) with:
     - n : int
         Order of nonlinearity where the multilinear pq-function is used.
     - p : int
@@ -238,18 +249,28 @@ def make_dict_pq_set(h_pq_bool, nl_order_max, print_opt=False):
         Number of input-entry for the multilinear pq-function.
     - k : list (of length p)
         Homogenous orders for the state-entries.
+    - nb : int
+        Number of unordered sets equals to k, including k.
 
     """
 
     ## Main ##
     list_pq = make_list_pq(nl_order_max)
     list_pq = elimination(h_pq_bool, list_pq)
-    pq_sets = state_combinatorics(list_pq, nl_order_max, print_opt)
-
-    # Optional printing
-    if print_opt:
-        print('')
-        for elt in pq_sets:
-            print(elt)
+    pq_sets = state_combinatorics(list_pq, nl_order_max, sym_bool)
 
     return pq_sets
+
+
+#==============================================================================
+# Main script
+#==============================================================================
+
+if __name__ == '__main__':
+    N = 5
+    list_pq = make_list_pq(N)
+    pq_sets = state_combinatorics(list_pq, N, True)
+    for n, value in pq_sets.items():
+        print(n)
+        for elt in value:
+            print(' ', elt)
