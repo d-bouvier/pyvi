@@ -70,7 +70,10 @@ def simulation(input_sig, system, fs=44100, nl_order_max=1, hold_opt=1,
 
     """
 
-    ## Init ##
+    ####################
+    ## Initialization ##
+    ####################
+
     # Compute parameters
     sig_len = max(input_sig.shape)
     sampling_time = 1/fs
@@ -80,7 +83,7 @@ def simulation(input_sig, system, fs=44100, nl_order_max=1, hold_opt=1,
     dtype = input_sig.dtype
     input_sig = input_sig.copy()
 
-    # Enforce good shape when dimension is 1
+    # Enforce good shape when input dimension is 1
     if system.dim['input'] == 1:
         system.B_m.shape = (system.dim['state'], system.dim['input'])
         system.D_m.shape = (system.dim['output'], system.dim['input'])
@@ -94,18 +97,7 @@ def simulation(input_sig, system, fs=44100, nl_order_max=1, hold_opt=1,
     # Put the input signal as order-zero state
     state_by_order[0,:,:] = np.dot(system.B_m, input_sig)
 
-    holder_b0 = np.dot(A_inv, w_filter - np.identity(system.dim['state']))
-    if hold_opt == 1:
-        holder_b1 = \
-                np.dot(A_inv, w_filter) -\
-                fs * np.dot(np.dot(A_inv, A_inv),
-                            w_filter - np.identity(system.dim['state']))
-        bias_1 = holder_b1
-        bias_0 = holder_b0 - holder_b1
-    else:
-        bias_1 = holder_b0
-
-    # Compute list of Mpq combinations and tensors
+    # Compute list of Mpq combinations and tensors/functions
     dict_mpq_set = make_dict_pq_set(system.is_mpq_used, nl_order_max)
     # Add the linear part (the B matrix) to the mpq dict
     dict_mpq_set[1] = [(1, 0, [0])]
@@ -114,7 +106,7 @@ def simulation(input_sig, system, fs=44100, nl_order_max=1, hold_opt=1,
     elif system.mode == 'function':
         system.mpq[1, 0] = lambda u: u
 
-    # Compute list of Npq combinations and tensors
+    # Compute list of Npq combinations and tensors/functions
     dict_npq_set = make_dict_pq_set(system.is_npq_used, nl_order_max)
     # Add the linear part (respectively the D and C matrices) to the npq dict
     dict_npq_set[1] = [(0, 1, [])]
@@ -129,111 +121,90 @@ def simulation(input_sig, system, fs=44100, nl_order_max=1, hold_opt=1,
     elif system.mode == 'function':
         system.npq[1, 0] = lambda u: system.C_m.dot(u)
 
-    ## Dynamical equation - Numerical simulation ##
 
-    # Simulation in tensor mode for ADC converter with holder of order 0
-    if (hold_opt == 0) & (system.mode == 'tensor'):
-        for n, elt in dict_mpq_set.items():
-            for p, q, order_set in elt:
-                temp_arg = ()
-                for count in range(p):
-                    temp_arg += (state_by_order[order_set[count]],)
-                    temp_arg += ([count, int(p+q)],)
-                for count in range(q):
-                    temp_arg += (input_sig, [p+count, int(p+q)])
-                temp_arg += (list(range(p+q+1)),)
-                temp_array = np.tensordot(system.mpq[(p, q)],
-                                          np.einsum(*temp_arg), p+q)
-                state_by_order[n,:,1::] += bias_1.dot(temp_array)[:,0:-1]
-            for k in np.arange(sig_len-1):
-                state_by_order[n,:,k+1] += np.dot(w_filter,
-                                                  state_by_order[n,:,k])
+    ##########################################
+    ## Creation of functions for simulation ##
+    ##########################################
 
-    # Simulation in tensor mode for ADC converter with holder of order 1
-    elif (hold_opt == 1) & (system.mode == 'tensor'):
-        for n, elt in dict_mpq_set.items():
-            for p, q, order_set in elt:
-                temp_arg = ()
-                for count in range(p):
-                    temp_arg += (state_by_order[order_set[count]],)
-                    temp_arg += ([count, int(p+q)],)
-                for count in range(q):
-                    temp_arg += (input_sig, [p+count, int(p+q)])
-                temp_arg += (list(range(p+q+1)),)
-                temp_array = np.tensordot(system.mpq[(p, q)],
-                                          np.einsum(*temp_arg), p+q)
-                state_by_order[n,:,1::] += bias_1.dot(temp_array)[:,0:-1] + \
-                                           bias_0.dot(temp_array)[:,1::]
-            for k in np.arange(sig_len-1):
-                state_by_order[n,:,k+1] += np.dot(w_filter,
-                                                  state_by_order[n,:,k])
-
-    # Simulation in function mode for ADC converter with holder of order 0
-    if (hold_opt == 0) & (system.mode == 'function'):
-        for n, elt in dict_mpq_set.items():
-            for p, q, order_set in elt:
-                temp_arg = (input_sig,)*q + tuple(state_by_order[order_set])
-                temp_array = system.mpq[(p, q)](*temp_arg)
-                state_by_order[n,:,1::] += bias_1.dot(temp_array)[:,0:-1]
-            for k in np.arange(sig_len-1):
-                state_by_order[n,:,k+1] += np.dot(w_filter,
-                                                  state_by_order[n,:,k])
-
-    # Simulation in function mode for ADC converter with holder of order 1
-    elif (hold_opt == 1) & (system.mode == 'function'):
-        for n, elt in dict_mpq_set.items():
-            for p, q, order_set in elt:
-                temp_arg = (input_sig,)*q + tuple(state_by_order[order_set])
-                temp_array = system.mpq[(p, q)](*temp_arg)
-                state_by_order[n,:,1::] += bias_1.dot(temp_array)[:,0:-1] + \
-                                           bias_0.dot(temp_array)[:,1::]
-            for k in np.arange(sig_len-1):
-                state_by_order[n,:,k+1] += np.dot(w_filter,
-                                                  state_by_order[n,:,k])
-
-    ## Output equation - Numerical simulation ##
-
+    # Computation of the Mpq/Npq functions (given as tensors or functions)
     if system.mode == 'tensor':
-        for n, elt in dict_npq_set.items():
-            for p, q, order_set in elt:
-                temp_arg = ()
-                for count in range(p):
-                    temp_arg += (state_by_order[order_set[count]],)
-                    temp_arg += ([count, int(p+q)],)
-                for count in range(q):
-                    temp_arg += (input_sig, [p+count, int(p+q)])
-                temp_arg += (list(range(p+q+1)),)
-                output_by_order[n-1,:,:] += np.tensordot(system.npq[(p, q)],
-                                                         np.einsum(*temp_arg),
-                                                         p+q)
+        def pq_computation(p, q, order_set, dict_pq):
+            temp_arg = ()
+            for count in range(p):
+                temp_arg += (state_by_order[order_set[count]],)
+                temp_arg += ([count, int(p+q)],)
+            for count in range(q):
+                temp_arg += (input_sig, [p+count, int(p+q)])
+            temp_arg += (list(range(p+q+1)),)
+            return np.tensordot(dict_pq[(p, q)], np.einsum(*temp_arg), p+q)
     elif system.mode == 'function':
-        for n, elt in dict_npq_set.items():
-            for p, q, order_set in elt:
-                temp_arg = (input_sig,)*q + tuple(state_by_order[order_set])
-                output_by_order[n-1,:,:] += system.npq[(p, q)](*temp_arg)
+        def pq_computation(p, q, order_set, dict_pq):
+            temp_arg = (input_sig,)*q + tuple(state_by_order[order_set])
+            return dict_pq[(p, q)](*temp_arg)
 
+    # Correction of the bias due to ADC converter (with holder of order 0 or 1)
+    if hold_opt == 0:
+        bias_1sample_lag = A_inv.dot(w_filter) - A_inv
+        def holder_bias(mpq_output):
+            return bias_1sample_lag.dot(mpq_output)[:,0:-1]
+    elif hold_opt == 1:
+        A_inv_squared = A_inv.dot(A_inv)
+        bias_1sample_lag = A_inv.dot(w_filter) - fs * \
+                           (A_inv_squared.dot(w_filter) - A_inv_squared)
+        bias_0sample_lag = A_inv.dot(w_filter) - A_inv - bias_1sample_lag
+        def holder_bias(mpq_output):
+            return bias_1sample_lag.dot(mpq_output)[:,0:-1] + \
+                   bias_0sample_lag.dot(mpq_output)[:,1::]
+
+    # Filter function (simply a matrix product by 'w_filter')
+    def filtering(n):
+        for k in np.arange(sig_len-1):
+            state_by_order[n,:,k+1] += w_filter.dot(state_by_order[n,:,k])
+
+
+    ##########################
+    ## Numerical simulation ##
+    ##########################
+
+    # Dynamical equation
+    for n, elt in dict_mpq_set.items():
+        for p, q, order_set in elt:
+            mpq_output = pq_computation(p, q, order_set, system.mpq)
+            state_by_order[n,:,1::] += holder_bias(mpq_output)
+        filtering(n)
+
+    # Output equation
+    for n, elt in dict_npq_set.items():
+        for p, q, order_set in elt:
+            output_by_order[n-1,:,:] += pq_computation(p, q, order_set,
+                                                       system.npq)
+
+
+    ######################
     ## Function outputs ##
+    ######################
 
-    if system.dim['output'] == 1:
-        output_by_order = output_by_order[:, 0, :]
-    output_sig = output_by_order.sum(0)
-
+    # Reshaping state (if necessary)
     if system.dim['state'] == 1:
         state_by_order = state_by_order[1:,0,:]
     else:
         state_by_order = state_by_order[1:,:,:]
-    state_sig = state_by_order.sum(0)
 
+    # Reshaping output (if necessary)
+    if system.dim['output'] == 1:
+        output_by_order = output_by_order[:, 0, :]
+
+    # Returns signals chosen by user
     if out == 'output':
-        return output_sig
+        return output_by_order.sum(0)
     elif out == 'output_by_order':
         return output_by_order
-    if out == 'state':
-        return state_sig
+    elif out == 'state':
+        return state_by_order.sum(0)
     elif out == 'all':
-        return output_sig, state_by_order, output_by_order
+        return output_by_order.sum(0), state_by_order, output_by_order
     else:
-        return output_sig
+        return output_by_order.sum(0)
 
 #==============================================================================
 # Main script
