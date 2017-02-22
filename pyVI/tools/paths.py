@@ -9,7 +9,9 @@ Notes
 
 Last modified on 3 Nov. 2016
 Developed for Python 3.5.1
-
+Uses:
+ - numpy 1.11.1
+ - os, pickle
 """
 
 #==============================================================================
@@ -17,7 +19,6 @@ Developed for Python 3.5.1
 #==============================================================================
 
 import os
-import datetime
 import pickle
 from numpy import savez
 

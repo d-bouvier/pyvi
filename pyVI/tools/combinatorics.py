@@ -23,6 +23,10 @@ Notes
 
 Last modified on 3 Nov. 2016
 Developed for Python 3.5.1
+Uses:
+ - numpy 1.11.1
+ - scipy 0.18.0
+ - itertools
 """
 
 #==============================================================================
