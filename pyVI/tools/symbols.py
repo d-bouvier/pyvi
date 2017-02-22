@@ -6,7 +6,8 @@ Module for handling sympy symbols.
          Damien Bouvier, IRCAM, Paris
 
 Last modified on 12 Sept. 2016
-Developed for Python 3.5.1
+Developed for Python 3.5.1Uses:
+ - sympy 1.0
 """
 
 #==============================================================================
