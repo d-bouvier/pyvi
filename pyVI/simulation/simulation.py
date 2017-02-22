@@ -42,7 +42,7 @@ def simulation(input_sig, system, fs=44100, nl_order_max=1, hold_opt=1,
     ----------
     input_sig : numpy.ndarray
         Input signal.
-    system : System
+    system : StateSpace
         Parameters of the system to simulate.
     fs : int, optional
         Sampling frequency.
@@ -65,6 +65,7 @@ def simulation(input_sig, system, fs=44100, nl_order_max=1, hold_opt=1,
     In function of the ``out`` option, this function returns:
         - ``output_sig`` (if ``out`` == 'output')
         - ``output_by_order`` (if ``out`` == 'output_by_order')
+        - ``state`` (if ``out`` == 'state')
         - ``output_sig``, ``state_by_order``, and ``output_by_order`` (if \
         ``out`` == 'all')
 
@@ -90,22 +91,20 @@ def simulation(input_sig, system, fs=44100, nl_order_max=1, hold_opt=1,
         input_sig.shape = (system.dim['input'], sig_len)
 
     # By-order state and output initialization
-    state_by_order = np.zeros((nl_order_max+1, system.dim['state'], sig_len),
+    state_by_order = np.zeros((nl_order_max, system.dim['state'], sig_len),
                               dtype)
     output_by_order = np.zeros((nl_order_max, system.dim['output'], sig_len),
                                dtype)
-    # Put the input signal as order-zero state
-    state_by_order[0,:,:] = np.dot(system.B_m, input_sig)
 
     # Compute list of Mpq combinations and tensors/functions
     dict_mpq_set = make_dict_pq_set(system.is_mpq_used, nl_order_max,
                                     system.sym_bool)
     # Add the linear part (the B matrix) to the mpq dict
-    dict_mpq_set[1] = [(1, 0, [0], 1)]
+    dict_mpq_set[1] = [(0, 1, [], 1)]
     if system.mode == 'tensor':
-        system.mpq[1, 0] = np.identity(system.dim['state'])
+        system.mpq[0, 1] = system.B_m
     elif system.mode == 'function':
-        system.mpq[1, 0] = lambda u: u
+        system.mpq[0, 1] = lambda u: system.B_m.dot(u)
 
     # Compute list of Npq combinations and tensors/functions
     dict_npq_set = make_dict_pq_set(system.is_npq_used, nl_order_max,
@@ -116,6 +115,7 @@ def simulation(input_sig, system, fs=44100, nl_order_max=1, hold_opt=1,
         system.npq[0, 1] = system.D_m
     elif system.mode == 'function':
         system.npq[0, 1] = lambda u: system.D_m.dot(u)
+
     for n in range(1, nl_order_max+1):
         dict_npq_set[n].insert(0, (1, 0, [n], 1))
     if system.mode == 'tensor':
@@ -161,7 +161,7 @@ def simulation(input_sig, system, fs=44100, nl_order_max=1, hold_opt=1,
     # Filter function (simply a matrix product by 'w_filter')
     def filtering(n):
         for k in np.arange(sig_len-1):
-            state_by_order[n,:,k+1] += w_filter.dot(state_by_order[n,:,k])
+            state_by_order[n-1,:,k+1] += w_filter.dot(state_by_order[n-1,:,k])
 
 
     ##########################
@@ -171,15 +171,16 @@ def simulation(input_sig, system, fs=44100, nl_order_max=1, hold_opt=1,
     # Dynamical equation
     for n, elt in dict_mpq_set.items():
         for p, q, order_set, nb in elt:
-            mpq_output = nb * pq_computation(p, q, order_set, system.mpq)
-            state_by_order[n,:,1::] += holder_bias(mpq_output)
+            mpq_output = nb * \
+                    pq_computation(p, q, [m-1 for m in order_set], system.mpq)
+            state_by_order[n-1,:,1::] += holder_bias(mpq_output)
         filtering(n)
 
     # Output equation
     for n, elt in dict_npq_set.items():
         for p, q, order_set, nb in elt:
-            output_by_order[n-1,:,:] += nb * pq_computation(p, q, order_set,
-                                                            system.npq)
+            output_by_order[n-1,:,:] += nb * \
+                    pq_computation(p, q, [m-1 for m in order_set], system.npq)
 
 
     ######################

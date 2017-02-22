@@ -210,14 +210,14 @@ def state_combinatorics(list_pq, nl_order_max, sym_bool=False):
                     nb_appearance = index.count(value)
                     current_max += nb_appearance
                     nb_repetitions *= int(binomial(current_max, nb_appearance))
-                pq_sets[elt[0]].append((int(elt[1]), int(elt[2]), list(index),
+                pq_sets[elt[0]].append((int(elt[1]), int(elt[2]), index,
                                         nb_repetitions))
         else:
             list_idx = itertbx.product(range(1, k_max+1), repeat=elt[1])
             list_idx_filtre = itertbx.filterfalse(lambda x: sum(x) != k_sum,
                                                   list_idx)
             for index in list_idx_filtre:
-                pq_sets[elt[0]].append((elt[1], elt[2], list(index), 1))
+                pq_sets[elt[0]].append((elt[1], elt[2], index, 1))
 
     return pq_sets
 
@@ -247,7 +247,7 @@ def make_dict_pq_set(h_pq_bool, nl_order_max, sym_bool=False):
         Number of state-entry for the multilinear pq-function.
     - q : int
         Number of input-entry for the multilinear pq-function.
-    - k : list (of length p)
+    - k : tuple (of length p)
         Homogenous orders for the state-entries.
     - nb : int
         Number of unordered sets equals to k, including k.
