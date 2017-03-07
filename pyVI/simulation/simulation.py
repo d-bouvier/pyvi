@@ -144,7 +144,7 @@ def simulation(input_sig, system, fs=44100, nl_order_max=1, hold_opt=1,
             return np.tensordot(dict_pq[(p, q)], np.einsum(*temp_arg), p+q)
     elif system.mode == 'function':
         def pq_computation(p, q, order_set, dict_pq):
-            temp_arg = (input_sig,)*q + tuple(state_by_order[order_set])
+            temp_arg = tuple(state_by_order[order_set]) + (input_sig,)*q
             return np.array(dict_pq[(p, q)](*temp_arg))
 
     # Correction of the bias due to ADC converter (with holder of order 0 or 1)
