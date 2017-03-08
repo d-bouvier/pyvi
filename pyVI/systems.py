@@ -166,10 +166,10 @@ def second_order(gain=1, f0=100, damping=0.5, nl_coeff=[1, 1/10, 1/100]):
                       mpq_dict, npq_dict, sym_bool=True, mode='function')
 
 
-def simple_system():
+def system_test(mode='tensor'):
     """
     Function that create and returns the StateSpace object corresponding to a
-    simple system for simulation test.
+    simple system for testing and debugging the simulation.
 
     Returns
     -------
@@ -177,15 +177,47 @@ def simple_system():
 
     """
 
-    m20 = np.zeros((2, 2, 2))
-    m20[1, 0, 0] = 1
-    m10 = np.zeros((2, 2, 1))
-    m10[0, 1, 0] = -1
-    m02 = np.zeros((2, 1, 1))
-    m02[0, 0, 0] = 2
+    # State-space matrices
+    A_m = np.array([[0, 1],
+                    [- 10000, - 40]]) # State-to-state matrix
+    B_m = np.array([[0], [1]]); # Input-to-state matrix
+    C_m = np.array([[1, 0]]) # State-to-output matrix
+    D_m = np.array([[1]]) # Input-to-output matrix
 
-    return StateSpace(np.array([[-1, 0], [1/2, 1/2]]), np.array([[1], [0]]),
-                      np.array([[1, 0]]), np.zeros((1, 1)),
-                      (lambda p, q: (p+q)<3), (lambda p, q: False),
-                      {(2, 0): m20, (1, 1): m10, (0, 2): m02}, dict(),
-                      sym_bool=True, mode='tensor')
+    if mode == 'tensor':
+        # Mpq & Npq in 'tensor' mode
+        m20 = np.zeros((2, 2, 2))
+        m20[1, 1, 1] = 1
+        m11 = np.zeros((2, 2, 1))
+        m11[0, 1, 0] = -1
+        m02 = np.zeros((2, 1, 1))
+        m02[0, 0, 0] = 0.1
+
+        n20 = np.zeros((1, 2, 2))
+        n20[0, 1, 1] = 1
+        n11 = np.zeros((1, 2, 1))
+        n11[0, 1, 0] = -1
+        n02 = np.zeros((1, 1, 1))
+        n02[0, 0, 0] = -1
+
+    elif mode == 'function':
+        # Mpq & Npq in 'function' mode
+        m20 = lambda x1, x2: [0*x1[0], x1[1] * x2[1]]
+        m11 = lambda x, u: [-x[1]*u[0], 0*x[0]]
+        m02 = lambda u1, u2: [0.1*u1[0]*u2[0], 0*u1[0]]
+
+        n20 = lambda x1, x2: x1[1]*x2[1]
+        n11 = lambda x, u: -x[1]*u[0]
+        n02 = lambda u1, u2: 0.01*u1[0]*u2[0]
+
+    # Handles for fonction saying if Mpq and Npq functions are used
+    h_mpq_bool = (lambda p, q: (p+q == 2))
+    h_npq_bool = (lambda p, q: (p+q == 2))
+
+    # Dictionnaries of Mpq & Npq
+    mpq_dict = {(2, 0): m20, (1, 1): m11, (0, 2): m02}
+    npq_dict = {(2, 0): n20, (1, 1): n11, (0, 2): n02}
+
+
+    return StateSpace(A_m, B_m, C_m, D_m, h_mpq_bool, h_npq_bool,
+                      mpq_dict, npq_dict, sym_bool=True, mode=mode)
