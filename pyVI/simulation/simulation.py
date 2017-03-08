@@ -210,6 +210,7 @@ def simulation(input_sig, system, fs=44100, nl_order_max=1, hold_opt=1,
     else:
         return output_by_order.sum(0)
 
+
 #==============================================================================
 # Main script
 #==============================================================================
@@ -219,10 +220,23 @@ if __name__ == '__main__':
     Main script for testing.
     """
 
-    from pyvi.systems import loudspeaker_sica
+    from pyvi.systems import loudspeaker_sica, system_test
     from matplotlib import pyplot as plt
     import time
 
+    ## Test if simulation works correctly ##
+    sig_test = np.ones((10000,))
+    out = simulation(sig_test, system_test(mode='tensor'),
+                     nl_order_max=3, hold_opt=0)
+    out = simulation(sig_test, system_test(mode='tensor'),
+                     nl_order_max=3, hold_opt=1)
+    out = simulation(sig_test, system_test(mode='function'),
+                     nl_order_max=3, hold_opt=0)
+    out = simulation(sig_test, system_test(mode='function'),
+                     nl_order_max=3, hold_opt=1)
+
+
+    ## Loudspeaker simulation ##
     # Input signal
     fs = 44100
     T = 1
