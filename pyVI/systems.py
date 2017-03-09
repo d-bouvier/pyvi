@@ -115,7 +115,7 @@ def loudspeaker_sica(version='tristan', output='pos', mode='function'):
                       mpq_dict, npq_dict, sym_bool=True, mode=mode)
 
 
-def second_order(gain=1, f0=100, damping=0.5, nl_coeff=[1, 1/10, 1/100]):
+def second_order_w_nl_damping(gain=1, f0=100, damping=0.2, nl_coeff=[0, 1e-6]):
     """
     Function that create and returns the StateSpace object corresponding to a
     second order system with nonlinear stiffness.
@@ -138,9 +138,7 @@ def second_order(gain=1, f0=100, damping=0.5, nl_coeff=[1, 1/10, 1/100]):
     """
 
     w0 = 2 * np.pi * f0 # Natural pulsation
-    coeff = (damping * w0)**2 # Damping factor
 
-    nl_coeff = [1, 1/10, 1/100]
     # State-space matrices
     A_m = np.array([[0, 1],
                     [- w0**2, - 2 * damping * w0]]) # State-to-state matrix
@@ -148,22 +146,23 @@ def second_order(gain=1, f0=100, damping=0.5, nl_coeff=[1, 1/10, 1/100]):
     C_m = np.array([[1, 0]]) # State-to-output matrix
     D_m = np.zeros((1, 1)) # Input-to-output matrix
 
-    # Handles for fonction saying if Mpq and Npq functions are used
-    h_mpq_bool = (lambda p, q: (p<=4) & (q==0))
-    h_npq_bool = (lambda p, q: False)
-
-    # Dictionnaries of Mpq & Npq tensors
-    m20 = lambda x1, x2: [0*x1[0], \
-                          nl_coeff[0] * x1[0] * x2[0]]
-    m30 = lambda x1, x2, x3: [0*x1[0], \
-                              nl_coeff[1] * x1[0] * x2[0] * x3[0]]
-    m40 = lambda x1, x2, x3, x4: [0*x1[0], \
-                                  nl_coeff[2] * x1[0] * x2[0] * x3[0] * x4[0]]
-    mpq_dict = {(2, 0): m20, (3, 0): m30, (4, 0): m40}
+    # Dictionnaries of Mpq & Npq
+    mpq_dict = dict()
     npq_dict = dict()
 
+    p_count = 1
+    for val in nl_coeff:
+        p_count += 1
+        temp_mpq = np.zeros((2,)*(p_count+1))
+        temp_mpq[(1,)*(p_count+1)] = val
+        mpq_dict[(p_count, 0)] = temp_mpq.copy()
+
+    # Handles for fonction saying if Mpq and Npq functions are used
+    h_mpq_bool = (lambda p, q: (p<=p_count) & (q==0))
+    h_npq_bool = (lambda p, q: False)
+
     return StateSpace(A_m, B_m, C_m, D_m, h_mpq_bool, h_npq_bool,
-                      mpq_dict, npq_dict, sym_bool=True, mode='function')
+                      mpq_dict, npq_dict, sym_bool=True, mode='tensor')
 
 
 def system_test(mode='tensor'):
