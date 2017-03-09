@@ -220,7 +220,7 @@ if __name__ == '__main__':
     Main script for testing.
     """
 
-    from pyvi.systems import loudspeaker_sica, system_test
+    from pyvi.simulation.systems import loudspeaker_sica, system_test
     from matplotlib import pyplot as plt
     import time
 
