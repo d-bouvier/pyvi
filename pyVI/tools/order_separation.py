@@ -90,7 +90,6 @@ def simu_collection(input_sig, system, fs=44100, N=1, hold_opt=1,
                     param['coeff'] = (-1)**vec * gain**(vec//2)
                 else:
                     param['coeff'] = gain**vec
-                print(param['coeff'])
         elif method == 'complex':
             param.update({'dtype': 'complex128',
                           'K': param['nl_order_max']})
@@ -134,20 +133,20 @@ def simu_collection(input_sig, system, fs=44100, N=1, hold_opt=1,
                   'nl_order_max': N,
                   'sampler_holder_option': hold_opt}
 
-    save_data_pickle({'sep_method': method,
-                      'sep_param': param,
-                      'simu_param': simu_param,
-                      'time': datetime.now().strftime('%d_%m_%Y_%Hh%M')},
-                     'config', folders)
-    save_data_numpy({'input': input_sig,
-                     'input_collection': input_coll,
-                     'output': out_by_order.sum(0),
-                     'output_by_order': out_by_order,
-                     'output_collection': output_coll,
-                     'time': [n / fs for n in range(len_sig)]},
-                    'data', folders)
+    config = {'sep_method': method,
+              'sep_param': param,
+              'simu_param': simu_param,
+              'time': datetime.now().strftime('%d_%m_%Y_%Hh%M')}
+    data = {'input': input_sig,
+            'input_collection': input_coll,
+            'output': out_by_order.sum(0),
+            'output_by_order': out_by_order,
+            'output_collection': output_coll,
+            'time': [n / fs for n in range(len_sig)]}
+    save_data_pickle(config, 'config', folders)
+    save_data_numpy(data, 'data', folders)
 
-    return output_coll, param
+    return data, config
 
 
 def order_separation(output_coll, method, param):
@@ -166,5 +165,4 @@ def order_separation(output_coll, method, param):
     elif method == 'complex':
         estimation = fftpack.ifft(output_coll, n=param['nl_order_max'], axis=0)
         demixing_vec = np.vander([1/param['rho']], N=param['K'], increasing=True)
-        return demixing_vec.T * estimation[::-1, :]
-
+        return demixing_vec.T * np.roll(estimation, -1, axis=0)
