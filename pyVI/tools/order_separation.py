@@ -69,7 +69,8 @@ def safe_db(num, den):
 
 
 def simu_collection(input_sig, system, fs=44100, N=1, hold_opt=1,
-                    name='unknown', method='boyd', param={'nl_order_max' :1}):
+                    name='unknown', method='boyd', param={'nl_order_max' :1},
+                    save_bool=False):
     """
     Make collection of simulation with inputs derived from a based signal.
     (only works with SISO system)
@@ -143,8 +144,10 @@ def simu_collection(input_sig, system, fs=44100, N=1, hold_opt=1,
             'output_by_order': out_by_order,
             'output_collection': output_coll,
             'time': [n / fs for n in range(len_sig)]}
-    save_data_pickle(config, 'config', folders)
-    save_data_numpy(data, 'data', folders)
+
+    if save_bool:
+        save_data_pickle(config, 'config', folders)
+        save_data_numpy(data, 'data', folders)
 
     return data, config
 
