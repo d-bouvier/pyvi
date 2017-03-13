@@ -81,13 +81,20 @@ def simu_collection(input_sig, system, fs=44100, N=1, hold_opt=1,
             if not 'K' in param:
                 param['K'] = param['nl_order_max']
             if not 'coeff' in param:
-                param['coeff'] = np.zeros((param['K']))
-                for idx in range(param['K']):
-                    param['coeff'][idx] = (-1)**idx * (np.pi/2)**(int(idx/2))
+                vec = np.arange(param['K'])
+                if not 'gain' in param:
+                    gain = np.pi/2
+                else:
+                    gain = param['gain']
+                if param.pop('negative_gain', False):
+                    param['coeff'] = (-1)**vec * gain**(vec//2)
+                else:
+                    param['coeff'] = gain**vec
+                print(param['coeff'])
         elif method == 'complex':
             param.update({'dtype': 'complex128',
                           'K': param['nl_order_max']})
-            param['w'] = np.exp(1j * 2 * np.pi / param['K'])
+            param['w'] = np.exp(- 1j * 2 * np.pi / param['K'])
             if not 'rho' in param:
                 param['rho'] = 1
         return param
