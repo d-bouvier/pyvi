@@ -240,39 +240,39 @@ if __name__ == '__main__':
     # Input signal
     fs = 44100
     T = 1
-    f1 = 100
-    f2 = 300
+    f1 = 75
+    f2 = 125
     amp = 10
     time_vector = np.arange(0, T, step=1/fs)
     f0_vector = np.linspace(f1, f2, num=len(time_vector))
-    sig = amp * np.sin(np.pi * f0_vector * time_vector)
+    sig = amp * np.sin(2 * np.pi * f0_vector * time_vector)
 
     # Simulation
     start1 = time.time()
-    out_t = simulation(sig, loudspeaker_sica(mode='tensor'),
+    out_t = simulation(sig, loudspeaker_sica(mode='tensor', output='current'),
                        fs=fs, nl_order_max=3, hold_opt=0)
     end1 = time.time()
     plt.figure('Input- Output (1)')
     plt.clf()
     plt.subplot(2, 1, 1)
-    plt.plot(sig)
+    plt.plot(time_vector, sig)
     plt.subplot(2, 1, 2)
-    plt.plot(out_t)
+    plt.plot(time_vector, out_t)
 
     start2 = time.time()
-    out_f = simulation(sig, loudspeaker_sica(mode='function'),
+    out_f = simulation(sig, loudspeaker_sica(mode='function', output='current'),
                        fs=fs, nl_order_max=3, hold_opt=0)
     end2 = time.time()
     plt.figure('Input- Output (2)')
     plt.clf()
     plt.subplot(2, 1, 1)
-    plt.plot(sig)
+    plt.plot(time_vector, sig)
     plt.subplot(2, 1, 2)
-    plt.plot(out_f)
+    plt.plot(time_vector, out_f)
 
     plt.figure('Difference')
     plt.clf()
-    plt.plot(out_t - out_f)
+    plt.plot(time_vector, out_t - out_f)
 
     print('"tensor" mode: {}s'.format(end1-start1))
     print('"function" mode: {}s'.format(end2-start2))
