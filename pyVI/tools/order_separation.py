@@ -166,3 +166,66 @@ def order_separation(output_coll, method, param):
         estimation = fftpack.ifft(output_coll, n=param['nl_order_max'], axis=0)
         demixing_vec = np.vander([1/param['rho']], N=param['K'], increasing=True)
         return demixing_vec.T * np.roll(estimation, -1, axis=0)
+
+
+#==============================================================================
+# Main script
+#==============================================================================
+
+if __name__ == '__main__':
+    """
+    Main script for testing.
+    """
+
+    from pyvi.simulation.systems import loudspeaker_sica
+    from matplotlib import pyplot as plt
+
+    fs = 44100
+    T = 0.1
+    time_vector = np.arange(0, T, 1/fs)
+    f0 = 160
+    input_sig_cplx = 10 * np.exp(2j * np.pi * f0 * time_vector)
+    input_sig_real = np.real(input_sig_cplx)
+
+    data_cplx, param_cplx = simu_collection(input_sig_cplx,
+                                            loudspeaker_sica(), fs=fs, N=3,
+                                            hold_opt=1, name='test_cplx',
+                                            method='complex',
+                                            param={'nl_order_max' :3,
+                                                   'rho': 2})
+
+    data_real, param_real = simu_collection(input_sig_real,
+                                            loudspeaker_sica(), fs=fs, N=3,
+                                            hold_opt=1, name='test_real',
+                                            method='boyd',
+                                            param={'nl_order_max' :3,
+                                                   'negative_gain': False,
+                                                   'gain': 2})
+
+    out_order_est_cplx = order_separation(data_cplx['output_collection'],
+                                          param_cplx['sep_method'],
+                                          param_cplx['sep_param'])
+    order_max_cplx = data_cplx['output_by_order'].shape[0]
+    out_order_est_real = order_separation(data_real['output_collection'],
+                                          param_real['sep_method'],
+                                          param_real['sep_param'])
+    order_max_real = data_real['output_by_order'].shape[0]
+
+    plt.figure('Method complex - True and estimated orders')
+    plt.clf()
+    for n in range(order_max_cplx):
+        plt.subplot(order_max_cplx, 2, 2*n+1)
+        plt.plot(data_cplx['time'],
+                 np.real(data_cplx['output_by_order'][n]), 'b')
+        plt.subplot(order_max_cplx, 2, 2*n+2)
+        plt.plot(data_cplx['time'], np.real(out_order_est_cplx[n]), 'r')
+    plt.show()
+
+    plt.figure('Method real - True and estimated orders')
+    plt.clf()
+    for n in range(order_max_real):
+        plt.subplot(order_max_real, 2, 2*n+1)
+        plt.plot(data_real['time'], data_real['output_by_order'][n], 'b')
+        plt.subplot(order_max_real, 2, 2*n+2)
+        plt.plot(data_real['time'], out_order_est_real[n], 'r')
+    plt.show()
