@@ -11,6 +11,7 @@ Last modified on 3 Nov. 2016
 Developed for Python 3.5.1
 Uses:
  - numpy 1.11.1
+ - matplolib 1.5.1
  - os, pickle
 """
 
@@ -21,6 +22,7 @@ Uses:
 import os
 import pickle
 from numpy import savez
+from matplotlib import pyplot as plt
 
 #==============================================================================
 # Global variables
@@ -80,3 +82,12 @@ def save_data_numpy(array_dict, name, folder):
     folder_path = folder_str(folder)
     full_path = folder_path + os.sep + name + '.npz'
     savez(full_path, **array_dict)
+
+def save_figure(handle_fig, name, folder):
+    """
+    Save figure using matplotlib.
+    """
+
+    folder_path = folder_str(folder)
+    full_path = folder_path + os.sep + name
+    handle_fig.savefig(full_path, bbox_inches='tight')
