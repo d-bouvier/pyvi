@@ -9,6 +9,7 @@ Last modified on 3 Nov. 2016
 Developed for Python 3.5.1
 Uses:
  - numpy 1.11.1
+ - scipy 0.18.0
  - pyvi 0.1
  - datetime
 """
@@ -21,6 +22,7 @@ import numpy as np
 from pyvi.simulation.simulation import simulation
 from pyvi.tools.paths import save_data_pickle, save_data_numpy
 from datetime import datetime
+from scipy.special import binom as binomial
 
 
 #==============================================================================
@@ -68,7 +70,7 @@ def safe_db(num, den):
     return 20 * np.log10(num / den)
 
 
-def simu_collection(input_sig, system, fs=44100, N=1, hold_opt=1,
+def simu_collection(input_sig, system, fs=44100, hold_opt=1,
                     name='unknown', method='boyd', param={'nl_order_max' :1},
                     save_bool=False):
     """
@@ -76,46 +78,85 @@ def simu_collection(input_sig, system, fs=44100, N=1, hold_opt=1,
     (only works with SISO system)
     """
 
-    def update_parameters():
-        if method == 'boyd':
+    # Checks the separation method used and creates functions accordingly
+    if method == 'boyd':
+        def update_parameters():
             param.update({'dtype': 'float64'})
             if not 'K' in param:
                 param['K'] = param['nl_order_max']
             if not 'coeff' in param:
                 vec = np.arange(param['K'])
                 if not 'gain' in param:
-                    gain = np.pi/2
-                else:
-                    gain = param['gain']
+                    param['gain'] = np.pi/2
                 if param.pop('negative_gain', False):
-                    param['coeff'] = (-1)**vec * gain**(vec//2)
+                    param['coeff'] = (-1)**vec * param['gain']**(vec//2)
                 else:
-                    param['coeff'] = gain**vec
-        elif method == 'complex':
+                    param['coeff'] = param['gain']**vec
+            return param
+        def create_input_coll(input_coll):
+            for idx in range(param['K']):
+                input_coll[idx, :] = param['coeff'][idx] * input_sig
+            return input_coll
+
+    elif method == 'complex':
+        def update_parameters():
             param.update({'dtype': 'complex128',
                           'K': param['nl_order_max']})
             param['w'] = np.exp(- 1j * 2 * np.pi / param['K'])
             if not 'rho' in param:
                 param['rho'] = 1
-        return param
-
-    def create_input_coll(input_coll):
-        if method == 'boyd':
-            for idx in range(param['K']):
-                input_coll[idx, :] = param['coeff'][idx] * input_sig
-        elif method == 'complex':
+            return param
+        def create_input_coll(input_coll):
             for idx in range(param['K']):
                 input_coll[idx, :] = param['rho'] * (param['w']**idx) * \
                                      input_sig
-        return input_coll
+            return input_coll
+
+    elif method == 'phase+amp':
+        def update_parameters():
+            param.update({'dtype': 'float64'})
+            N = param['nl_order_max']
+            param['K_phase'] = 2*N + 1
+            param['K_amp'] = (N + 1) // 2
+            param['K'] = param['K_phase'] * param['K_amp']
+            param['nb_term'] = (N * (N + 3)) // 2
+            if not 'coeff' in param:
+                vec = np.arange(param['K_amp'])
+                if not 'gain' in param:
+                    param['gain'] = np.pi/2
+                param['coeff'] = param['gain']**vec
+            param['w'] = np.exp(- 1j * 2 * np.pi / param['K_phase'])
+            return param
+        def create_input_coll(input_coll):
+            for idx_amp in range(param['K_amp']):
+                for idx_phase in range(param['K_phase']):
+                    idx = idx_amp * param['K_phase'] + idx_phase
+#                    aaa = param['coeff'][idx_amp] * param['w']**idx_phase
+#                    print(idx, np.abs(aaa), np.angle(aaa))
+                    input_coll[idx, :] = np.real(param['coeff'][idx_amp] * \
+                                                 param['w']**idx_phase * \
+                                                 input_sig)
+            return input_coll
+
 
     len_sig = input_sig.shape[0]
     param = update_parameters()
 
     # Simulation for the basic input
-    out_by_order = simulation(input_sig, system, fs=fs, nl_order_max=N,
-                              hold_opt=hold_opt, out='output_by_order')
-    out_by_order.dtype = param['dtype']
+    if method == 'phase+amp':
+        out_by_order = simulation(np.real(input_sig), system, fs=fs,
+                                  nl_order_max=param['nl_order_max'],
+                                  hold_opt=hold_opt, out='output_by_order')
+        out_by_order.dtype = param['dtype']
+        out_by_order_bis = simulation(input_sig, system, fs=fs,
+                                      nl_order_max=param['nl_order_max'],
+                                      hold_opt=hold_opt, out='output_by_order')
+
+    else:
+        out_by_order = simulation(input_sig, system, fs=fs,
+                                  nl_order_max=param['nl_order_max'],
+                                  hold_opt=hold_opt, out='output_by_order')
+        out_by_order.dtype = param['dtype']
 
     # Initialization
     input_coll = create_input_coll(np.zeros((param['K'], len_sig),
@@ -125,13 +166,14 @@ def simu_collection(input_sig, system, fs=44100, N=1, hold_opt=1,
     # Simulation for the different inputs of input_coll
     for idx in range(param['K']):
         out = simulation(input_coll[idx, :], system, fs=fs,
-                         nl_order_max=N, hold_opt=hold_opt, out='output')
+                         nl_order_max=param['nl_order_max'],
+                         hold_opt=hold_opt, out='output')
         output_coll[idx, :] = out
 
     # Saving data
     folders = ('order_separation', name)
     simu_param = {'fs': fs,
-                  'nl_order_max': N,
+                  'nl_order_max': param['nl_order_max'],
                   'sampler_holder_option': hold_opt}
 
     config = {'sep_method': method,
@@ -144,6 +186,8 @@ def simu_collection(input_sig, system, fs=44100, N=1, hold_opt=1,
             'output_by_order': out_by_order,
             'output_collection': output_coll,
             'time': [n / fs for n in range(len_sig)]}
+    if method == 'phase+amp':
+        data.update({'output_by_order_cplx': out_by_order_bis})
 
     if save_bool:
         save_data_pickle(config, 'config', folders)
@@ -158,17 +202,60 @@ def order_separation(output_coll, method, param):
     (only works with SISO system)
     """
     from scipy import fftpack
+
     if method == 'boyd':
-        mixing_mat = np.vander(param['coeff'], N=4, increasing=True)[:, 1::]
+        mixing_mat = np.vander(param['coeff'], N=param['nl_order_max']+1,
+                               increasing=True)[:, 1::]
         if mixing_mat.shape[0] == mixing_mat.shape[1]:
             return np.dot(np.linalg.inv(mixing_mat), output_coll)
         else:
             return np.dot(np.linalg.inv(np.dot(mixing_mat.T, mixing_mat)),
                           np.dot(mixing_mat.T, output_coll))
+
     elif method == 'complex':
         estimation = fftpack.ifft(output_coll, n=param['nl_order_max'], axis=0)
         demixing_vec = np.vander([1/param['rho']], N=param['K'], increasing=True)
         return demixing_vec.T * np.roll(estimation, -1, axis=0)
+
+    elif method == 'phase+amp':
+        T = output_coll.shape[-1]
+        out_per_phase = np.zeros((param['K_amp'], param['K_phase'], T),
+                                 dtype='complex128')
+        term_combinatoric = np.zeros((param['nb_term'], T), dtype='complex128')
+        mixing_mat = np.vander(param['coeff'], N=param['nl_order_max']+1,
+                               increasing=True)[:, 1::]
+
+        for idx in range(0, param['K_amp']):
+            start = idx*param['K_phase']
+            end = start + param['K_phase']
+            out_per_phase[idx,:,:] = fftpack.ifft(output_coll[start:end, :],
+                                                  n=param['K_phase'], axis=0)
+        k = np.arange(0, param['nb_term'])
+        n = (np.sqrt(9 + 8*k) - 1)//2
+        q = k + 1 - (n*(n+1))//2
+        phase_factor = (n - 2*q) % param['K_phase']
+
+        tmp = (np.arange(param['nl_order_max'], 0, -1) + 1) // 2
+        nb_term = np.append(np.concatenate((tmp, tmp[::-1])), tmp[1])[::-1]
+        tmp = np.arange(1, param['nl_order_max']+1)
+        first_term = np.append(np.concatenate((tmp, tmp[::-1])), tmp[1])[::-1]
+        first_term -= 1
+
+        for idx in range(0, param['K_phase']):
+            indexes = np.where(phase_factor == idx)
+            tmp_mixing = mixing_mat[:, first_term[idx]::2]
+#            combinatoric_factor = np.diag(1/binomial(n[indexes], q[indexes]))
+            if nb_term[idx] == param['K_amp']:
+                tmp_result = np.dot(np.linalg.inv(tmp_mixing),
+                                    out_per_phase[:,idx,:])
+            else:
+                tmp_result = \
+                        np.dot(np.linalg.inv(np.dot(tmp_mixing.T, tmp_mixing)),
+                               np.dot(tmp_mixing.T, out_per_phase[:,idx,:]))
+            term_combinatoric[indexes, :] = tmp_result
+#            term_combinatoric[indexes, :] = \
+#                                np.dot(combinatoric_factor, tmp_result)
+        return term_combinatoric
 
 
 #==============================================================================
@@ -180,30 +267,39 @@ if __name__ == '__main__':
     Main script for testing.
     """
 
-    from pyvi.simulation.systems import loudspeaker_sica
+    from pyvi.simulation.systems import second_order_w_nl_damping
     from matplotlib import pyplot as plt
+    from scipy import fftpack
 
-    fs = 44100
-    T = 0.1
+    system = second_order_w_nl_damping(gain=1, f0=100,
+                                       damping=0.2, nl_coeff=[1e-1, 3e-5])
+    fs = 4410
+    T = 0.2
     time_vector = np.arange(0, T, 1/fs)
-    f0 = 160
-    input_sig_cplx = 10 * np.exp(2j * np.pi * f0 * time_vector)
+    f1 = 100
+    f2 = 133
+    input_sig_cplx = np.exp(2j * np.pi * f1 * time_vector) + \
+                     np.exp(2j * np.pi * f2 * time_vector)
     input_sig_real = np.real(input_sig_cplx)
 
-    data_cplx, param_cplx = simu_collection(input_sig_cplx,
-                                            loudspeaker_sica(), fs=fs, N=3,
+    data_cplx, param_cplx = simu_collection(input_sig_cplx, system, fs=fs,
                                             hold_opt=1, name='test_cplx',
                                             method='complex',
                                             param={'nl_order_max' :3,
                                                    'rho': 2})
 
-    data_real, param_real = simu_collection(input_sig_real,
-                                            loudspeaker_sica(), fs=fs, N=3,
+    data_real, param_real = simu_collection(input_sig_real, system, fs=fs,
                                             hold_opt=1, name='test_real',
                                             method='boyd',
                                             param={'nl_order_max' :3,
                                                    'negative_gain': False,
                                                    'gain': 2})
+
+    data_phase, param_phase = simu_collection(input_sig_cplx, system, fs=fs,
+                                              hold_opt=1, name='test_phase+amp',
+                                              method='phase+amp',
+                                              param={'nl_order_max' :3,
+                                                     'gain': 0.1})
 
     out_order_est_cplx = order_separation(data_cplx['output_collection'],
                                           param_cplx['sep_method'],
@@ -213,6 +309,10 @@ if __name__ == '__main__':
                                           param_real['sep_method'],
                                           param_real['sep_param'])
     order_max_real = data_real['output_by_order'].shape[0]
+    out_order_est_phase = order_separation(data_phase['output_collection'],
+                                           param_phase['sep_method'],
+                                           param_phase['sep_param'])
+    order_max_phase = data_phase['output_by_order'].shape[0]
 
     plt.figure('Method complex - True and estimated orders')
     plt.clf()
@@ -231,4 +331,73 @@ if __name__ == '__main__':
         plt.plot(data_real['time'], data_real['output_by_order'][n], 'b')
         plt.subplot(order_max_real, 2, 2*n+2)
         plt.plot(data_real['time'], out_order_est_real[n], 'r')
+    plt.show()
+
+    plt.figure('Method phase + amplitude - Estimated orders')
+    plt.clf()
+    N = order_max_phase
+    nb_col = 2*(N+1)
+    shape = (order_max_phase, nb_col)
+    for n in range(1, order_max_phase+1):
+        for q in range(0,n+1):
+            odd = n%2
+            ax = plt.subplot2grid(shape, (n-1, N - n + 2*q), colspan=2)
+            ind = (n*(n+1))//2 + q - 1
+            ax.plot(data_phase['time'], np.real(out_order_est_phase[ind]), 'b')
+            ax.plot(data_phase['time'], np.imag(out_order_est_phase[ind]), 'r')
+
+    plt.figure('Method phase + amplitude - Estimated orders (FFT)')
+    plt.clf()
+    nfft = 2**int(np.log2(out_order_est_phase.shape[-1])+1)
+    f_vec = np.fft.fftfreq(nfft, 1/fs)
+    spectrum = fftpack.fft(out_order_est_phase, n=nfft)
+    for n in range(1, order_max_phase+1):
+        for q in range(0,n+1):
+            odd = n%2
+            ax = plt.subplot2grid(shape, (n-1, N - n + 2*q), colspan=2)
+            ind = (n*(n+1))//2 + q - 1
+            ax.plot(f_vec, np.abs(spectrum[ind]))
+
+#    plt.figure('Method phase + amplitude - Estimated orders - Real')
+#    plt.clf()
+#    shape2 = (order_max_phase, N+2)
+#    for n in range(1, order_max_phase+1):
+#        for q in range(0, 1 + n//2):
+#            odd = n%2
+#            ax = plt.subplot2grid(shape2, (n-1, N%2 + 2*q), colspan=2)
+#            ind1 = (n*(n+1))//2 + q - 1
+#            ind2 = (n*(n+1))//2 + n - q - 1
+#            if 2*q == n:
+#                estimation = out_order_est_phase[ind1]
+#            else:
+#                estimation = out_order_est_phase[ind1] + \
+#                             out_order_est_phase[ind2]
+#            ax.plot(data_phase['time'], np.real(estimation), 'b')
+#            ax.plot(data_phase['time'], np.imag(estimation), 'r')
+#
+#    plt.figure('Method phase + amplitude - Estimated orders - Real (FFT)')
+#    plt.clf()
+#    for n in range(1, order_max_phase+1):
+#        for q in range(0, 1 + n//2):
+#            odd = n%2
+#            ax = plt.subplot2grid(shape2, (n-1, N%2 + 2*q), colspan=2)
+#            ind1 = (n*(n+1))//2 + q - 1
+#            ind2 = (n*(n+1))//2 + n - q - 1
+#            if 2*q == n:
+#                estimation = spectrum[ind1]
+#            else:
+#                estimation = spectrum[ind1] + spectrum[ind2]
+#            ax.plot(f_vec, np.abs(estimation))
+
+    plt.figure('Method phase + amplitude - True and estimated orders')
+    plt.clf()
+    idx = 0
+    for n in range(order_max_phase):
+        estimation = np.sum(out_order_est_phase[idx:idx+n+2], axis=0)
+        plt.subplot(order_max_phase, 2, 2*n+1)
+        plt.plot(data_phase['time'], data_phase['output_by_order'][n], 'b')
+        plt.subplot(order_max_phase, 2, 2*n+2)
+        plt.plot(data_phase['time'], np.real_if_close(estimation), 'r')
+        idx += n + 2
+
     plt.show()
