@@ -21,6 +21,7 @@ Notes
 Last modified on 3 Nov. 2016
 Developed for Python 3.5.1
 Uses:
+ - numpy 1.11.1
  - sympy 1.0
  - pyvi 0.1
 """
@@ -32,6 +33,7 @@ Uses:
 from pyvi.tools.utilities import Style
 from abc import abstractmethod
 import sys as sys
+import numpy as np
 import sympy as sp
 
 
@@ -124,6 +126,8 @@ class StateSpace:
         self.sym_bool = sym_bool
         self.mode = mode
 
+        # Check dimension and linearity
+        self._dim_ok = self._check_dim()
         self.linear = self._is_linear()
 
     def __repr__(self):
@@ -164,6 +168,93 @@ class StateSpace:
         return print_str
 
     #=============================================#
+
+    def _check_dim(self):
+        """Verify that input, state and output dimensions are respected."""
+        # Check matrices shape
+        self._check_dim_matrices()
+
+        # Check that all nonlinear lambda functions works correctly
+        for (p, q), mpq in self.mpq.items():
+            if self.mode == 'function':
+                self._check_dim_nl_fct(p, q, mpq, 'M', self.dim['state'])
+            else:
+                self._check_dim_nl_tensor(p, q, mpq, 'M', self.dim['state'])
+        for (p, q), npq in self.npq.items():
+            if self.mode == 'function':
+                self._check_dim_nl_fct(p, q, npq, 'N', self.dim['output'])
+            else:
+                self._check_dim_nl_tensor(p, q, npq, 'M', self.dim['output'])
+        # If no error is raised, return True
+        return True
+
+
+    def _check_dim_matrices(self):
+        """Verify shape of the matrices used in the linear part."""
+        def check_equal(iterator, value):
+            return len(set(iterator)) == 1 and iterator[0] == value
+
+        list_dim_state = [self.A_m.shape[0], self.A_m.shape[1],
+                          self.B_m.shape[0], self.C_m.shape[1]]
+        list_dim_input = [self.B_m.shape[1], self.D_m.shape[1]]
+        list_dim_output = [self.C_m.shape[0], self.D_m.shape[0]]
+        assert check_equal(list_dim_state, self.dim['state']), \
+               'State dimension not consistent'
+        assert check_equal(list_dim_input, self.dim['input']), \
+               'Input dimension not consistent'
+        assert check_equal(list_dim_output, self.dim['output']), \
+               'Output dimension not consistent'
+
+
+    def _check_dim_nl_fct(self, p, q, fct, name, dim_result):
+        """Verify shape and functionnality of the multilinear functions."""
+        str_fct = '{}_{}{} function: '.format(name, p, q)
+        # Check that each nonlinear lambda functions:
+        # - accepts the good number of input arguments
+        assert fct.__code__.co_argcount == p + q, \
+               str_fct + 'wrong number of input arguments ' + \
+               '(got {}, expected {}).'.format(fct.__code__.co_argcount, p + q)
+        try:
+            state_vectors = (np.ones(self.dim['state']),)*p
+            input_vectors = (np.ones(self.dim['input']),)*q
+            result_vector = fct(*state_vectors, *input_vectors)
+        # - accepts vectors of appropriate shapes
+        except IndexError:
+            raise IndexError(str_fct + 'some index exceeds dimension of ' + \
+                             'input and/or state vectors.')
+        # - does not cause error
+        except:
+            raise NameError(str_fct + 'creates a ' + \
+                            '{}.'.format(sys.exc_info()[0]))
+        # - returns a vector of appropriate shape
+        assert len(result_vector) == dim_result, \
+               str_fct + 'wrong shape for the output (got ' + \
+               '{}, expected {}).'.format(result_vector.shape, (dim_result,1))
+
+
+    def _check_dim_nl_tensor(self, p, q, tensor, name, dim_result):
+        """Verify shape and functionnality of the multilinear tensors."""
+        str_tensor = '{}_{}{} tensor: '.format(name, p, q)
+        shape = tensor.shape
+        # Check that each nonlinear lambda functions:
+        # - accepts the good number of input arguments
+        assert len(shape) == p + q + 1, \
+               str_tensor + 'wrong number of dimension ' + \
+               '(got {}, expected {}).'.format(len(shape), p + q + 1)
+        assert shape[0] == dim_result, \
+               str_tensor + 'wrong size for dimension 1 ' + \
+               '(got {}, expected {}).'.format(dim_result, shape[0])
+        for ind in range(p):
+            assert shape[1+ind] == self.dim['state'], \
+                   str_tensor + 'wrong size for dimension ' + \
+                   '{} (got {}, expected {}).'.format(1+ind, shape[1+ind],
+                                                      self.dim['state'])
+        for ind in range(q):
+            assert shape[1+p+ind] == self.dim['input'], \
+                   str_tensor + 'wrong size for dimension ' + \
+                   '{} (got {}, expected {}).'.format(1+p+ind, shape[1+p+ind],
+                                                      self.dim['input'])
+
 
     def _is_linear(self):
         """Check if the system is linear."""
