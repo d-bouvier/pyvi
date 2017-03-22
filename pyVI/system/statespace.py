@@ -267,11 +267,10 @@ class StateSpace:
         #TODO sauvegarde des noyaux input2state
         #TODO faire marcher en mode 'function'
         if mode == 'freq':
-            self.transfer_kernels, self._frequency_vector = \
-                        self._compute_frequency_kernel(vec, order_max)
-        if mode == 'time':
-            self.volterra_kernels, self._time_vector = \
-                        self._compute_time_kernel(vec, order_max)
+            self._compute_frequency_kernel(vec, order_max)
+        if mode == 'time' or mode == 'both':
+            self._compute_frequency_kernel(vec, order_max)
+            self._compute_time_kernel(vec, order_max)
 
 
     def _compute_time_kernel(self, time_vec, order_max):
@@ -284,33 +283,37 @@ class StateSpace:
     def _compute_frequency_kernel(self, freq_vec, order_max):
         #TODO methode generale superieur a l'ordre 2
         #TODO faire marcher en mode 'function'
+        #TODO prendre en compte les Npq
         def _filter_values(f):
             fac = np.reshape(2j*np.pi*f, f.shape + (1, 1))
             identity = np.identity(self.dim['state'])
             return np.linalg.inv(fac * identity - self.A_m)
 
         # Initialization
-        vector = dict()
-        in2state = dict()
-        in2out = dict()
+        self._frequency_vector = dict()
+        self._freq_in2state = dict()
+        self.transfer_kernels = dict()
         w = _filter_values(freq_vec)
 
         # Order 1
-        vector[1] = freq_vec
-        in2state[1] = np.squeeze(w.dot(self.B_m)).T
-        in2out[1] = np.squeeze(np.dot(self.C_m, in2state[1]) + self.D_m)
+        self._frequency_vector[1] = freq_vec
+        self._freq_in2state[1] = np.squeeze(w.dot(self.B_m)).T
+        self.transfer_kernels[1] = np.squeeze( \
+                                    np.dot(self.C_m, self._freq_in2state[1]) + \
+                                    self.D_m)
 
         # Order 2
-        vector[2] = {1: freq_vec, 2: freq_vec}
+        self._frequency_vector[2] = {1: freq_vec, 2: freq_vec}
         shape_order2 = (self.dim['state'],) + (freq_vec.shape[0],) * 2
         ones4input = np.ones((self.dim['input'], freq_vec.shape[0]))
         temp_state = np.zeros(shape_order2, dtype='complex128')
         if self.is_mpq_used(2, 0):
-            temp_tensor = np.einsum(in2state[1], (0, 2),
-                                    in2state[1], (1, 3), (0, 1, 2, 3))
+            temp_tensor = np.einsum(self._freq_in2state[1], (0, 2),
+                                    self._freq_in2state[1], (1, 3),
+                                    (0, 1, 2, 3))
             temp_state += np.tensordot(self.mpq[(2, 0)], temp_tensor, 2)
         if self.is_mpq_used(1, 1):
-            temp_tensor = np.einsum(in2state[1], (0, 2),
+            temp_tensor = np.einsum(self._freq_in2state[1], (0, 2),
                                     ones4input, (1, 3), (0, 1, 2, 3))
             temp_result = np.tensordot(self.mpq[(1, 1)], temp_tensor, 2)
             temp_state += (1/2)*(temp_result + np.swapaxes(temp_result, 1, 2))
@@ -319,13 +322,15 @@ class StateSpace:
                                     ones4input, (1, 3), (0, 1, 2, 3))
             temp_state += np.tensordot(self.mpq[(0, 2)], temp_tensor, 2)
         freq_somme = freq_vec[:, np.newaxis] + freq_vec[np.newaxis, :]
-        in2state[2] = np.einsum('ijkl,kij->lij', _filter_values(freq_somme),
-                                temp_state)
-        in2out[2] = np.squeeze(np.tensordot(self.C_m, in2state[2], 1))
-        return in2out, vector
+        self._freq_in2state[2] = np.einsum('ijkl,kij->lij',
+                                           _filter_values(freq_somme),
+                                           temp_state)
+        self.transfer_kernels[2] = np.squeeze( \
+                                     np.tensordot(self.C_m,
+                                                  self._freq_in2state[2], 1))
 
     def _plot_kernels(self):
-        #TODO ajouter ordre 2
+        #TODO faire plots pour noyau temporel
         #TODO plot + beau (grilles, axes, titres, labels, ticks, ...)
         #TODO faire save
         from mpl_toolkits.mplot3d import Axes3D
