@@ -23,6 +23,7 @@ Developed for Python 3.5.1
 Uses:
  - numpy 1.11.1
  - sympy 1.0
+ - matplotlib 1.5.1
  - pyvi 0.1
 """
 
@@ -30,11 +31,11 @@ Uses:
 # Importations
 #==============================================================================
 
+import numpy as np
+import sympy as sp
 from pyvi.tools.utilities import Style
 from abc import abstractmethod
 import sys as sys
-import numpy as np
-import sympy as sp
 
 
 #==============================================================================
@@ -301,6 +302,27 @@ class StateSpace:
 
         return in2out, vector
 
+    def _plot_kernels(self):
+        #TODO ajouter ordre 2
+        #TODO plot + beau (grilles, axes, titres, labels, ticks, ...)
+        #TODO faire save
+        from matplotlib import pyplot as plt
+        if ('transfer_kernels' in self.__dict__) & \
+           ('_frequency_vector' in self.__dict__):
+
+            plt.figure('Transfer kernel of order 1 (linear filter)')
+            plt.clf()
+            plt.subplot(211)
+            plt.semilogx(self._frequency_vector[1],
+                         20*np.log10(np.abs(self.transfer_kernels[1])),
+                         basex=10)
+            plt.title('Magnitude')
+            plt.subplot(212)
+            plt.semilogx(self._frequency_vector[1],
+                         np.angle(self.transfer_kernels[1]), basex=10)
+            plt.title('Phase')
+
+
 
 class SymbolicStateSpace:
     """Characterize a system by its state-space representation.
@@ -560,3 +582,4 @@ if __name__ == '__main__':
     time_vec = np.arange(0, T, step=1/fs)
     freq_vec =np.linspace(0, fs/2, num=N)
     system.compute_volterra_kernels(freq_vec, mode='freq')
+    system._plot_kernels()
