@@ -285,7 +285,7 @@ class StateSpace:
         #TODO methode generale superieur a l'ordre 2
         #TODO faire marcher en mode 'function'
         def _filter_values(f):
-            fac = np.reshape(2j*np.pi*f, (f.shape[0], 1, 1))
+            fac = np.reshape(2j*np.pi*f, f.shape + (1, 1))
             identity = np.identity(self.dim['state'])
             return np.linalg.inv(fac * identity - self.A_m)
 
@@ -297,31 +297,91 @@ class StateSpace:
 
         # Order 1
         vector[1] = freq_vec
-        in2state[1] = w.dot(self.B_m)
-        in2out[1] = np.squeeze(np.dot(self.C_m, in2state[1].T).T + self.D_m)
+        in2state[1] = np.squeeze(w.dot(self.B_m)).T
+        in2out[1] = np.squeeze(np.dot(self.C_m, in2state[1]) + self.D_m)
 
+        # Order 2
+        vector[2] = {1: freq_vec, 2: freq_vec}
+        shape_order2 = (self.dim['state'],) + (freq_vec.shape[0],) * 2
+        ones4input = np.ones((self.dim['input'], freq_vec.shape[0]))
+        temp_state = np.zeros(shape_order2, dtype='complex128')
+        if self.is_mpq_used(2, 0):
+            temp_tensor = np.einsum(in2state[1], (0, 2),
+                                    in2state[1], (1, 3), (0, 1, 2, 3))
+            temp_state += np.tensordot(self.mpq[(2, 0)], temp_tensor, 2)
+        if self.is_mpq_used(1, 1):
+            temp_tensor = np.einsum(in2state[1], (0, 2),
+                                    ones4input, (1, 3), (0, 1, 2, 3))
+            temp_result = np.tensordot(self.mpq[(1, 1)], temp_tensor, 2)
+            temp_state += (1/2)*(temp_result + np.swapaxes(temp_result, 1, 2))
+        if self.is_mpq_used(0, 2):
+            temp_tensor = np.einsum(ones4input, (0, 2),
+                                    ones4input, (1, 3), (0, 1, 2, 3))
+            temp_state += np.tensordot(self.mpq[(0, 2)], temp_tensor, 2)
+        freq_somme = freq_vec[:, np.newaxis] + freq_vec[np.newaxis, :]
+        in2state[2] = np.einsum('ijkl,kij->lij', _filter_values(freq_somme),
+                                temp_state)
+        in2out[2] = np.squeeze(np.tensordot(self.C_m, in2state[2], 1))
         return in2out, vector
 
     def _plot_kernels(self):
         #TODO ajouter ordre 2
         #TODO plot + beau (grilles, axes, titres, labels, ticks, ...)
         #TODO faire save
-        from matplotlib import pyplot as plt
+        from mpl_toolkits.mplot3d import Axes3D
+        from matplotlib import cm
+        import matplotlib.pyplot as plt
         if ('transfer_kernels' in self.__dict__) & \
            ('_frequency_vector' in self.__dict__):
+
+            H1_amp_db = 20*np.log10(np.abs(self.transfer_kernels[1]))
+            H1_phase = np.angle(self.transfer_kernels[1])
+            H2_amp_db = 20*np.log10(np.abs(self.transfer_kernels[2]))
+            H2_phase = np.angle(self.transfer_kernels[2])
+            X, Y = np.meshgrid(self._frequency_vector[2][1],
+                               self._frequency_vector[2][2],)
 
             plt.figure('Transfer kernel of order 1 (linear filter)')
             plt.clf()
             plt.subplot(211)
-            plt.semilogx(self._frequency_vector[1],
-                         20*np.log10(np.abs(self.transfer_kernels[1])),
-                         basex=10)
+            plt.semilogx(self._frequency_vector[1], H1_amp_db, basex=10)
             plt.title('Magnitude')
             plt.subplot(212)
-            plt.semilogx(self._frequency_vector[1],
-                         np.angle(self.transfer_kernels[1]), basex=10)
+            plt.semilogx(self._frequency_vector[1], H1_phase, basex=10)
             plt.title('Phase')
 
+            plt.figure('Transfer kernel of order 2')
+            plt.clf()
+            plt.subplot(211)
+            N = 100
+            plt.contourf(X, Y, H2_amp_db, N)
+            plt.colorbar(extend='both')
+#            plt.contour(X, Y, H2_amp_db, N,
+#                        linewidths=1.5, linestyles='dashed', colors='k')
+            plt.title('Magnitude')
+            plt.subplot(212)
+            plt.contourf(X, Y, H2_phase, N)
+            plt.colorbar(extend='both')
+#            plt.contour(X, Y, H2_phase, N,
+#                        linewidths=1.5, linestyles='dashed', colorms='k')
+            plt.title('Phase')
+
+            plt.figure('Transfer kernel of order 2 (2)')
+            plt.clf()
+            ax_amp = plt.subplot(211, projection='3d')
+            surf_amp = ax_amp.plot_surface(X, Y, H2_amp_db, linewidth=0,
+                                           antialiased=False, cmap=cm.jet,
+                                           vmin=-20, vmax=100)
+            plt.colorbar(surf_amp, extend='both')
+            plt.title('Magnitude')
+            ax_phase = plt.subplot(212, projection='3d')
+            surf_phase = ax_phase.plot_surface(X, Y, H2_phase, linewidth=0,
+                                               antialiased=False,
+                                               cmap=cm.jet)
+            plt.colorbar(surf_phase, extend='both')
+            plt.title('Phase')
+
+            plt.show()
 
 
 class SymbolicStateSpace:
@@ -576,7 +636,7 @@ if __name__ == '__main__':
 
     system = systems.second_order_w_nl_damping(gain=1, f0=100, damping=0.2,
                                                nl_coeff=[1e-1, 3e-5])
-    fs = 20000
+    fs = 2000
     T = 0.1
     N = 1000
     time_vec = np.arange(0, T, step=1/fs)
