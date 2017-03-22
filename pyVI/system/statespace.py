@@ -124,6 +124,52 @@ class StateSpace:
         self.sym_bool = sym_bool
         self.mode = mode
 
+        self.linear = self._is_linear()
+
+    def __repr__(self):
+        """Lists all attributes and their values."""
+        repr_str = ''
+        # Print one attribute per line, in a alphabetical order
+        for name in sorted(self.__dict__):
+            repr_str += name + ' : ' + getattr(self, name).__str__() + '\n'
+        return repr_str
+
+
+    def __str__(self):
+        """Prints the system's equation."""
+        def list_nl_fct(dict_fct, name):
+            temp_str = Style.RED + \
+                       'List of non-zero {}pq functions'.format(name) + \
+                       Style.RESET + '\n'
+            for key in dict_fct.keys():
+                temp_str += key.__repr__() + ', '
+            temp_str = temp_str[0:-2] + '\n'
+            return temp_str
+
+        print_str = Style.UNDERLINE + Style.CYAN + Style.BRIGHT + \
+                    'State-space representation :' + Style.RESET + '\n'
+        for name, desc, mat in [ \
+                    ('State {} A', 'state-to-state', self.A_m),
+                    ('Input {} B', 'input-to-state', self.B_m),
+                    ('Output {} C', 'state-to-output', self.C_m),
+                    ('Feedthrough {} D', 'input-to-output', self.D_m)]:
+            print_str += Style.GREEN + Style.BRIGHT + name.format('matrice') + \
+                        ' (' + desc + ')' + Style.RESET + '\n' + \
+                         sp.pretty(mat) + '\n'
+        if not self.linear:
+            if len(self.mpq):
+                print_str += list_nl_fct(self.mpq, 'M')
+            if len(self.npq):
+                print_str += list_nl_fct(self.npq, 'N')
+        return print_str
+
+    #=============================================#
+
+    def _is_linear(self):
+        """Check if the system is linear."""
+        return len(self.mpq) == 0 and len(self.npq) == 0
+
+
 
 class SymbolicStateSpace:
     """Characterize a system by its state-space representation.
@@ -209,7 +255,7 @@ class SymbolicStateSpace:
         self.mpq = mpq_dict
         self.npq = npq_dict
 
-        # CHeck dimension and linearity
+        # Check dimension and linearity
         self._dim_ok = self._check_dim()
         self.linear = self._is_linear()
 
@@ -359,3 +405,22 @@ class Filter:
         print_str = '\n' + sp.pretty( expr )
         return print_str
 
+
+
+#==============================================================================
+# Main script
+#==============================================================================
+
+if __name__ == '__main__':
+    """
+    Main script for testing.
+    """
+
+    from pyvi.simulation.systems import system_test, loudspeaker_sica
+
+    system = loudspeaker_sica(mode='function')
+    print(system.__repr__())
+    print(system)
+
+    system2 = system_test(mode='tensor')
+    print(system2)
