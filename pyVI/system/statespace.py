@@ -260,6 +260,46 @@ class StateSpace:
         """Check if the system is linear."""
         return len(self.mpq) == 0 and len(self.npq) == 0
 
+    #=============================================#
+
+    def compute_volterra_kernels(self, vec, order_max=2, mode='freq'):
+        #TODO sauvegarde des noyaux input2state
+        #TODO faire marcher en mode 'function'
+        if mode == 'freq':
+            self.transfer_kernels, self._frequency_vector = \
+                        self._compute_frequency_kernel(vec, order_max)
+        if mode == 'time':
+            self.volterra_kernels, self._time_vector = \
+                        self._compute_time_kernel(vec, order_max)
+
+
+    def _compute_time_kernel(self, time_vec, order_max):
+        #TODO faire pour ordre 1 et 2
+        #TODO methode generale superieur a l'ordre 2
+        #TODO faire marcher en mode 'tensor' et 'function'
+        return {}, {}
+
+
+    def _compute_frequency_kernel(self, freq_vec, order_max):
+        #TODO methode generale superieur a l'ordre 2
+        #TODO faire marcher en mode 'function'
+        def _filter_values(f):
+            fac = np.reshape(2j*np.pi*f, (f.shape[0], 1, 1))
+            identity = np.identity(self.dim['state'])
+            return np.linalg.inv(fac * identity - self.A_m)
+
+        # Initialization
+        vector = dict()
+        in2state = dict()
+        in2out = dict()
+        w = _filter_values(freq_vec)
+
+        # Order 1
+        vector[1] = freq_vec
+        in2state[1] = w.dot(self.B_m)
+        in2out[1] = np.squeeze(np.dot(self.C_m, in2state[1].T).T + self.D_m)
+
+        return in2out, vector
 
 
 class SymbolicStateSpace:
@@ -507,11 +547,16 @@ if __name__ == '__main__':
     Main script for testing.
     """
 
-    from pyvi.simulation.systems import system_test, loudspeaker_sica
+    import pyvi.simulation.systems as systems
 
-    system = loudspeaker_sica(mode='function')
-    print(system.__repr__())
-    print(system)
+    print(systems.system_test(mode='tensor'))
+    print(systems.loudspeaker_sica(mode='function'))
 
-    system2 = system_test(mode='tensor')
-    print(system2)
+    system = systems.second_order_w_nl_damping(gain=1, f0=100, damping=0.2,
+                                               nl_coeff=[1e-1, 3e-5])
+    fs = 20000
+    T = 0.1
+    N = 1000
+    time_vec = np.arange(0, T, step=1/fs)
+    freq_vec =np.linspace(0, fs/2, num=N)
+    system.compute_volterra_kernels(freq_vec, mode='freq')
