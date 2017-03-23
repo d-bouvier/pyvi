@@ -23,6 +23,7 @@ Developed for Python 3.5.1
 Uses:
  - numpy 1.11.1
  - sympy 1.0
+ - scipy 0.18.0
  - matplotlib 1.5.1
  - pyvi 0.1
 """
@@ -263,24 +264,20 @@ class StateSpace:
 
     #=============================================#
 
-    def compute_volterra_kernels(self, vec, order_max=2, mode='freq'):
+    def compute_volterra_kernels(self, fs, T, order_max=2, mode='freq'):
         #TODO sauvegarde des noyaux input2state
         #TODO faire marcher en mode 'function'
-        if mode == 'freq':
-            self._compute_frequency_kernel(vec, order_max)
+        time_vec = np.arange(0, T + (1/fs), step=1/fs)
+        N = time_vec.shape[0]
+        freq_vec = np.linspace(0, fs, num=N, endpoint=False)
+        positive_freq = freq_vec[:((N+1)//2 + (N+1)%2)]
+        if mode == 'freq' or mode == 'both':
+            self._compute_frequency_kernel(freq_vec, positive_freq, order_max)
         if mode == 'time' or mode == 'both':
-            self._compute_frequency_kernel(vec, order_max)
-            self._compute_time_kernel(vec, order_max)
+            self._compute_time_kernel(time_vec, order_max)
 
 
-    def _compute_time_kernel(self, time_vec, order_max):
-        #TODO faire pour ordre 1 et 2
-        #TODO methode generale superieur a l'ordre 2
-        #TODO faire marcher en mode 'tensor' et 'function'
-        return {}, {}
-
-
-    def _compute_frequency_kernel(self, freq_vec, order_max):
+    def _compute_frequency_kernel(self, freq_vec, positive_freq, order_max):
         #TODO methode generale superieur a l'ordre 2
         #TODO faire marcher en mode 'function'
         #TODO prendre en compte les Npq
@@ -293,19 +290,19 @@ class StateSpace:
         self._frequency_vector = dict()
         self._freq_in2state = dict()
         self.transfer_kernels = dict()
-        w = _filter_values(freq_vec)
+        w = _filter_values(positive_freq)
 
         # Order 1
-        self._frequency_vector[1] = freq_vec
+        self._frequency_vector[1] = positive_freq
         self._freq_in2state[1] = np.squeeze(w.dot(self.B_m)).T
         self.transfer_kernels[1] = np.squeeze( \
                                     np.dot(self.C_m, self._freq_in2state[1]) + \
                                     self.D_m)
 
         # Order 2
-        self._frequency_vector[2] = {1: freq_vec, 2: freq_vec}
-        shape_order2 = (self.dim['state'],) + (freq_vec.shape[0],) * 2
-        ones4input = np.ones((self.dim['input'], freq_vec.shape[0]))
+        self._frequency_vector[2] = {1: positive_freq, 2: positive_freq}
+        shape_order2 = (self.dim['state'],) + (positive_freq.shape[0],) * 2
+        ones4input = np.ones((self.dim['input'], positive_freq.shape[0]))
         temp_state = np.zeros(shape_order2, dtype='complex128')
         if self.is_mpq_used(2, 0):
             temp_tensor = np.einsum(self._freq_in2state[1], (0, 2),
@@ -321,13 +318,81 @@ class StateSpace:
             temp_tensor = np.einsum(ones4input, (0, 2),
                                     ones4input, (1, 3), (0, 1, 2, 3))
             temp_state += np.tensordot(self.mpq[(0, 2)], temp_tensor, 2)
-        freq_somme = freq_vec[:, np.newaxis] + freq_vec[np.newaxis, :]
+        freq_somme = positive_freq[:, np.newaxis] + positive_freq[np.newaxis, :]
         self._freq_in2state[2] = np.einsum('ijkl,kij->lij',
                                            _filter_values(freq_somme),
                                            temp_state)
         self.transfer_kernels[2] = np.squeeze( \
                                      np.tensordot(self.C_m,
                                                   self._freq_in2state[2], 1))
+
+
+    def _compute_time_kernel(self, time_vec, order_max):
+        #TODO faire pour ordre 1 et 2
+        #TODO methode generale superieur a l'ordre 2
+        #TODO faire marcher en mode 'tensor' et 'function'
+        from scipy import linalg
+
+        # Initialization
+        self._time_vector = dict()
+        self._time_in2state = dict()
+        self.volterra_kernels = dict()
+        N = time_vec.shape[0]
+
+        w = np.zeros((N, self.dim['state'], self.dim['state']))
+        for ind in range(N):
+            w[ind] = linalg.expm(self.A_m * time_vec[ind])
+
+        # Order 1
+        self._time_vector[1] = time_vec
+        self._time_in2state[1] = np.squeeze(w.dot(self.B_m).T)
+        self.volterra_kernels[1] = np.squeeze(np.dot(self.C_m,
+                                                     self._time_in2state[1]))
+        self.volterra_kernels[1][0] += self.D_m
+
+        # Order 2
+        self._time_vector[2] = {1: time_vec, 2: time_vec}
+        self._time_in2state[2] = np.zeros((self.dim['state'], N, N))
+        self.volterra_kernels[2] = np.zeros((N, N))
+        dirac4input = np.ones((self.dim['input'], 1))
+        if self.is_mpq_used(2, 0):
+            temp_tensor = np.einsum(self._time_in2state[1], (0, 2),
+                                    self._time_in2state[1], (1, 3),
+                                    (0, 1, 2, 3))
+            temp_result = np.tensordot(self.mpq[(2, 0)], temp_tensor, 2)
+            temp_result_2 = np.zeros((self.dim['state'], N, N))
+            for ind in range(1,N):
+                for idx1 in range(self.dim['state']):
+                    for idx2 in range(self.dim['state']):
+                        truc = np.convolve(w[:, idx1, idx2],
+                                           temp_result[idx2, np.arange(N-ind), np.arange(ind, N)],
+                                           mode='same')
+                        temp_result[idx1, np.arange(N-ind), np.arange(ind, N)] += \
+                                                                    truc[:-ind]
+                        if not N == 0:
+                            temp_result[idx1, np.arange(ind, N), np.arange(N-ind)] += \
+                                                                    truc[:-ind]
+            self._time_in2state[2] += np.squeeze(temp_result)
+        if self.is_mpq_used(1, 1):
+            temp_tensor = np.einsum(self._time_in2state[1], (0, 2),
+                                    dirac4input, (1, 3), (0, 1, 2, 3))
+            temp_result = np.tensordot(self.mpq[(1, 1)], temp_tensor, 2)
+            temp_result_2 = np.zeros((self.dim['state'], N, N))
+            for ind in range(N):
+                temp_result_2[:, np.arange(N-ind), np.arange(ind, N)] = \
+                                                        temp_result[:, ind]
+            temp_result = np.einsum('jkl,lij->kij', w, temp_result_2)
+            self._time_in2state[2] += (1/2)*(temp_result + \
+                                             np.swapaxes(temp_result, 1, 2))
+        if self.is_mpq_used(0, 2):
+            temp_tensor = np.einsum(dirac4input, (0, 2),
+                                    dirac4input, (1, 3), (0, 1, 2, 3))
+            temp_result = np.tensordot(self.mpq[(0, 2)], temp_tensor, 2)
+            self._time_in2state[2][:, np.arange(N), np.arange(N)] += \
+                                            w.dot(np.squeeze(temp_result)).T
+        self.volterra_kernels[2] = np.squeeze( \
+                                     np.tensordot(self.C_m,
+                                                  self._time_in2state[2], 1))
 
     def _plot_kernels(self):
         #TODO faire plots pour noyau temporel
@@ -338,6 +403,38 @@ class StateSpace:
         import matplotlib.pyplot as plt
         if ('transfer_kernels' in self.__dict__) & \
            ('_frequency_vector' in self.__dict__):
+
+            xt, yt = np.meshgrid(self._time_vector[2][1],
+                                 self._time_vector[2][2],)
+
+            plt.figure('Volterra kernel of order 1 (linear filter)')
+            plt.clf()
+            plt.plot(self._time_vector[1], self.volterra_kernels[1])
+            plt.figure('Volterra kernel of order 2')
+            plt.clf()
+            N = 100
+            plt.contourf(xt, yt, self.volterra_kernels[2], N)
+            plt.colorbar(extend='both')
+#            plt.contour(X, Y, H2_amp_db, N,
+#                        linewidths=1.5, linestyles='dashed', colors='k')
+
+
+#            plt.figure('Volterra kernel of order 2 (2)')
+#            plt.clf()
+#            ax2 = plt.subplot(111, projection='3d')
+#            surf2 = ax2.plot_surface(xt, yt, self.volterra_kernels[2],
+#                                     linewidth=0.1,
+#                                     antialiased=True, cmap='jet',
+#                                     rstride=1, cstride=1)
+#            plt.colorbar(surf2, extend='both')
+
+            plt.figure('Volterra kernel of order 2 (3)')
+            plt.clf()
+            ax2 = plt.subplot(111, projection='3d')
+            surf2 = ax2.plot_wireframe(xt, yt, self.volterra_kernels[2],
+                                       linewidth=0.1,
+                                       antialiased=True, cmap='jet')
+#            plt.colorbar(surf2, extend='both')
 
             H1_amp_db = 20*np.log10(np.abs(self.transfer_kernels[1]))
             H1_phase = np.angle(self.transfer_kernels[1])
@@ -371,20 +468,20 @@ class StateSpace:
 #                        linewidths=1.5, linestyles='dashed', colorms='k')
             plt.title('Phase')
 
-            plt.figure('Transfer kernel of order 2 (2)')
-            plt.clf()
-            ax_amp = plt.subplot(211, projection='3d')
-            surf_amp = ax_amp.plot_surface(X, Y, H2_amp_db, linewidth=0,
-                                           antialiased=False, cmap=cm.jet,
-                                           vmin=-20, vmax=100)
-            plt.colorbar(surf_amp, extend='both')
-            plt.title('Magnitude')
-            ax_phase = plt.subplot(212, projection='3d')
-            surf_phase = ax_phase.plot_surface(X, Y, H2_phase, linewidth=0,
-                                               antialiased=False,
-                                               cmap=cm.jet)
-            plt.colorbar(surf_phase, extend='both')
-            plt.title('Phase')
+#            plt.figure('Transfer kernel of order 2 (2)')
+#            plt.clf()
+#            ax_amp = plt.subplot(211, projection='3d')
+#            surf_amp = ax_amp.plot_surface(X, Y, H2_amp_db, linewidth=0,
+#                                           antialiased=False, cmap='jet',
+#                                           vmin=-20, vmax=100)
+#            plt.colorbar(surf_amp, extend='both')
+#            plt.title('Magnitude')
+#            ax_phase = plt.subplot(212, projection='3d')
+#            surf_phase = ax_phase.plot_surface(X, Y, H2_phase, linewidth=0,
+#                                               antialiased=False,
+#                                               cmap='jet')
+#            plt.colorbar(surf_phase, extend='both')
+#            plt.title('Phase')
 
             plt.show()
 
@@ -641,10 +738,7 @@ if __name__ == '__main__':
 
     system = systems.second_order_w_nl_damping(gain=1, f0=100, damping=0.2,
                                                nl_coeff=[1e-1, 3e-5])
-    fs = 2000
-    T = 0.1
-    N = 1000
-    time_vec = np.arange(0, T, step=1/fs)
-    freq_vec =np.linspace(0, fs/2, num=N)
-    system.compute_volterra_kernels(freq_vec, mode='freq')
+    fs = 5000
+    T = 0.2
+    system.compute_volterra_kernels(fs, T, mode='both')
     system._plot_kernels()
