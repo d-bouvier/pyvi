@@ -22,7 +22,7 @@ Uses:
 import os
 import pickle
 from numpy import savez
-from matplotlib import pyplot as plt
+
 
 #==============================================================================
 # Global variables

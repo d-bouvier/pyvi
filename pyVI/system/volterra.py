@@ -22,16 +22,17 @@ import sympy as sp
 import sympy.combinatorics as spP
 from abc import abstractmethod
 
+
 #==============================================================================
 # Class
 #==============================================================================
 
 class Kernel:
     """Symbolic representation of a transfer Volterra kernel."""
-    
+
     def __init__(self, expression=sp.zeros(1), order=1, **kwargs):
         """Initialize the kernel with its formula and order.
-        
+
         If neither the expression or the order are given, it is supposed that
         it is a null kernel of order 1."""
 
@@ -39,31 +40,31 @@ class Kernel:
         self.order = order
         self.dim_input = self.expr.shape[1]
         self.dim_output = self.expr.shape[0]
-        
+
         self.symmetric = kwargs.get('symmetric', None)
         self.symb_name = kwargs.get('name',
                                     sp.Function('H{}'.format(self.order)))
         self.symb_var = kwargs.get('var', None)
-        
-        
+
+
     def __repr__(self):
         """Represents the kernel as its Sympy expression."""
         return sp.srepr(self.expr)
-        
-        
+
+
     def __str__(self):
-        """Print the kernel expression using Sympy pretty printing.""" 
+        """Print the kernel expression using Sympy pretty printing."""
         return sp.pretty(self.symb_name(*self.symb_var)) + ' = \n' + \
                sp.pretty(self.expr)
-    
+
     #=============================================#
-    
+
     @abstractmethod
     def plot(self):
         """Plots kernels of order 1 and 2."""
         return NotImplementedError
-        
-        
+
+
     @abstractmethod
     def symmetrize(self):
         """Put the kernel expression into its symmetric form."""
@@ -77,12 +78,12 @@ class Kernel:
         result_tmp = sp.zeros(self.dim_output, self.dim_input)
         perm = spP.Permutation(range(self.order))
         for idx in range(perm.cardinality):
-            result_tmp += kernel_expr(self.expr, self.symb_var, 
-                                      (perm + idx)(self.symb_var))      
+            result_tmp += kernel_expr(self.expr, self.symb_var,
+                                      (perm + idx)(self.symb_var))
         self.expr = result_tmp/perm.cardinality
         self.symmetric = True
-        
-        
+
+
     @abstractmethod
     def regularize(self):
         """Put the kernel expression into its regular form."""
@@ -98,17 +99,17 @@ class Kernel:
 
 class Volterra:
     """SYmbolic representation of a Volterra serie of a system."""
-    
+
     def __init__(self, kernels=[Kernel()], **kwargs):
         """Initialize the Volterra series.
-        
+
         If no arguments are given, the Volterra serie is limited to a null
         kernel of order 1."""
         self.kernels = kernels
         self.list_kernels = []
         for idx, kernel in enumerate(self.kernels):
             self.list_kernels.append(kernel.order)
-        
+
         self.order_max = kwargs.get('order_max', max(self.list_kernels))
         self.symmetric = kwargs.get('symmetric')
         if self.symmetric is None:
@@ -116,14 +117,14 @@ class Volterra:
             for idx, kernel in enumerate(self.kernels):
                 self.symmetric = self.symmetric and kernel.symmetric
 
-    
+
     def __repr__(self):
         repr_str = '{\n'
         for name, attribute in self.__dict__.items():
             repr_str += name + ' : ' + attribute.__repr__() + '\n'
         return repr_str + '}'
-    
-    
+
+
     def __str__(self):
         print_str = 'Volterra serie up to order {}:\n'.format(self.order_max)
         for kernel in self.kernels:
@@ -136,8 +137,8 @@ class Volterra:
     def plot(self):
         """Plots kernels of order 1 and 2."""
         return NotImplementedError
-    
-    
+
+
     @abstractmethod
     def symmetrize(self):
         """Put all kernel expression into their symmetric form."""

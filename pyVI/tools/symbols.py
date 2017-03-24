@@ -16,6 +16,7 @@ Developed for Python 3.5.1Uses:
 
 import sympy as sp
 
+
 #==============================================================================
 # Class
 #==============================================================================
@@ -24,14 +25,14 @@ class Symbols:
     _first_init = True
     _instance = None
     _list = ['t', 'tau', 's', 'w', 'f']
-    
+
     def __new__(cls, order=0):
         if cls._first_init:
             cls._instance = object.__new__(cls)
         else:
-            cls._instance._update(order)            
-        return cls._instance 
-            
+            cls._instance._update(order)
+        return cls._instance
+
     def __init__(self, order=0):
         if Symbols._first_init:
             self.order = order
@@ -53,6 +54,6 @@ class Symbols:
             for var in self._list:
                 str_symb = '{}({}:{})'.format(var, self.order, order+1)
                 setattr(self, var, getattr(self, var) + sp.symbols(str_symb,
-                                                                   seq=True))            
+                                                                   seq=True))
             self.order = order
 
