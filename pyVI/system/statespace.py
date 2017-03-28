@@ -765,7 +765,7 @@ if __name__ == '__main__':
 
     system = systems.second_order_w_nl_damping(gain=1, f0=100, damping=0.2,
                                                nl_coeff=[1e-1, 3e-5])
-    fs = 5000
-    T = 0.2
-    system.compute_volterra_kernels(fs, T, mode='both')
-    system._plot_kernels()
+    fs = 2000
+    T = 0.06
+    system.compute_volterra_kernels(fs, T, which='both')
+    system.plot_kernels()
