@@ -17,7 +17,7 @@ Uses:
 #Importations
 #==============================================================================
 
-from numpy as np
+import numpy as np
 
 
 #==============================================================================
@@ -40,4 +40,4 @@ def safe_db(num, den):
         return np.Inf
     if num == 0:
         return - np.Inf
-    return 20 * np.log10(num / den))
+    return 20 * np.log10(num / den)
