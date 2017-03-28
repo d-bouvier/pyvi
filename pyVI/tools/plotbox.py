@@ -121,31 +121,31 @@ def plot_kernel_time(vec, kernel, style='surface', title=None, N=20):
     elif order ==2:
         if not title:
             title = 'Volterra kernel of order 2'
-            time_x, time_y = np.meshgrid(vec, vec)
-            plt.figure(title)
-            plt.clf()
+        time_x, time_y = np.meshgrid(vec, vec)
+        plt.figure(title)
+        plt.clf()
 
-            if style == 'contour':
-                plt.contourf(time_x, time_y, kernel, N)
-                plt.colorbar(extend='both')
-                plt.xlabel('Time (s)')
-                plt.ylabel('Time (s)')
-            elif style == 'surface':
-                ax = plt.subplot(111, projection='3d')
-                surf = ax.plot_surface(time_x, time_y, kernel, linewidth=0.1,
-                                       antialiased=True, cmap='jet',
-                                       rstride=1, cstride=1)
-                plt.colorbar(surf, extend='both')
-                ax.set_xlabel('Time (s)')
-                ax.set_ylabel('Time (s)')
-                ax.set_zlabel('Amplitude')
-            elif style == 'wireframe':
-                ax = plt.subplot(111, projection='3d')
-                ax.plot_wireframe(time_x, time_y, kernel, linewidth=0.1,
-                                  antialiased=True, cmap='jet')
-                ax.set_xlabel('Time (s)')
-                ax.set_ylabel('Time (s)')
-                ax.set_zlabel('Amplitude')
+        if style == 'contour':
+            plt.contourf(time_x, time_y, kernel, N)
+            plt.colorbar(extend='both')
+            plt.xlabel('Time (s)')
+            plt.ylabel('Time (s)')
+        elif style == 'surface':
+            ax = plt.subplot(111, projection='3d')
+            surf = ax.plot_surface(time_x, time_y, kernel, linewidth=0.1,
+                                   antialiased=True, cmap='jet',
+                                   rstride=1, cstride=1)
+            plt.colorbar(surf, extend='both')
+            ax.set_xlabel('Time (s)')
+            ax.set_ylabel('Time (s)')
+            ax.set_zlabel('Amplitude')
+        elif style == 'wireframe':
+            ax = plt.subplot(111, projection='3d')
+            ax.plot_wireframe(time_x, time_y, kernel, linewidth=0.1,
+                              antialiased=True, cmap='jet')
+            ax.set_xlabel('Time (s)')
+            ax.set_ylabel('Time (s)')
+            ax.set_zlabel('Amplitude')
 
     else:
         print('No plot possible, the kernel is of order {}.'.format(order))
