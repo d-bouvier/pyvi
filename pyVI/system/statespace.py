@@ -21,7 +21,10 @@ Notes
 Last modified on 3 Nov. 2016
 Developed for Python 3.5.1
 Uses:
+ - numpy 1.11.1
  - sympy 1.0
+ - scipy 0.18.0
+ - matplotlib 1.5.1
  - pyvi 0.1
 """
 
@@ -29,10 +32,11 @@ Uses:
 # Importations
 #==============================================================================
 
+import numpy as np
+import sympy as sp
 from pyvi.tools.utilities import Style
 from abc import abstractmethod
 import sys as sys
-import sympy as sp
 
 
 #==============================================================================
@@ -124,6 +128,390 @@ class StateSpace:
         self.sym_bool = sym_bool
         self.mode = mode
 
+        # Check dimension and linearity
+        self._dim_ok = self._check_dim()
+        self.linear = self._is_linear()
+
+    def __repr__(self):
+        """Lists all attributes and their values."""
+        repr_str = ''
+        # Print one attribute per line, in a alphabetical order
+        for name in sorted(self.__dict__):
+            repr_str += name + ' : ' + getattr(self, name).__str__() + '\n'
+        return repr_str
+
+
+    def __str__(self):
+        """Prints the system's equation."""
+        def list_nl_fct(dict_fct, name):
+            temp_str = Style.RED + \
+                       'List of non-zero {}pq functions'.format(name) + \
+                       Style.RESET + '\n'
+            for key in dict_fct.keys():
+                temp_str += key.__repr__() + ', '
+            temp_str = temp_str[0:-2] + '\n'
+            return temp_str
+
+        print_str = Style.UNDERLINE + Style.CYAN + Style.BRIGHT + \
+                    'State-space representation :' + Style.RESET + '\n'
+        for name, desc, mat in [ \
+                    ('State {} A', 'state-to-state', self.A_m),
+                    ('Input {} B', 'input-to-state', self.B_m),
+                    ('Output {} C', 'state-to-output', self.C_m),
+                    ('Feedthrough {} D', 'input-to-output', self.D_m)]:
+            print_str += Style.GREEN + Style.BRIGHT + name.format('matrice') + \
+                        ' (' + desc + ')' + Style.RESET + '\n' + \
+                         sp.pretty(mat) + '\n'
+        if not self.linear:
+            if len(self.mpq):
+                print_str += list_nl_fct(self.mpq, 'M')
+            if len(self.npq):
+                print_str += list_nl_fct(self.npq, 'N')
+        return print_str
+
+    #=============================================#
+
+    def _check_dim(self):
+        """Verify that input, state and output dimensions are respected."""
+        # Check matrices shape
+        self._check_dim_matrices()
+
+        # Check that all nonlinear lambda functions works correctly
+        for (p, q), mpq in self.mpq.items():
+            if self.mode == 'function':
+                self._check_dim_nl_fct(p, q, mpq, 'M', self.dim['state'])
+            else:
+                self._check_dim_nl_tensor(p, q, mpq, 'M', self.dim['state'])
+        for (p, q), npq in self.npq.items():
+            if self.mode == 'function':
+                self._check_dim_nl_fct(p, q, npq, 'N', self.dim['output'])
+            else:
+                self._check_dim_nl_tensor(p, q, npq, 'M', self.dim['output'])
+        # If no error is raised, return True
+        return True
+
+
+    def _check_dim_matrices(self):
+        """Verify shape of the matrices used in the linear part."""
+        def check_equal(iterator, value):
+            return len(set(iterator)) == 1 and iterator[0] == value
+
+        list_dim_state = [self.A_m.shape[0], self.A_m.shape[1],
+                          self.B_m.shape[0], self.C_m.shape[1]]
+        list_dim_input = [self.B_m.shape[1], self.D_m.shape[1]]
+        list_dim_output = [self.C_m.shape[0], self.D_m.shape[0]]
+        assert check_equal(list_dim_state, self.dim['state']), \
+               'State dimension not consistent'
+        assert check_equal(list_dim_input, self.dim['input']), \
+               'Input dimension not consistent'
+        assert check_equal(list_dim_output, self.dim['output']), \
+               'Output dimension not consistent'
+
+
+    def _check_dim_nl_fct(self, p, q, fct, name, dim_result):
+        """Verify shape and functionnality of the multilinear functions."""
+        str_fct = '{}_{}{} function: '.format(name, p, q)
+        # Check that each nonlinear lambda functions:
+        # - accepts the good number of input arguments
+        assert fct.__code__.co_argcount == p + q, \
+               str_fct + 'wrong number of input arguments ' + \
+               '(got {}, expected {}).'.format(fct.__code__.co_argcount, p + q)
+        try:
+            state_vectors = (np.ones(self.dim['state']),)*p
+            input_vectors = (np.ones(self.dim['input']),)*q
+            result_vector = fct(*state_vectors, *input_vectors)
+        # - accepts vectors of appropriate shapes
+        except IndexError:
+            raise IndexError(str_fct + 'some index exceeds dimension of ' + \
+                             'input and/or state vectors.')
+        # - does not cause error
+        except:
+            raise NameError(str_fct + 'creates a ' + \
+                            '{}.'.format(sys.exc_info()[0]))
+        # - returns a vector of appropriate shape
+        assert len(result_vector) == dim_result, \
+               str_fct + 'wrong shape for the output (got ' + \
+               '{}, expected {}).'.format(result_vector.shape, (dim_result,1))
+
+
+    def _check_dim_nl_tensor(self, p, q, tensor, name, dim_result):
+        """Verify shape and functionnality of the multilinear tensors."""
+        str_tensor = '{}_{}{} tensor: '.format(name, p, q)
+        shape = tensor.shape
+        # Check that each nonlinear lambda functions:
+        # - accepts the good number of input arguments
+        assert len(shape) == p + q + 1, \
+               str_tensor + 'wrong number of dimension ' + \
+               '(got {}, expected {}).'.format(len(shape), p + q + 1)
+        assert shape[0] == dim_result, \
+               str_tensor + 'wrong size for dimension 1 ' + \
+               '(got {}, expected {}).'.format(dim_result, shape[0])
+        for ind in range(p):
+            assert shape[1+ind] == self.dim['state'], \
+                   str_tensor + 'wrong size for dimension ' + \
+                   '{} (got {}, expected {}).'.format(1+ind, shape[1+ind],
+                                                      self.dim['state'])
+        for ind in range(q):
+            assert shape[1+p+ind] == self.dim['input'], \
+                   str_tensor + 'wrong size for dimension ' + \
+                   '{} (got {}, expected {}).'.format(1+p+ind, shape[1+p+ind],
+                                                      self.dim['input'])
+
+
+    def _is_linear(self):
+        """Check if the system is linear."""
+        return len(self.mpq) == 0 and len(self.npq) == 0
+
+    #=============================================#
+
+    def compute_volterra_kernels(self, fs, T, order_max=2, which='time'):
+        #TODO sauvegarde des noyaux input2state
+        #TODO faire marcher en mode 'function'
+        #TODO tester pour dim['entree'/'sortie'] diff de 1
+        #TODO faire docstring
+        N = int(fs*T + 1)
+        if which == 'time' or which == 'both':
+            self._compute_time_kernels(fs, T, order_max)
+        if which == 'freq':
+            self._compute_frequency_kernels(fs, N, order_max)
+        elif which == 'both':
+            self._compute_frequency_kernels(fs, N, order_max, from_time=True)
+
+
+    def _compute_time_kernels(self, fs, T, order_max):
+        #TODO faire pour holder1
+        #TODO methode generale superieur a l'ordre 2
+        #TODO faire marcher en mode 'function'
+        #TODO prendre en compte les Npq
+        #TODO faire docstring
+
+        from scipy import linalg
+        time_vec = np.arange(0, T + (1/fs), step=1/fs)
+        N = time_vec.shape[0]
+
+        # Initialization
+        self._time_vector = time_vec
+        self._time_in2state = dict()
+        self.volterra_kernels = dict()
+
+        # Filter computation
+        w = np.zeros((N, self.dim['state'], self.dim['state']))
+        for ind in range(N):
+            w[ind] = linalg.expm(self.A_m * time_vec[ind])
+        w_filter = w[1]
+        A_inv = np.linalg.inv(self.A_m)
+        holder0_bias = A_inv.dot(w_filter) - A_inv
+
+        # Order 1
+        self._time_in2state[1] = np.zeros((self.dim['state'], N))
+        self._time_in2state[1][:, 1:] = np.squeeze(np.dot(w[:-1],
+                                                          np.dot(holder0_bias,
+                                                                 self.B_m)).T)
+        self.volterra_kernels[1] = np.squeeze(np.dot(self.C_m,
+                                                     self._time_in2state[1]))
+
+        # Order 2
+        self._time_in2state[2] = np.zeros((self.dim['state'], N, N))
+        dirac4input = np.zeros((self.dim['input'], N-1))
+        dirac4input[0] = 1
+        if self.is_mpq_used(2, 0):
+            temp_tensor = np.einsum(self._time_in2state[1][:, :-1], (0, 2),
+                                    self._time_in2state[1][:, :-1], (1, 3),
+                                    (0, 1, 2, 3))
+            temp_result = np.tensordot(self.mpq[(2, 0)], temp_tensor, 2)
+            self._time_in2state[2][:, 1:, 1:] += \
+                np.tensordot(holder0_bias, temp_result, 1)
+        if self.is_mpq_used(1, 1):
+            temp_tensor = np.einsum(self._time_in2state[1][:, :-1], (0, 2),
+                                    dirac4input, (1, 3), (0, 1, 2, 3))
+            temp_result = np.tensordot(self.mpq[(1, 1)], temp_tensor, 2)
+            temp_result += np.swapaxes(temp_result, 1, 2)
+            temp_result *= 1/2
+            self._time_in2state[2][:, 1:, 1:] += \
+                    np.tensordot(holder0_bias, temp_result, 1)
+        if self.is_mpq_used(0, 2):
+            temp_tensor = np.einsum(dirac4input, (0, 2),
+                                    dirac4input, (1, 3), (0, 1, 2, 3))
+            temp_result = np.tensordot(self.mpq[(0, 2)], temp_tensor, 2)
+            self._time_in2state[2][:, 1:, 1:] += \
+                    np.tensordot(holder0_bias, temp_result, 1)
+
+        for ind in range(1,2*(N-1)):
+            ind_vec = np.arange(max(1, ind-N+2), min(N, ind+1))
+            self._time_in2state[2][:, ind_vec, ind_vec[::-1]] += \
+            w_filter.dot(self._time_in2state[2][:, ind_vec-1, ind_vec[::-1]-1])
+
+        self.volterra_kernels[2] = np.squeeze( \
+                                     np.tensordot(self.C_m,
+                                                  self._time_in2state[2], 1))
+
+
+    def _compute_frequency_kernels(self, fs, N, order_max, from_time=False):
+        #TODO methode generale superieur a l'ordre 2
+        #TODO faire marcher en mode 'function'
+        #TODO prendre en compte les Npq
+        #TODO faire docstring
+
+        # Initialization
+        freq_vec = np.fft.fftshift(np.fft.fftfreq(N, d=1/fs))
+
+        self._frequency_vector = freq_vec
+        self._freq_in2state = dict()
+        self.transfer_kernels = dict()
+
+        if from_time:
+            for n in range(1, order_max+1):
+                self._freq_in2state[n] = np.fft.fftshift( \
+                                     np.fft.fftn(self._time_in2state[n],
+                                                 axes=np.arange(1, n+1)))
+                self.transfer_kernels[n] = np.fft.fftshift( \
+                                     np.fft.fftn(self.volterra_kernels[n]))
+
+        else:
+            # Filter computation
+            def _filter_values(f):
+                fac = np.reshape(2j*np.pi*f, f.shape + (1, 1))
+                identity = np.identity(self.dim['state'])
+                return np.linalg.inv(fac * identity - self.A_m)
+
+            w = _filter_values(freq_vec)
+            holder0_bias = np.exp(- 1j * np.pi / fs) * np.sinc(freq_vec/fs)
+
+            # Order 1
+            self._freq_in2state[1] = np.squeeze(np.dot(holder0_bias * w,
+                                                       self.B_m)).T
+            self.transfer_kernels[1] = np.squeeze( \
+                                        np.dot(self.C_m,
+                                               self._freq_in2state[1]) + \
+                                        self.D_m)
+
+            # Order 2
+            ones4input = holder0_bias
+            temp_state = np.zeros((self.dim['state'], N, N), dtype='complex128')
+            if self.is_mpq_used(2, 0):
+                temp_tensor = np.einsum(self._freq_in2state[1], (0, 2),
+                                        self._freq_in2state[1], (1, 3),
+                                        (0, 1, 2, 3))
+                temp_state += np.tensordot(self.mpq[(2, 0)], temp_tensor, 2)
+            if self.is_mpq_used(1, 1):
+                temp_tensor = np.einsum(self._freq_in2state[1], (0, 2),
+                                        ones4input, (1, 3), (0, 1, 2, 3))
+                temp_result = np.tensordot(self.mpq[(1, 1)], temp_tensor, 2)
+                temp_result += np.swapaxes(temp_result, 1, 2)
+                temp_state += (1/2) * temp_result
+            if self.is_mpq_used(0, 2):
+                temp_tensor = np.einsum(ones4input, (0, 2),
+                                        ones4input, (1, 3), (0, 1, 2, 3))
+                temp_state += np.tensordot(self.mpq[(0, 2)], temp_tensor, 2)
+            freq_somme = freq_vec[:, np.newaxis] + freq_vec[np.newaxis, :]
+            self._freq_in2state[2] = np.einsum('ijkl,kij->lij',
+                                               _filter_values(freq_somme),
+                                               temp_state)
+            self.transfer_kernels[2] = np.squeeze( \
+                                        np.tensordot(self.C_m,
+                                                     self._freq_in2state[2], 1))
+
+
+    def plot_kernels(self):
+        #TODO faire plots pour noyau temporel
+        #TODO plot + beau (grilles, axes, titres, labels, ticks, ...)
+        #TODO faire save
+        #TODO faire docstring
+
+        from mpl_toolkits.mplot3d import Axes3D
+        import matplotlib.pyplot as plt
+
+        if 'volterra_kernels' in self.__dict__:
+
+            # Order 1
+            plt.figure('Volterra kernel of order 1 (linear filter)')
+            plt.clf()
+            plt.plot(self._time_vector, self.volterra_kernels[1])
+
+            # Order 2
+            time_x, time_y = np.meshgrid(self._time_vector, self._time_vector)
+
+            plt.figure('Volterra kernel of order 2 (a)')
+            plt.clf()
+            N = 20
+            plt.contourf(time_x, time_y, self.volterra_kernels[2], N)
+            plt.colorbar(extend='both')
+
+            plt.figure('Volterra kernel of order 2 (b)')
+            plt.clf()
+            ax = plt.subplot(111, projection='3d')
+            surf = ax.plot_surface(time_x, time_y, self.volterra_kernels[2],
+                                   linewidth=0.1, antialiased=True, cmap='jet',
+                                   rstride=1, cstride=1)
+            plt.colorbar(surf, extend='both')
+
+            plt.figure('Volterra kernel of order 2 (c)')
+            plt.clf()
+            ax = plt.subplot(111, projection='3d')
+            ax.plot_wireframe(time_x, time_y, self.volterra_kernels[2],
+                              linewidth=0.1, antialiased=True, cmap='jet')
+
+        if 'transfer_kernels' in self.__dict__:
+
+            # Order 1
+            H1_amp_db = 20*np.log10(np.abs(self.transfer_kernels[1]))
+            H1_phase = np.angle(self.transfer_kernels[1])
+
+            plt.figure('Transfer kernel of order 1 (linear filter)')
+            plt.clf()
+            plt.subplot(211)
+            plt.semilogx(self._frequency_vector, H1_amp_db, basex=10)
+            plt.title('Magnitude')
+            plt.subplot(212)
+            plt.semilogx(self._frequency_vector, H1_phase, basex=10)
+            plt.title('Phase')
+
+            # Order 2
+            H2_amp_db = 20*np.log10(np.abs(self.transfer_kernels[2]))
+            H2_phase = np.angle(self.transfer_kernels[2])
+            freq_x, freq_y = np.meshgrid(self._frequency_vector,
+                                         self._frequency_vector)
+
+            plt.figure('Transfer kernel of order 2 (a)')
+            plt.clf()
+            N = 20
+            plt.subplot(211)
+            plt.contourf(freq_x, freq_y, H2_amp_db, N)
+            plt.colorbar(extend='both')
+            plt.title('Magnitude (dB)')
+            plt.subplot(212)
+            plt.contourf(freq_x, freq_y, H2_phase, N)
+            plt.colorbar(extend='both')
+            plt.title('Phase')
+
+            plt.figure('Transfer kernel of order 2 (b)')
+            plt.clf()
+            ax = plt.subplot(211, projection='3d')
+            surf = ax.plot_surface(freq_x, freq_y, H2_amp_db,
+                                   linewidth=0.1, antialiased=True, cmap='jet',
+                                   rstride=1, cstride=1)
+            plt.colorbar(surf, extend='both')
+            plt.title('Magnitude (dB)')
+            ax = plt.subplot(212, projection='3d')
+            surf = ax.plot_surface(freq_x, freq_y, H2_phase,
+                                   linewidth=0.1, antialiased=True, cmap='jet',
+                                   rstride=1, cstride=1)
+            plt.colorbar(surf, extend='both')
+            plt.title('Phase')
+
+            plt.figure('Transfer kernel of order 2 (c)')
+            plt.clf()
+            ax = plt.subplot(211, projection='3d')
+            ax.plot_wireframe(freq_x, freq_y, H2_amp_db,
+                              linewidth=0.1, antialiased=True, cmap='jet')
+            plt.title('Magnitude (dB)')
+            ax = plt.subplot(212, projection='3d')
+            ax.plot_wireframe(freq_x, freq_y, H2_phase,
+                              linewidth=0.1, antialiased=True, cmap='jet')
+            plt.title('Phase')
+
+        plt.show()
+
 
 class SymbolicStateSpace:
     """Characterize a system by its state-space representation.
@@ -209,7 +597,7 @@ class SymbolicStateSpace:
         self.mpq = mpq_dict
         self.npq = npq_dict
 
-        # CHeck dimension and linearity
+        # Check dimension and linearity
         self._dim_ok = self._check_dim()
         self.linear = self._is_linear()
 
@@ -359,3 +747,25 @@ class Filter:
         print_str = '\n' + sp.pretty( expr )
         return print_str
 
+
+
+#==============================================================================
+# Main script
+#==============================================================================
+
+if __name__ == '__main__':
+    """
+    Main script for testing.
+    """
+
+    import pyvi.simulation.systems as systems
+
+    print(systems.system_test(mode='tensor'))
+    print(systems.loudspeaker_sica(mode='function'))
+
+    system = systems.second_order_w_nl_damping(gain=1, f0=100, damping=0.2,
+                                               nl_coeff=[1e-1, 3e-5])
+    fs = 2000
+    T = 0.06
+    system.compute_volterra_kernels(fs, T, which='both')
+    system.plot_kernels()

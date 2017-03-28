@@ -221,7 +221,7 @@ if __name__ == '__main__':
     """
 
     from pyvi.simulation.systems import loudspeaker_sica, system_test
-    from matplotlib import pyplot as plt
+    import matplotlib.pyplot as plt
     import time
 
     ## Test if simulation works correctly ##

@@ -301,7 +301,7 @@ if __name__ == '__main__':
     """
 
     from pyvi.simulation.systems import second_order_w_nl_damping
-    from matplotlib import pyplot as plt
+    import matplotlib.pyplot as plt
 
     system = second_order_w_nl_damping(gain=1, f0=100,
                                        damping=0.2, nl_coeff=[1e-1, 3e-5])

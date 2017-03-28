@@ -16,6 +16,8 @@ Uses:
 #==============================================================================
 
 import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
+import numpy as np
 
 
 #==============================================================================
@@ -85,6 +87,166 @@ def plot_sig_coll(sig_coll, time_vec, name=None, title_plots=None,
             plt.xlim(xlim)
             plt.ylim(ylim)
     plt.show()
+
+
+def plot_kernel_time(vec, kernel, style='surface', title=None, N=20):
+    """
+    Plots a discrete time kernel of order 1 or 2.
+
+    Parameters
+    ----------
+    vec : numpy.ndarray
+        Time vector.
+    kernel : 1-D or 2-D numpy.ndarray
+        Kernel to plot.
+    style : {'surface', 'contour', 'wireframe'}, optional
+        Plot mode if the kernel is of order 2.
+    title : string, optional
+        Title of the Figure.
+    N : int, optional
+        Optional parameter when using 'countour'
+    """
+
+    order = kernel.ndim
+
+    if order ==1:
+        if not title:
+            title = 'Volterra kernel of order 1 (linear filter)'
+        plt.figure(title)
+        plt.clf()
+        plt.plot(vec, kernel)
+        plt.xlabel('Time (s)')
+        plt.ylabel('Amplitude')
+
+    elif order ==2:
+        if not title:
+            title = 'Volterra kernel of order 2'
+            time_x, time_y = np.meshgrid(vec, vec)
+            plt.figure(title)
+            plt.clf()
+
+            if style == 'contour':
+                plt.contourf(time_x, time_y, kernel, N)
+                plt.colorbar(extend='both')
+                plt.xlabel('Time (s)')
+                plt.ylabel('Time (s)')
+            elif style == 'surface':
+                ax = plt.subplot(111, projection='3d')
+                surf = ax.plot_surface(time_x, time_y, kernel, linewidth=0.1,
+                                       antialiased=True, cmap='jet',
+                                       rstride=1, cstride=1)
+                plt.colorbar(surf, extend='both')
+                ax.set_xlabel('Time (s)')
+                ax.set_ylabel('Time (s)')
+                ax.set_zlabel('Amplitude')
+            elif style == 'wireframe':
+                ax = plt.subplot(111, projection='3d')
+                ax.plot_wireframe(time_x, time_y, kernel, linewidth=0.1,
+                                  antialiased=True, cmap='jet')
+                ax.set_xlabel('Time (s)')
+                ax.set_ylabel('Time (s)')
+                ax.set_zlabel('Amplitude')
+
+    else:
+        print('No plot possible, the kernel is of order {}.'.format(order))
+
+
+def plot_kernel_freq(vec, kernel, style='surface', title=None, N=20,
+                     db=True, unwrap_angle=False, logscale=10):
+    """
+    Plots a discrete time kernel of order 1 or 2.
+
+    Parameters
+    ----------
+    vec : numpy.ndarray
+        Frequency vector.
+    kernel : 1-D or 2-D numpy.ndarray
+        Kernel to plot.
+    style : {'surface', 'contour', 'wireframe'}, optional
+        Plot mode if the kernel is of order 2.
+    title : string, optional
+        Title of the Figure.
+    N : int, optional
+        Optional parameter when using 'countour'
+    db : boolean, optional
+        Choose wether or not magnitude is expressed in deciBel.
+    unwrap_angle : boolen, optional
+        Choose wether or not the phase is unwrapped.
+    logscale: boolen or int, optional
+        If False, all frequency axis are on a linear scale. If True, should be
+        an int, and all frequency axis will be plotted using a logscale of base
+        ``logscale``.
+    """
+
+    order = kernel.ndim
+    kernel_amp = np.abs(kernel)
+    kernel_phase = np.angle(kernel)
+    amplabel = 'Magnitude'
+    if db:
+        kernel_amp = 20*np.log10(kernel_amp)
+        amplabel += ' (dB)'
+    if unwrap_angle:
+        for n in range(order):
+            kernel_phase = np.unwrap(kernel_phase, n)
+
+    if order ==1:
+        if not title:
+            title = 'Transfer kernel of order 1 (linear filter)'
+        plt.figure(title)
+        plt.clf()
+        ax1 = plt.subplot(211)
+        ax2 = plt.subplot(212)
+        if logscale:
+            ax1.semilogx(vec, kernel_amp, basex=logscale)
+            ax2.semilogx(vec, kernel_phase, basex=logscale)
+        else:
+            ax1.plot(vec, np.abs(kernel))
+            ax2.plot(vec, np.angle(kernel))
+        ax1.set_xlabel('Time (s)')
+        ax1.set_ylabel(amplabel)
+        ax2.set_xlabel('Time (s)')
+        ax2.set_ylabel('Phase (radians)')
+
+    elif order ==2:
+        if not title:
+            title = 'Trnsfer kernel of order 2'
+        time_x, time_y = np.meshgrid(vec, vec)
+        plt.figure(title)
+        plt.clf()
+
+        if style == 'contour':
+            ax1 = plt.subplot(211)
+            ax2 = plt.subplot(212)
+            ax1.contourf(time_x, time_y, kernel_amp, N)
+            ax2.contourf(time_x, time_y, kernel_phase, N)
+        if style == 'surface':
+            ax1 = plt.subplot(211, projection='3d')
+            ax2 = plt.subplot(212, projection='3d')
+            ax1.plot_surface(time_x, time_y, kernel_amp,
+                                     linewidth=0.1, antialiased=True,
+                                     cmap='jet', rstride=1, cstride=1)
+            ax2.plot_surface(time_x, time_y, kernel_phase,
+                                     linewidth=0.1, antialiased=True,
+                                     cmap='jet', rstride=1, cstride=1)
+        if style == 'wireframe':
+            ax1 = plt.subplot(211, projection='3d')
+            ax2 = plt.subplot(212, projection='3d')
+            ax1.plot_wireframe(time_x, time_y, kernel_amp, linewidth=0.1,
+                             antialiased=True, cmap='jet')
+            ax2.plot_wireframe(time_x, time_y, kernel_phase, linewidth=0.1,
+                             antialiased=True, cmap='jet')
+
+        ax1.set_xlabel('Time (s)')
+        ax1.set_ylabel('Time (s)')
+        ax2.set_xlabel('Time (s)')
+        ax2.set_ylabel('Time (s)')
+        if not (style == 'contour'):
+            ax1.set_zlabel(amplabel)
+            ax2.set_zlabel('Phase (radians)')
+
+    else:
+        print('No plot possible, the kernel is of order {}.'.format(order))
+
 
 #==============================================================================
 # Main script
