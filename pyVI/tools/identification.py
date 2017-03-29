@@ -12,6 +12,7 @@ Uses:
  - scipy 0.18.0
  - pyvi 0.1
  - itertools
+ - math
 """
 
 #==============================================================================
@@ -24,6 +25,7 @@ from scipy.special import binom as binomial
 import itertools as itr
 from pyvi.simulation.simulation import simulation
 from pyvi.tools.mathbox import rms, safe_db
+from math import factorial
 
 
 #==============================================================================
@@ -250,7 +252,34 @@ def vector_to_kernel(vec, M, order):
         kernel[indexes] = vec[current_ind]
         current_ind += 1
 
-    return kernel
+    return symmetrization(kernel)
+
+
+def symmetrization(array):
+    """
+    Symmetrize a multidimensional square array (each dimension must have the
+    same length).
+
+    Parameters
+    ----------
+    array : numpy.ndarray
+        Array to symmetrize.
+
+    Returns
+    -------
+    array_sym : numpy.ndarray
+        Symmetrized array.
+    """
+
+    shape = array.shape
+    assert len(set(shape)) == 1, 'Multidimensional array is not square ' + \
+        '(has shape {})'.format(shape)
+    n = len(array.shape)
+
+    array_sym = np.zeros(shape, dtype=array.dtype)
+    for ind in itr.permutations(range(n), n):
+        array_sym += np.transpose(array, ind)
+    return array_sym / factorial(n)
 
 
 def error_measure(estimated_kernels, true_kernels, db=True):
@@ -315,37 +344,38 @@ if __name__ == '__main__':
     input_sig = np.random.normal(scale=sigma, size=K)
 
     # Simulation
-    out_sig = simulation(input_sig, system, fs=fs, nl_order_max=Nmax,
-                         hold_opt=0)
+    out_sig_1 = simulation(input_sig, system, fs=fs, nl_order_max=Nmax,
+                           hold_opt=0)
+    out_sig_2 = simulation(input_sig, system, fs=fs, nl_order_max=Nmax,
+                           out='output_by_order', hold_opt=0)
 
     # Identification
-    kernels = identification(input_sig, out_sig, order_max=Nmax, M=M)
-    kernels[2] = (1/2) * (kernels[2] + kernels[2].T)
+    kernels_1 = identification(input_sig, out_sig_1, order_max=Nmax, M=M)
+    kernels_2 = identification(input_sig, out_sig_2, order_max=Nmax, M=M,
+                               separated_orders=True)
 
     # Ground truth
     system.compute_volterra_kernels(fs, (M-1)/fs, order_max=Nmax, which='time')
-    tau_vec = system._time_vector
 
     # Estimation error
-    error = error_measure(kernels, system.volterra_kernels)
-    print(error)
+    errors_1 = error_measure(kernels_1, system.volterra_kernels)
+    errors_2 = error_measure(kernels_2, system.volterra_kernels)
+    print(errors_1)
+    print(errors_2)
 
     # Plots
-    system.compute_volterra_kernels(fs, (M-1)/fs, order_max=Nmax, which='time')
     tau_vec = system._time_vector
-    kernels[2] = (1/2) * (kernels[2] + kernels[2].T)
-#    style2D = 'wireframe'
-    style2D = 'surface'
+    style2D = 'surface' # 'wireframe'
 
-    plot_kernel_time(tau_vec, kernels[1],
-                     title='Kernel of order 1 - Estimation')
     plot_kernel_time(tau_vec, system.volterra_kernels[1],
                      title='Kernel of order 1 - Ground truth')
-    plot_kernel_time(tau_vec, kernels[2], style=style2D,
-                     title='Kernel of order 2 - Estimation')
     plot_kernel_time(tau_vec, system.volterra_kernels[2], style=style2D,
                      title='Kernel of order 2 - Ground truth')
 
+    plot_kernel_time(tau_vec, kernels_1[1],
+                     title='Kernel of order 1 - Estimation')
+    plot_kernel_time(tau_vec, kernels_1[2], style=style2D,
+                     title='Kernel of order 2 - Estimation')
 
     # Test
     out2_sig = simulation(input_sig, system, fs=fs, nl_order_max=Nmax,
