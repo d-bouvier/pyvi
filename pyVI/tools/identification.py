@@ -23,6 +23,7 @@ from scipy.linalg import solve_triangular
 from scipy.special import binom as binomial
 import itertools as itr
 from pyvi.simulation.simulation import simulation
+from pyvi.tools.mathbox import rms, safe_db
 
 
 #==============================================================================
@@ -223,6 +224,39 @@ def vector_to_kernel(vec, M, order):
     return kernel
 
 
+def error_measure(estimated_kernels, true_kernels, db=True):
+    """
+    Give the measurment error of the kernel identification, as the RMS value of
+    the difference divided by the RMS of the trus kernels (for each order).
+
+    Parameters
+    ----------
+    estimated_kernels : dict of numpy.ndarray
+        Dictionnary of kernels values (estimation).
+    true_kernels : dict of numpy.ndarray
+        Dictionnary of kernels values (ground truth).
+
+    Returns
+    -------
+    error : list of floats
+        List of normalized-RMS error values.
+    """
+
+    # Initialization
+    errors = []
+
+    # Loop on all estimated kernels
+    for n, kernel in estimated_kernels.items():
+        num = rms(kernel - true_kernels[n])
+        den = rms(true_kernels[n])
+        if db:
+            errors.append(safe_db(num, den))
+        else:
+            errors.append(num/den)
+
+    return errors
+
+
 #==============================================================================
 # Main script
 #==============================================================================
@@ -233,7 +267,7 @@ if __name__ == '__main__':
     """
 
     from pyvi.simulation.systems import second_order_w_nl_damping
-    import matplotlib.pyplot as plt
+    from pyvi.tools.plotbox import plot_kernel_time
 
     # System specification
     system = second_order_w_nl_damping(gain=1, f0=100,
@@ -241,10 +275,10 @@ if __name__ == '__main__':
                                        nl_coeff=[1e-1, 3e-5])
 
     # Input signal specification
-    fs = 1000
+    fs = 2000
     T = 5
     Nmax = 2
-    M = 20
+    M = 60
     time_vector = np.arange(0, T, 1/fs)
     K = time_vector.shape[0]
 
@@ -257,16 +291,30 @@ if __name__ == '__main__':
 
     # Identification
     kernels = identification(input_sig, out_sig, order_max=Nmax, M=M)
-
-    # Kernel plots
-    tau_vec = np.arange(0, M/fs, 1/fs)
     kernels[2] = (1/2) * (kernels[2] + kernels[2].T)
 
-    plt.figure('Kernels')
-    plt.clf()
-    plt.subplot(2, 1, 1)
-    plt.plot(tau_vec, kernels[1])
-    plt.subplot(2, 1, 2)
-    plt.contourf(tau_vec, tau_vec, kernels[2], 10)
-    plt.colorbar(extend='both')
+    # Ground truth
+    system.compute_volterra_kernels(fs, (M-1)/fs, order_max=Nmax, which='time')
+    tau_vec = system._time_vector
+
+    # Estimation error
+    error = error_measure(kernels, system.volterra_kernels)
+    print(error)
+
+    # Plots
+    system.compute_volterra_kernels(fs, (M-1)/fs, order_max=Nmax, which='time')
+    tau_vec = system._time_vector
+    kernels[2] = (1/2) * (kernels[2] + kernels[2].T)
+#    style2D = 'wireframe'
+    style2D = 'surface'
+
+    plot_kernel_time(tau_vec, kernels[1],
+                     title='Kernel of order 1 - Estimation')
+    plot_kernel_time(tau_vec, system.volterra_kernels[1],
+                     title='Kernel of order 1 - Ground truth')
+    plot_kernel_time(tau_vec, kernels[2], style=style2D,
+                     title='Kernel of order 2 - Estimation')
+    plot_kernel_time(tau_vec, system.volterra_kernels[2], style=style2D,
+                     title='Kernel of order 2 - Ground truth')
+
 
