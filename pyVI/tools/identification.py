@@ -58,7 +58,7 @@ def identification(input_sig, output_sig, M=1, order_max=1):
     q, r = np.linalg.qr(phi_m)
 
     # Forward inverse
-    y = np.dot(q.T, out_sig)
+    y = np.dot(q.T, output_sig)
     f = solve_triangular(r, y)
 
     # Re-arranging vector f into volterra kernels
