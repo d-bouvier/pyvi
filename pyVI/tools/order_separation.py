@@ -246,6 +246,8 @@ def order_separation(output_coll, method, param):
             end = start + param['K_phase']
             out_per_phase[idx,:,:] = fftpack.ifft(output_coll[start:end, :],
                                                   n=param['K_phase'], axis=0)
+        if param['output'] == 'raw':
+            return out_per_phase[0, :, :]
 
         # Computation of indexes and necessary vector
         k_vec = np.arange(0, param['nb_term'])
