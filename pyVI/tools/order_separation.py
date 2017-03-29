@@ -133,6 +133,8 @@ def simu_collection(input_sig, system, fs=44100, hold_opt=1,
             param['w'] = np.exp(- 1j * 2 * np.pi / param['K_phase'])
             if not 'output' in param:
                 param['output'] = 'orders'
+            if not 'out_type' in param:
+                param['out_type'] = 'array'
             return param
         def create_input_coll(input_coll):
             for idx_amp in range(param['K_amp']):
@@ -269,7 +271,7 @@ def order_separation(output_coll, method, param):
                                     out_per_phase[:,idx,:])
             if param['output'] == 'orders':
                 term_combinatoric[indexes, :] = tmp_result
-            elif param['output'] == 'terms':
+            elif param['output'] in ['terms', 'real_terms']:
                 binomial_factor = np.diag(1/binomial(n_vec[indexes],
                                                      q_vec[indexes]))
                 term_combinatoric[indexes, :] = \
@@ -277,7 +279,8 @@ def order_separation(output_coll, method, param):
 
         # Function output
         # (either the nonlinear homogeneous orders of the output of the real
-        # signal, or the complex terms obtained using binomial decomposition)
+        # signal, or the complex or real terms obtained using binomial
+        # decomposition)
         if param['output'] == 'orders':
             orders = np.zeros((param['nl_order_max'], len_sig))
             start = 0
@@ -288,7 +291,36 @@ def order_separation(output_coll, method, param):
                 start += ind_n + 2
             return orders
         elif param['output'] == 'terms':
-            return term_combinatoric
+            if param['out_type'] == 'array':
+                return term_combinatoric
+            elif param['out_type'] == 'dict':
+                term_combinatoric_dict = dict()
+                for n in range(1, param['nl_order_max']+1):
+                    for q in range(0, n+1):
+                        ind = ind = (n*(n+1))//2 + q - 1
+                        term_combinatoric_dict[(n, q)] = term_combinatoric[ind]
+                return term_combinatoric_dict
+        elif param['output'] == 'real_terms':
+            nb_real_terms = (param['nb_term'] + param['nl_order_max']//2) // 2
+            real_terms = np.zeros((nb_real_terms, len_sig))
+            real_terms_dict = dict()
+            for n in range(1, param['nl_order_max']+1):
+                for q in range(0, 1+n//2):
+                    ind = (n*(n-1))//2 + q
+                    ind1 = (n*(n+1))//2 + q - 1
+                    ind2 = (n*(n+1))//2 + (n - q) - 1
+                    if ind1 == ind2:
+                        real_terms[ind] = np.real_if_close( \
+                                              term_combinatoric[ind1])
+                    else:
+                        real_terms[ind] = np.real_if_close( \
+                                              term_combinatoric[ind1] + \
+                                              term_combinatoric[ind2])
+                    real_terms_dict[(n, q)] = real_terms[ind]
+            if param['out_type'] == 'array':
+                return real_terms
+            elif param['out_type'] == 'dict':
+                return real_terms_dict
 
 
 #==============================================================================
