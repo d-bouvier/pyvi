@@ -30,7 +30,8 @@ from pyvi.tools.mathbox import rms, safe_db
 # Functions
 #==============================================================================
 
-def identification(input_sig, output_sig, M=1, order_max=1):
+def identification(input_sig, output_sig, M=1, order_max=1,
+                   separated_orders=False):
     """
     Identify the Volterra kernels of a system from input and output signals.
 
@@ -44,6 +45,10 @@ def identification(input_sig, output_sig, M=1, order_max=1):
         Memory length of kernels
     order_max : int, optional
         Highest kernel order (default 1).
+    separated_orders : boolean, optional
+        If True, ``output_sig`` should contain the separated homogeneous order
+        of the output, and the identification will be made for each kernel
+        separately.
 
     Returns
     -------
@@ -54,15 +59,39 @@ def identification(input_sig, output_sig, M=1, order_max=1):
     # Input combinatoric
     phi_m = construct_phi_matrix(input_sig, M, order_max)
 
-    # QR decomposition
-    q, r = np.linalg.qr(phi_m)
+    if separated_orders:
+        f = np.array([])
+        ind_start = 0
 
-    # Forward inverse
-    y = np.dot(q.T, output_sig)
-    f = solve_triangular(r, y)
+        for n in range(order_max):
+            # Number of combination term
+            nb_term = int(binomial(M + n, n + 1))
 
-    # Re-arranging vector f into volterra kernels
-    kernels = vector_to_kernels(f, M, order_max)
+            # QR decomposition
+            q_n, r_n = np.linalg.qr(phi_m[:,ind_start:ind_start+nb_term])
+
+            # Forward inverse
+            current_y = np.dot(q_n.T, output_sig[n])
+            f_n = solve_triangular(r_n, current_y)
+
+            # Save this order kernel coefficient
+            f = np.concatenate((f, f_n), axis=0)
+            ind_start += nb_term
+
+        # Re-arranging vector f into volterra kernels
+        kernels = vector_to_kernels(f, M, order_max)
+
+    else:
+        # QR decomposition
+        q, r = np.linalg.qr(phi_m)
+        print( np.linalg.cond(r))
+
+        # Forward inverse
+        y = np.dot(q.T, output_sig)
+        f = solve_triangular(r, y)
+
+        # Re-arranging vector f into volterra kernels
+        kernels = vector_to_kernels(f, M, order_max)
 
     return kernels
 
@@ -287,7 +316,7 @@ if __name__ == '__main__':
 
     # Simulation
     out_sig = simulation(input_sig, system, fs=fs, nl_order_max=Nmax,
-                     hold_opt=0)
+                         hold_opt=0)
 
     # Identification
     kernels = identification(input_sig, out_sig, order_max=Nmax, M=M)
@@ -318,3 +347,17 @@ if __name__ == '__main__':
                      title='Kernel of order 2 - Ground truth')
 
 
+    # Test
+    out2_sig = simulation(input_sig, system, fs=fs, nl_order_max=Nmax,
+                          out='output_by_order', hold_opt=0)
+    kernels_bis = identification(input_sig, out2_sig, order_max=Nmax, M=M,
+                                 separated_orders=True)
+    kernels_bis[2] = (1/2) * (kernels_bis[2] + kernels_bis[2].T)
+    kernels_bis = {1: kernels_bis[1], 2: kernels_bis[2]}
+    error_bis = error_measure(kernels_bis, system.volterra_kernels)
+    print(error_bis)
+
+    plot_kernel_time(tau_vec, kernels_bis[1],
+                     title='Kernel of order 1 - Estimation 2')
+    plot_kernel_time(tau_vec, kernels_bis[2], style=style2D,
+                     title='Kernel of order 2 - Estimation 2')
