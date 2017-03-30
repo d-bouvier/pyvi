@@ -71,6 +71,7 @@ def identification(input_sig, output_sig, M=1, order_max=1,
 
             # QR decomposition
             q_n, r_n = np.linalg.qr(phi_m[:,ind_start:ind_start+nb_term])
+            print('Condition number order {}:'.format(n+1), np.linalg.cond(r_n))
 
             # Forward inverse
             current_y = np.dot(q_n.T, output_sig[n])
@@ -86,7 +87,7 @@ def identification(input_sig, output_sig, M=1, order_max=1,
     else:
         # QR decomposition
         q, r = np.linalg.qr(phi_m)
-        print( np.linalg.cond(r))
+        print('Condition number (total):', np.linalg.cond(r))
 
         # Forward inverse
         y = np.dot(q.T, output_sig)
@@ -326,6 +327,7 @@ if __name__ == '__main__':
 
     from pyvi.simulation.systems import second_order_w_nl_damping
     from pyvi.tools.plotbox import plot_kernel_time
+    import pyvi.tools.order_separation as sep
 
     # System specification
     system = second_order_w_nl_damping(gain=1, f0=100,
@@ -333,26 +335,44 @@ if __name__ == '__main__':
                                        nl_coeff=[1e-1, 3e-5])
 
     # Input signal specification
-    fs = 2000
-    T = 5
+    fs = 1000
+    T = 2
     Nmax = 2
-    M = 60
+    M = 30
     time_vector = np.arange(0, T, 1/fs)
     K = time_vector.shape[0]
 
+    assert (binomial(M+Nmax, Nmax) - 1) <= K
+
     sigma = 1
-    input_sig = np.random.normal(scale=sigma, size=K)
+    covariance = [[sigma, 0], [0, sigma]]
+    random_sig = np.random.multivariate_normal([0, 0], covariance, size=K)
+    input_sig_cplx = random_sig[:, 0] + 1j * random_sig[:, 1]
+    input_sig = np.real(input_sig_cplx)
 
     # Simulation
     out_sig_1 = simulation(input_sig, system, fs=fs, nl_order_max=Nmax,
                            hold_opt=0)
     out_sig_2 = simulation(input_sig, system, fs=fs, nl_order_max=Nmax,
                            out='output_by_order', hold_opt=0)
+    data, param = sep.simu_collection(input_sig_cplx, system, fs=fs,
+                                      hold_opt=0, name='sep',
+                                      method='phase+amp',
+                                      param={'nl_order_max' :Nmax,
+                                             'gain': 0.6,
+                                             'output': 'orders'})
+    out_sig_3 = sep.order_separation(data['output_collection'],
+                                     param['sep_method'],
+                                     param['sep_param'])
 
     # Identification
     kernels_1 = identification(input_sig, out_sig_1, order_max=Nmax, M=M)
     kernels_2 = identification(input_sig, out_sig_2, order_max=Nmax, M=M,
                                separated_orders=True)
+    kernels_3 = identification(data['input_collection'][0], out_sig_3,
+                               order_max=Nmax, M=M, separated_orders=True)
+    print((input_sig == data['input_collection'][0]).all())
+
 
     # Ground truth
     system.compute_volterra_kernels(fs, (M-1)/fs, order_max=Nmax, which='time')
@@ -360,34 +380,35 @@ if __name__ == '__main__':
     # Estimation error
     errors_1 = error_measure(kernels_1, system.volterra_kernels)
     errors_2 = error_measure(kernels_2, system.volterra_kernels)
+    errors_3 = error_measure(kernels_3, system.volterra_kernels)
     print(errors_1)
     print(errors_2)
+    print(errors_3)
 
     # Plots
     tau_vec = system._time_vector
     style2D = 'surface' # 'wireframe'
+    str1 = ['Kernel of order 1 - ',  'Kernel of order 2 - ']
+    str2 = ['Ground truth', 'Identification',
+            'Identification on true separated orders',
+            'Identification on estimated separated orders']
 
     plot_kernel_time(tau_vec, system.volterra_kernels[1],
-                     title='Kernel of order 1 - Ground truth')
+                     title=str1[0]+str2[0])
     plot_kernel_time(tau_vec, system.volterra_kernels[2], style=style2D,
-                     title='Kernel of order 2 - Ground truth')
+                     title=str1[1]+str2[0])
 
     plot_kernel_time(tau_vec, kernels_1[1],
-                     title='Kernel of order 1 - Estimation')
+                     title=str1[0]+str2[1])
     plot_kernel_time(tau_vec, kernels_1[2], style=style2D,
-                     title='Kernel of order 2 - Estimation')
+                     title=str1[1]+str2[1])
 
-    # Test
-    out2_sig = simulation(input_sig, system, fs=fs, nl_order_max=Nmax,
-                          out='output_by_order', hold_opt=0)
-    kernels_bis = identification(input_sig, out2_sig, order_max=Nmax, M=M,
-                                 separated_orders=True)
-    kernels_bis[2] = (1/2) * (kernels_bis[2] + kernels_bis[2].T)
-    kernels_bis = {1: kernels_bis[1], 2: kernels_bis[2]}
-    error_bis = error_measure(kernels_bis, system.volterra_kernels)
-    print(error_bis)
+    plot_kernel_time(tau_vec, kernels_2[1],
+                     title=str1[0]+str2[2])
+    plot_kernel_time(tau_vec, kernels_2[2], style=style2D,
+                     title=str1[1]+str2[2])
 
-    plot_kernel_time(tau_vec, kernels_bis[1],
-                     title='Kernel of order 1 - Estimation 2')
-    plot_kernel_time(tau_vec, kernels_bis[2], style=style2D,
-                     title='Kernel of order 2 - Estimation 2')
+    plot_kernel_time(tau_vec, kernels_3[1],
+                     title=str1[0]+str2[3])
+    plot_kernel_time(tau_vec, kernels_3[2], style=style2D,
+                     title=str1[1]+str2[3])
