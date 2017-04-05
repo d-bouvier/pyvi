@@ -328,7 +328,7 @@ def vector_to_kernels(f, M, order_max=1):
     """
 
     # Check dimension
-    length = int(binomial(M + Nmax, Nmax)) - 1
+    length = int(binomial(M + order_max, order_max)) - 1
     assert f.shape[0] == length, \
            'The vector of Volterra coefficients has wrong length ' + \
            '(got {}, expected {}).'.format(f.shape[0], length)
@@ -338,7 +338,7 @@ def vector_to_kernels(f, M, order_max=1):
     current_ind = 0
 
     # Loop on all orders of nonlinearity
-    for n in range(1, Nmax+1):
+    for n in range(1, order_max+1):
         nb_term = int(binomial(M + n - 1, n))
         kernels[n] = vector_to_kernel(f[current_ind:current_ind+nb_term], M, n)
         current_ind += nb_term
