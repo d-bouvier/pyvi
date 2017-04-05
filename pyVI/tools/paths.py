@@ -113,4 +113,4 @@ def load_data_numpy(name, folder):
 
     folder_path = folder_str(folder)
     full_path = folder_path + os.sep + name + '.npz'
-    savez(full_path)
+    return savez(full_path)
