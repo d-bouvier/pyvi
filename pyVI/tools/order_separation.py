@@ -22,6 +22,7 @@ import numpy as np
 from scipy import fftpack
 from scipy.special import binom as binomial
 from pyvi.simulation.simulation import simulation
+from pyvi.tools.mathbox import rms, safe_db
 from pyvi.tools.paths import save_data_pickle, save_data_numpy
 from datetime import datetime
 
@@ -50,25 +51,6 @@ def estimation_measure(signals_ref, signals_est, mode='default'):
         error_measure.append(val)
 
     return error_measure
-
-
-def rms(sig):
-    """
-    Computation of the root-mean-square of a vector.
-    """
-    return np.sqrt( np.mean(np.abs(sig)**2) )
-
-
-def safe_db(num, den):
-    """
-    dB computation with verification that neither the denominator or numerator
-    are equal to zero.
-    """
-    if den == 0:
-        return np.Inf
-    if num == 0:
-        return - np.Inf
-    return 20 * np.log10(num / den)
 
 
 def simu_collection(input_sig, system, fs=44100, hold_opt=1,
@@ -140,9 +122,9 @@ def simu_collection(input_sig, system, fs=44100, hold_opt=1,
             for idx_amp in range(param['K_amp']):
                 for idx_phase in range(param['K_phase']):
                     idx = idx_amp * param['K_phase'] + idx_phase
-                    input_coll[idx, :] = np.real(param['coeff'][idx_amp] * \
-                                                 param['w']**idx_phase * \
-                                                 input_sig)
+                    input_coll[idx, :] = 2 * np.real(param['coeff'][idx_amp] * \
+                                                     param['w']**idx_phase * \
+                                                     input_sig)
             return input_coll
 
     # Parameters initialization
@@ -196,7 +178,8 @@ def simu_collection(input_sig, system, fs=44100, hold_opt=1,
             'output_collection': output_coll,
             'time': [n / fs for n in range(len_sig)]}
     if method == 'phase+amp':
-        data.update({'output_by_order_cplx': out_by_order_bis})
+        data.update({'output_by_order_cplx': out_by_order_bis,
+                     'input_real': 2 * np.real(input_sig)})
 
     if save_bool:
         save_data_pickle(config, 'config', folders)
