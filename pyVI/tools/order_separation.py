@@ -55,7 +55,7 @@ def estimation_measure(signals_ref, signals_est, mode='default'):
 
 def simu_collection(input_sig, system, fs=44100, hold_opt=1,
                     name='unknown', method='boyd', param={'nl_order_max' :1},
-                    save_bool=False):
+                    save_bool=False, resampling=False):
     """
     Make collection of simulation with inputs derived from a based signal.
     (only works with SISO system)
@@ -137,16 +137,19 @@ def simu_collection(input_sig, system, fs=44100, hold_opt=1,
     if method == 'phase+amp':
         out_by_order = simulation(2 * np.real(input_sig), system, fs=fs,
                                   nl_order_max=param['nl_order_max'],
-                                  hold_opt=hold_opt, out='output_by_order')
+                                  hold_opt=hold_opt, out='output_by_order',
+                                  resampling=resampling)
         out_by_order.dtype = param['dtype']
         out_by_order_bis = simulation(input_sig, system, fs=fs,
                                       nl_order_max=param['nl_order_max'],
-                                      hold_opt=hold_opt, out='output_by_order')
+                                      hold_opt=hold_opt, out='output_by_order',
+                                      resampling=resampling)
 
     else:
         out_by_order = simulation(input_sig, system, fs=fs,
                                   nl_order_max=param['nl_order_max'],
-                                  hold_opt=hold_opt, out='output_by_order')
+                                  hold_opt=hold_opt, out='output_by_order',
+                                  resampling=resampling)
         out_by_order.dtype = param['dtype']
 
     # Creation of input collection
@@ -158,7 +161,8 @@ def simu_collection(input_sig, system, fs=44100, hold_opt=1,
     for idx in range(param['K']):
         out = simulation(input_coll[idx, :], system, fs=fs,
                          nl_order_max=param['nl_order_max'],
-                         hold_opt=hold_opt, out='output')
+                         hold_opt=hold_opt, out='output',
+                         resampling=resampling)
         output_coll[idx, :] = out
 
     # Data saving and function output
