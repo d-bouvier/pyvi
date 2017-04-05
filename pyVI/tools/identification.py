@@ -58,7 +58,7 @@ def identification(input_sig, output_sig, M=1, order_max=1,
     """
 
     # Input combinatoric
-    if phi_m == None:
+    if phi_m is None:
         phi_m = construct_phi_matrix(input_sig, M, order_max)
 
     if separated_orders:
