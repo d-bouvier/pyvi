@@ -99,6 +99,59 @@ def identification(input_sig, output_sig, M=1, order_max=1,
     return kernels
 
 
+def identification_cplx(input_sig, output_sig, M=1, order_max=1, phi=None,
+                        real=True, all_terms=True):
+    #TODO faire docstring
+    #TODO regroup functions
+
+    # Input combinatoric
+    if phi is None:
+        phi = construct_phi_cplx(input_sig, M, order_max, real=real)
+    f = np.array([])
+
+    # Case where we have all Mpq terms
+    if all_terms:
+        for n in range(1, order_max+1):
+            # Number of combination term
+            nb_term = int(binomial(M + n - 1, n))
+
+            # cas termes reels
+            if real:
+                f_n = np.zeros((nb_term,))
+                for q in range(0, 1+n//2): # cas termes reels
+                    # QR decomposition
+                    current_q, current_r = np.linalg.qr(phi[n, q])
+                    print('Cond {},{}:'.format(n, q), np.linalg.cond(current_r))
+                    # Forward inverse
+                    current_y = np.dot(current_q.T, output_sig[(n ,q)])
+                    current_f = solve_triangular(current_r, current_y)
+                    f_n += current_f
+                f_n /= (1+n//2)
+                # Save this order kernel coefficient
+                f = np.concatenate((f, f_n), axis=0)
+
+            # cas termes cplx
+            else:
+                #TODO test this case
+                f_n = np.zeros((nb_term,), dtype='complex128')
+                for q in range(0, n+1): # cas termes reels
+                    # QR decomposition
+                    current_q, current_r = np.linalg.qr(phi[n, q])
+                    print('Cond {},{}:'.format(n, q), np.linalg.cond(current_r))
+                    # Forward inverse
+                    current_y = np.dot(current_q.T, output_sig[(n ,q)])
+                    current_f = solve_triangular(current_r, current_y)
+                    f_n += current_f
+                f_n /= (1+n//2)
+                # Save this order kernel coefficient
+                f = np.concatenate((f, np.real_if_close(f_n)), axis=0)
+
+    # Re-arranging vector f into volterra kernels
+    kernels = vector_to_kernels(f, M, order_max)
+
+    return kernels
+
+
 def construct_phi_matrix(signal, M, order_max=1):
     """
     Construct the Volterra basis functionals for kernels up to a certain order,
@@ -142,6 +195,48 @@ def construct_phi_matrix(signal, M, order_max=1):
     return phi.T
 
 
+def construct_phi_cplx(signal, M, order_max=1, real=True):
+    #TODO optimiser calcul
+    #TODO faire docstring
+    #TODO regroup functions
+
+    # Initialization
+    phi = dict()
+    padded_signal = np.pad(signal, (M-1, 0), 'constant')
+    list_ind = np.arange(M-1, padded_signal.shape[0])
+
+    # Main loop
+    for n in range(1, order_max+1):
+        nb_terms = int(binomial(M + n - 1, n))
+
+        for q in range(0, 1+n//2):
+            phi[(n, q)] = np.zeros((signal.shape[0], nb_terms),
+                                   dtype='complex128')
+            product = volterra_basis_functionals_cplx(padded_signal,
+                                                      M, n, q)
+            ind_iterator = itr.combinations_with_replacement(range(M), n)
+            ind = 0
+            for indexes in ind_iterator:
+                temp_arg = tuple()
+                for iii in reversed(indexes):
+                    temp_arg += (list_ind-iii,)
+                for jjj in itr.permutations(temp_arg):
+                    phi[(n, q)][:, ind] += product[jjj]
+                ind += 1
+            phi[(n, q)] /= factorial(n)
+            if (not n%2) and (q == n//2):
+                phi[(n, q)] = np.real_if_close(phi[(n, q)])
+            else:
+                # cas termes reels
+                if real:
+                    phi[(n, q)] = 2 * np.real(phi[(n, q)])
+                # cas termes cplx
+                else:
+                    phi[(n, n-q)] = phi[(n, q)].conj()
+
+    return phi
+
+
 def volterra_basis_functionals(signal, M, n):
     """
     Construct the Volterra basis functionals for a kernel of order ``n``, of
@@ -178,6 +273,37 @@ def volterra_basis_functionals(signal, M, n):
         product_array[temp_arg] = np.prod(signal[np.stack(temp_arg)], axis=0)
 
     return product_array
+
+
+def volterra_basis_functionals_cplx(signal, M, n, q):
+    #TODO optimiser calcul
+    #TODO faire docstring
+    #TODO regroup functions
+
+    # Initialization
+    length = signal.shape[0]
+    list_ind = np.arange(M-1, length)
+    iterator = itr.product(range(M), repeat=n)
+    temp_prod = np.zeros((length,) * n, dtype='complex128')
+    if q in (0, n):
+        for indexes in iterator:
+            temp_arg = tuple()
+            for iii in reversed(indexes):
+                temp_arg += (list_ind-iii,)
+            temp_prod[temp_arg] = np.prod(signal[np.stack(temp_arg)], axis=0)
+        if q == n:
+            temp_prod = temp_prod.conj()
+    else:
+        # Main loop
+        for indexes in iterator:
+            temp_arg = tuple()
+            for iii in reversed(indexes):
+                temp_arg += (list_ind-iii,)
+            temp_prod[temp_arg] = np.prod(signal[np.stack(temp_arg[0:(n-q)])],
+                                                          axis=0) * \
+                                  np.prod(signal[np.stack(temp_arg[(n-q):n])],
+                                                          axis=0).conj()
+    return temp_prod
 
 
 def vector_to_kernels(f, M, order_max=1):
@@ -353,6 +479,12 @@ if __name__ == '__main__':
     input_sig_cplx = random_sig[:, 0] + 1j * random_sig[:, 1]
     input_sig = 2 * np.real(input_sig_cplx)
 
+    # Added noise
+    sigma_error = sigma * 1e-2
+    noise_1 = np.random.normal(0, sigma_error, size=K)
+    noise_2 = np.random.normal(0, sigma_error, size=(Nmax, K))
+    noise_4 = np.random.normal(0, sigma_error,
+                               size=((2*Nmax+1)*((Nmax+1)//2), K))
 
     ## Simulation and identification ##
 
@@ -362,46 +494,114 @@ if __name__ == '__main__':
     phi_1 = construct_phi_matrix(input_sig, M, order_max=Nmax)
     kernels_1 = identification(input_sig, out_sig_1, order_max=Nmax, M=M,
                                phi_m=phi_1)
+    kernels_1n = identification(input_sig, out_sig_1 + noise_1, order_max=Nmax,
+                                M=M, phi_m=phi_1)
 
     # Identification on separated orders (ground truth)
     out_sig_2 = simulation(input_sig, system, fs=fs, nl_order_max=Nmax,
                            out='output_by_order', hold_opt=0)
     kernels_2 = identification(input_sig, out_sig_2, order_max=Nmax, M=M,
                                separated_orders=True, phi_m=phi_1)
+    kernels_2n = identification(input_sig, out_sig_2 + noise_2, order_max=Nmax,
+                                M=M, separated_orders=True, phi_m=phi_1)
+
+   # Identification on separated orders (amp method)
+    data_3, param_3 = sep.simu_collection(input_sig, system, fs=fs,
+                                          hold_opt=0, name='sep',
+                                          method='boyd',
+                                          param={'nl_order_max' :Nmax,
+                                                 'gain': 0.6})
+    out_sig_3 = sep.order_separation(data_3['output_collection'],
+                                     param_3['sep_method'],
+                                     param_3['sep_param'])
+    out_sig_3n = sep.order_separation(data_3['output_collection'] + noise_2,
+                                      param_3['sep_method'],
+                                      param_3['sep_param'])
+    kernels_3 = identification(data_3['input_collection'][0], out_sig_3,
+                               order_max=Nmax, M=M, separated_orders=True,
+                               phi_m=phi_1)
+    kernels_3n = identification(data_3['input_collection'][0], out_sig_3n,
+                               order_max=Nmax, M=M, separated_orders=True,
+                               phi_m=phi_1)
 
     # Identification on separated orders (phase+amp method)
-    data_3, param_3 = sep.simu_collection(input_sig_cplx, system, fs=fs,
+    data_4, param_4 = sep.simu_collection(input_sig_cplx, system, fs=fs,
                                           hold_opt=0, name='sep',
                                           method='phase+amp',
                                           param={'nl_order_max' :Nmax,
                                                  'gain': 0.6,
                                                  'output': 'orders'})
-    out_sig_3 = sep.order_separation(data_3['output_collection'],
-                                     param_3['sep_method'],
-                                     param_3['sep_param'])
-    kernels_3 = identification(data_3['input_collection'][0], out_sig_3,
+    out_sig_4 = sep.order_separation(data_4['output_collection'],
+                                     param_4['sep_method'],
+                                     param_4['sep_param'])
+    out_sig_4n = sep.order_separation(data_4['output_collection'] + noise_4,
+                                      param_4['sep_method'],
+                                      param_4['sep_param'])
+    kernels_4 = identification(data_4['input_collection'][0], out_sig_4,
                                order_max=Nmax, M=M, separated_orders=True,
                                phi_m=phi_1)
+    kernels_4n = identification(data_4['input_collection'][0], out_sig_4n,
+                               order_max=Nmax, M=M, separated_orders=True,
+                               phi_m=phi_1)
+
+    # Identification on separated real terms (phase+amp method)
+    data_5, param_5 = sep.simu_collection(input_sig_cplx, system, fs=fs,
+                                          hold_opt=0, name='sep',
+                                          method='phase+amp',
+                                          param={'nl_order_max' :Nmax,
+                                                 'gain': 0.6,
+                                                 'output': 'real_terms',
+                                                 'out_type': 'dict'})
+    out_sig_5 = sep.order_separation(data_5['output_collection'],
+                                     param_5['sep_method'],
+                                     param_5['sep_param'])
+    out_sig_5n = sep.order_separation(data_5['output_collection'] + noise_4,
+                                      param_5['sep_method'],
+                                      param_5['sep_param'])
+    phi_5 = construct_phi_cplx(input_sig_cplx, M, order_max=Nmax, real=True)
+    kernels_5 = identification_cplx(input_sig_cplx, out_sig_5, order_max=Nmax,
+                                    phi=phi_5, M=M, real=True)
+    kernels_5n = identification_cplx(input_sig_cplx, out_sig_5n, order_max=Nmax,
+                                     phi=phi_5, M=M, real=True)
 
 
     # Ground truth
     system.compute_volterra_kernels(fs, (M-1)/fs, order_max=Nmax, which='time')
 
     # Estimation error
+    print('Estimation error (without noise)')
     errors_1 = error_measure(kernels_1, system.volterra_kernels)
     errors_2 = error_measure(kernels_2, system.volterra_kernels)
     errors_3 = error_measure(kernels_3, system.volterra_kernels)
-    print(errors_1)
-    print(errors_2)
-    print(errors_3)
+    errors_4 = error_measure(kernels_4, system.volterra_kernels)
+    errors_5 = error_measure(kernels_5, system.volterra_kernels)
+    print('Direct identif :      ', errors_1)
+    print('True sep + identif:   ', errors_2)
+    print('Amp sep + identif:    ', errors_3)
+    print('Our sep + identif (1):', errors_4)
+    print('Our sep + identif (2):', errors_5)
+
+    print('Estimation error (with noise)')
+    errors_1n = error_measure(kernels_1n, system.volterra_kernels)
+    errors_2n = error_measure(kernels_2n, system.volterra_kernels)
+    errors_3n = error_measure(kernels_3n, system.volterra_kernels)
+    errors_4n = error_measure(kernels_4n, system.volterra_kernels)
+    errors_5n = error_measure(kernels_5n, system.volterra_kernels)
+    print('Direct identif :      ', errors_1n)
+    print('True sep + identif:   ', errors_2n)
+    print('Amp sep + identif:    ', errors_3n)
+    print('Our sep + identif (1):', errors_4n)
+    print('Our sep + identif (2):', errors_5n)
 
     # Plots
     tau_vec = system._time_vector
     style2D = 'surface' # 'wireframe'
     str1 = ['Kernel of order 1 - ',  'Kernel of order 2 - ']
-    str2 = ['Ground truth', 'Identification',
+    str2 = ['Ground truth', 'Direct identification',
             'Identification on true separated orders',
-            'Identification on estimated separated orders']
+            'Identification on estimated separated orders via amplitude method',
+            'Identification on estimated separated orders via phase+amp method',
+            'Identification on estimated separated terms via phase+amp method']
 
     plot_kernel_time(tau_vec, system.volterra_kernels[1],
                      title=str1[0]+str2[0])
@@ -422,3 +622,13 @@ if __name__ == '__main__':
                      title=str1[0]+str2[3])
     plot_kernel_time(tau_vec, kernels_3[2], style=style2D,
                      title=str1[1]+str2[3])
+
+    plot_kernel_time(tau_vec, kernels_4[1],
+                     title=str1[0]+str2[4])
+    plot_kernel_time(tau_vec, kernels_4[2], style=style2D,
+                     title=str1[1]+str2[4])
+
+    plot_kernel_time(tau_vec, kernels_4[1],
+                     title=str1[0]+str2[5])
+    plot_kernel_time(tau_vec, kernels_4[2], style=style2D,
+                     title=str1[1]+str2[5])
