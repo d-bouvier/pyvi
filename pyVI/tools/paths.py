@@ -65,6 +65,7 @@ def folder_str(folder):
 
     return folder_path
 
+
 def save_data_pickle(param_dict, name, folder):
     """
     Save data using pickle.
@@ -73,6 +74,7 @@ def save_data_pickle(param_dict, name, folder):
     folder_path = folder_str(folder)
     full_path = folder_path + os.sep + name
     pickle.dump(param_dict, open(full_path, 'wb'))
+
 
 def save_data_numpy(array_dict, name, folder):
     """
@@ -83,6 +85,7 @@ def save_data_numpy(array_dict, name, folder):
     full_path = folder_path + os.sep + name + '.npz'
     savez(full_path, **array_dict)
 
+
 def save_figure(handle_fig, name, folder):
     """
     Save figure using matplotlib.
@@ -91,3 +94,23 @@ def save_figure(handle_fig, name, folder):
     folder_path = folder_str(folder)
     full_path = folder_path + os.sep + name
     handle_fig.savefig(full_path, bbox_inches='tight')
+
+
+def load_data_pickle(name, folder):
+    """
+    Load data using pickle.
+    """
+
+    folder_path = folder_str(folder)
+    full_path = folder_path + os.sep + name
+    return pickle.load(open(full_path, 'rb'))
+
+
+def load_data_numpy(name, folder):
+    """
+    Load data using numpy savez function.
+    """
+
+    folder_path = folder_str(folder)
+    full_path = folder_path + os.sep + name + '.npz'
+    savez(full_path)
