@@ -135,7 +135,7 @@ def simu_collection(input_sig, system, fs=44100, hold_opt=1,
 
     # Simulation of ground truth
     if method == 'phase+amp':
-        out_by_order = simulation(np.real(input_sig), system, fs=fs,
+        out_by_order = simulation(2 * np.real(input_sig), system, fs=fs,
                                   nl_order_max=param['nl_order_max'],
                                   hold_opt=hold_opt, out='output_by_order')
         out_by_order.dtype = param['dtype']
