@@ -23,7 +23,6 @@ import numpy as np
 from scipy.linalg import solve_triangular
 from scipy.special import binom as binomial
 import itertools as itr
-from pyvi.simulation.simulation import simulation
 from pyvi.tools.mathbox import rms, safe_db
 from math import factorial
 
@@ -33,7 +32,7 @@ from math import factorial
 #==============================================================================
 
 def identification(input_sig, output_sig, M=1, order_max=1,
-                   separated_orders=False):
+                   separated_orders=False, phi_m=None):
     """
     Identify the Volterra kernels of a system from input and output signals.
 
@@ -59,7 +58,8 @@ def identification(input_sig, output_sig, M=1, order_max=1,
     """
 
     # Input combinatoric
-    phi_m = construct_phi_matrix(input_sig, M, order_max)
+    if phi_m == None:
+        phi_m = construct_phi_matrix(input_sig, M, order_max)
 
     if separated_orders:
         f = np.array([])
@@ -119,6 +119,7 @@ def construct_phi_matrix(signal, M, order_max=1):
         Matrix containing the expression of the Volterra basis functionals for
         all orders (up to ``order_max``) and all samples of ``signal``.
     """
+    #TODO optimiser calcul (si possible)
 
     # Initialization
     nb_terms = int(binomial(M + order_max, order_max)) - 1
@@ -129,7 +130,7 @@ def construct_phi_matrix(signal, M, order_max=1):
     # Main loop
     ind = 0
     for n in range(1, order_max+1):
-        product = construct_volterra_basis_functionals(padded_signal, M, n)
+        product = volterra_basis_functionals(padded_signal, M, n)
         ind_iterator = itr.combinations_with_replacement(range(M), n)
         for indexes in ind_iterator:
             temp_arg = tuple()
@@ -141,7 +142,7 @@ def construct_phi_matrix(signal, M, order_max=1):
     return phi.T
 
 
-def construct_volterra_basis_functionals(signal, M, n):
+def volterra_basis_functionals(signal, M, n):
     """
     Construct the Volterra basis functionals for a kernel of order ``n``, of
     memory ``M``, and for a given input signal.
@@ -160,6 +161,7 @@ def construct_volterra_basis_functionals(signal, M, n):
     product_array : numpy.ndarray
         Muldimensional array with the basis functionals in the main diagonals.
     """
+    #TODO optimiser calcul (si possible)
 
     # Initialization
     length = signal.shape[0]
@@ -326,6 +328,7 @@ if __name__ == '__main__':
     """
 
     from pyvi.simulation.systems import second_order_w_nl_damping
+    from pyvi.simulation.simulation import simulation
     from pyvi.tools.plotbox import plot_kernel_time
     import pyvi.tools.order_separation as sep
 
@@ -337,41 +340,48 @@ if __name__ == '__main__':
     # Input signal specification
     fs = 1000
     T = 2
-    Nmax = 2
-    M = 30
+    Nmax = 3
+    M = 20
     time_vector = np.arange(0, T, 1/fs)
     K = time_vector.shape[0]
 
     assert (binomial(M+Nmax, Nmax) - 1) <= K
 
-    sigma = 1
+    sigma = np.sqrt(2)
     covariance = [[sigma, 0], [0, sigma]]
     random_sig = np.random.multivariate_normal([0, 0], covariance, size=K)
     input_sig_cplx = random_sig[:, 0] + 1j * random_sig[:, 1]
-    input_sig = np.real(input_sig_cplx)
+    input_sig = 2 * np.real(input_sig_cplx)
 
-    # Simulation
+
+    ## Simulation and identification ##
+
+    # Identification on output signal
     out_sig_1 = simulation(input_sig, system, fs=fs, nl_order_max=Nmax,
                            hold_opt=0)
+    phi_1 = construct_phi_matrix(input_sig, M, order_max=Nmax)
+    kernels_1 = identification(input_sig, out_sig_1, order_max=Nmax, M=M,
+                               phi_m=phi_1)
+
+    # Identification on separated orders (ground truth)
     out_sig_2 = simulation(input_sig, system, fs=fs, nl_order_max=Nmax,
                            out='output_by_order', hold_opt=0)
-    data, param = sep.simu_collection(input_sig_cplx, system, fs=fs,
-                                      hold_opt=0, name='sep',
-                                      method='phase+amp',
-                                      param={'nl_order_max' :Nmax,
-                                             'gain': 0.6,
-                                             'output': 'orders'})
-    out_sig_3 = sep.order_separation(data['output_collection'],
-                                     param['sep_method'],
-                                     param['sep_param'])
-
-    # Identification
-    kernels_1 = identification(input_sig, out_sig_1, order_max=Nmax, M=M)
     kernels_2 = identification(input_sig, out_sig_2, order_max=Nmax, M=M,
-                               separated_orders=True)
-    kernels_3 = identification(data['input_collection'][0], out_sig_3,
-                               order_max=Nmax, M=M, separated_orders=True)
-    print((input_sig == data['input_collection'][0]).all())
+                               separated_orders=True, phi_m=phi_1)
+
+    # Identification on separated orders (phase+amp method)
+    data_3, param_3 = sep.simu_collection(input_sig_cplx, system, fs=fs,
+                                          hold_opt=0, name='sep',
+                                          method='phase+amp',
+                                          param={'nl_order_max' :Nmax,
+                                                 'gain': 0.6,
+                                                 'output': 'orders'})
+    out_sig_3 = sep.order_separation(data_3['output_collection'],
+                                     param_3['sep_method'],
+                                     param_3['sep_param'])
+    kernels_3 = identification(data_3['input_collection'][0], out_sig_3,
+                               order_max=Nmax, M=M, separated_orders=True,
+                               phi_m=phi_1)
 
 
     # Ground truth
