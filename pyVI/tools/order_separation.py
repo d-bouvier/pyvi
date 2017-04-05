@@ -230,7 +230,25 @@ def order_separation(output_coll, method, param):
             out_per_phase[idx,:,:] = fftpack.ifft(output_coll[start:end, :],
                                                   n=param['K_phase'], axis=0)
         if param['output'] == 'raw':
-            return out_per_phase[0, :, :]
+            if param['out_type'] == 'array':
+                return out_per_phase[0, :, :]
+            elif param['out_type'] == 'dict':
+                raw_terms_dict = dict()
+                for k in range(param['K_phase']):
+                    raw_terms_dict[k] = out_per_phase[0, k, :]
+                return raw_terms_dict
+        elif param['output'] == 'raw_real':
+            temp = out_per_phase[0, :((param['K_phase']+1)//2), :]
+            temp2 = np.empty(temp.shape)
+            temp2[0, :] = np.real(temp[0, :])
+            temp2[1:, :] = 2 * np.real(temp[1:, :])
+            if param['out_type'] == 'array':
+                return temp2
+            elif param['out_type'] == 'dict':
+                raw_terms_dict = dict()
+                for k in range((param['K_phase']+1)//2):
+                    raw_terms_dict[k] = temp2[k, :]
+                return raw_terms_dict
 
         # Computation of indexes and necessary vector
         k_vec = np.arange(0, param['nb_term'])
@@ -274,7 +292,13 @@ def order_separation(output_coll, method, param):
                 orders[ind_n, :] = np.real_if_close(np.sum( \
                                           term_combinatoric[start:end], axis=0))
                 start += ind_n + 2
-            return orders
+            if param['out_type'] == 'array':
+                return orders
+            elif param['out_type'] == 'dict':
+                orders_dict = dict()
+                for n in range(1, param['nl_order_max']+1):
+                    orders_dict[n] = orders[n-1]
+                return orders_dict
         elif param['output'] == 'terms':
             if param['out_type'] == 'array':
                 return term_combinatoric
