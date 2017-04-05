@@ -21,8 +21,7 @@ Uses:
 
 import os
 import pickle
-from numpy import savez
-
+import numpy as np
 
 #==============================================================================
 # Global variables
@@ -83,7 +82,7 @@ def save_data_numpy(array_dict, name, folder):
 
     folder_path = folder_str(folder)
     full_path = folder_path + os.sep + name + '.npz'
-    savez(full_path, **array_dict)
+    np.savez(full_path, **array_dict)
 
 
 def save_figure(handle_fig, name, folder):
@@ -113,4 +112,4 @@ def load_data_numpy(name, folder):
 
     folder_path = folder_str(folder)
     full_path = folder_path + os.sep + name + '.npz'
-    return savez(full_path)
+    return np.load(full_path)
