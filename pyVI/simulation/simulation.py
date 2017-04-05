@@ -30,6 +30,7 @@ Uses:
 import numpy as np
 from scipy import linalg
 from pyvi.tools.combinatorics import make_dict_pq_set
+from scipy.signal import resample_poly
 
 
 #==============================================================================
@@ -37,7 +38,7 @@ from pyvi.tools.combinatorics import make_dict_pq_set
 #==============================================================================
 
 def simulation(input_sig, system, fs=44100, nl_order_max=1, hold_opt=1,
-               out='output'):
+               out='output', resampling=False):
     """
     Compute the simulation of a nonlinear system for a given input.
 
@@ -78,20 +79,25 @@ def simulation(input_sig, system, fs=44100, nl_order_max=1, hold_opt=1,
     ## Initialization ##
     ####################
 
-    # Compute parameters
-    sig_len = max(input_sig.shape)
-    sampling_time = 1/fs
-    w_filter = linalg.expm(system.A_m * sampling_time)
-    A_inv = np.linalg.inv(system.A_m)
-
-    dtype = input_sig.dtype
-    input_sig = input_sig.copy()
-
     # Enforce good shape when input dimension is 1
+    sig_len_tmp = max(input_sig.shape)
+    input_sig = input_sig.copy()
+    dtype = input_sig.dtype
     if system.dim['input'] == 1:
         system.B_m.shape = (system.dim['state'], system.dim['input'])
         system.D_m.shape = (system.dim['output'], system.dim['input'])
-        input_sig.shape = (system.dim['input'], sig_len)
+        input_sig.shape = (system.dim['input'], sig_len_tmp)
+
+    # Upsampling (if wanted)
+    if resampling:
+        fs = nl_order_max * fs
+        input_sig = resample_poly(input_sig, nl_order_max, 1, axis=1)
+
+    # Compute parameters
+    sig_len = input_sig.shape[1]
+    sampling_time = 1/fs
+    w_filter = linalg.expm(system.A_m * sampling_time)
+    A_inv = np.linalg.inv(system.A_m)
 
     # By-order state and output initialization
     state_by_order = np.zeros((nl_order_max, system.dim['state'], sig_len),
@@ -190,6 +196,15 @@ def simulation(input_sig, system, fs=44100, nl_order_max=1, hold_opt=1,
     ## Function outputs ##
     ######################
 
+    # Downsampling(if necessary)
+    if resampling:
+        fs = nl_order_max * fs
+        input_sig = resample_poly(input_sig, 1, nl_order_max, axis=1)
+        state_by_order = resample_poly(state_by_order, 1, nl_order_max,
+                                       axis=2)
+        output_by_order = resample_poly(output_by_order, 1, nl_order_max,
+                                        axis=2)
+
     # Reshaping state (if necessary)
     if system.dim['state'] == 1:
         state_by_order = state_by_order[:, 0, :]
@@ -230,9 +245,9 @@ if __name__ == '__main__':
                      nl_order_max=3, hold_opt=0)
     out = simulation(sig_test, system_test(mode='tensor'),
                      nl_order_max=3, hold_opt=1)
-    out = simulation(sig_test, system_test(mode='function'),
+    out = simulation(sig_test, system_test(mode='tensor'),
                      nl_order_max=3, hold_opt=0)
-    out = simulation(sig_test, system_test(mode='function'),
+    out = simulation(sig_test, system_test(mode='tensor'),
                      nl_order_max=3, hold_opt=1)
 
 
@@ -240,8 +255,8 @@ if __name__ == '__main__':
     # Input signal
     fs = 44100
     T = 1
-    f1 = 75
-    f2 = 125
+    f1 = 100
+    f2 = 100
     amp = 10
     time_vector = np.arange(0, T, step=1/fs)
     f0_vector = np.linspace(f1, f2, num=len(time_vector))
@@ -260,8 +275,8 @@ if __name__ == '__main__':
     plt.plot(time_vector, out_t)
 
     start2 = time.time()
-    out_f = simulation(sig, loudspeaker_sica(mode='function', output='current'),
-                       fs=fs, nl_order_max=3, hold_opt=0)
+    out_f = simulation(sig, loudspeaker_sica(mode='tensor', output='current'),
+                       fs=fs, nl_order_max=3, hold_opt=0, resampling=True)
     end2 = time.time()
     plt.figure('Input- Output (2)')
     plt.clf()
@@ -274,5 +289,5 @@ if __name__ == '__main__':
     plt.clf()
     plt.plot(time_vector, out_t - out_f)
 
-    print('"tensor" mode: {}s'.format(end1-start1))
-    print('"function" mode: {}s'.format(end2-start2))
+    print('Without resampling: {}s'.format(end1-start1))
+    print('With resampling:    {}s'.format(end2-start2))
