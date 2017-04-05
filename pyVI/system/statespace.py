@@ -26,6 +26,7 @@ Uses:
  - scipy 0.18.0
  - matplotlib 1.5.1
  - pyvi 0.1
+ - itertools
 """
 
 #==============================================================================
@@ -37,6 +38,7 @@ import sympy as sp
 from pyvi.tools.utilities import Style
 from abc import abstractmethod
 import sys as sys
+import itertools as itr
 
 
 #==============================================================================
@@ -280,12 +282,13 @@ class StateSpace:
 
     def _compute_time_kernels(self, fs, T, order_max):
         #TODO faire pour holder1
-        #TODO methode generale superieur a l'ordre 2
         #TODO faire marcher en mode 'function'
         #TODO prendre en compte les Npq
         #TODO faire docstring
 
         from scipy import linalg
+        from pyvi.tools.combinatorics import make_dict_pq_set
+
         time_vec = np.arange(0, T + (1/fs), step=1/fs)
         N = time_vec.shape[0]
 
@@ -293,57 +296,76 @@ class StateSpace:
         self._time_vector = time_vec
         self._time_in2state = dict()
         self.volterra_kernels = dict()
+        for n in range(1, order_max+1):
+            self._time_in2state[n] = np.zeros((self.dim['state'],)+(N,)*n)
 
         # Filter computation
-        w = np.zeros((N, self.dim['state'], self.dim['state']))
+        w_filter = np.zeros((N, self.dim['state'], self.dim['state']))
         for ind in range(N):
-            w[ind] = linalg.expm(self.A_m * time_vec[ind])
-        w_filter = w[1]
+            w_filter[ind] = linalg.expm(self.A_m * time_vec[ind])
+        w = w_filter[1]
         A_inv = np.linalg.inv(self.A_m)
-        holder0_bias = A_inv.dot(w_filter) - A_inv
+        holder0_bias = A_inv.dot(w) - A_inv
 
         # Order 1
-        self._time_in2state[1] = np.zeros((self.dim['state'], N))
-        self._time_in2state[1][:, 1:] = np.squeeze(np.dot(w[:-1],
+        self._time_in2state[1][:, 1:] = np.squeeze(np.dot(w_filter[:-1],
                                                           np.dot(holder0_bias,
                                                                  self.B_m)).T)
-        self.volterra_kernels[1] = np.squeeze(np.dot(self.C_m,
-                                                     self._time_in2state[1]))
 
-        # Order 2
-        self._time_in2state[2] = np.zeros((self.dim['state'], N, N))
-        dirac4input = np.zeros((self.dim['input'], N-1))
+        # Compute list of Mpq combinations and tensors/functions
+        dict_mpq_set = make_dict_pq_set(self.is_mpq_used, order_max,
+                                        self.sym_bool)
+        dirac4input = np.zeros((self.dim['input'], N))
         dirac4input[0] = 1
-        if self.is_mpq_used(2, 0):
-            temp_tensor = np.einsum(self._time_in2state[1][:, :-1], (0, 2),
-                                    self._time_in2state[1][:, :-1], (1, 3),
-                                    (0, 1, 2, 3))
-            temp_result = np.tensordot(self.mpq[(2, 0)], temp_tensor, 2)
-            self._time_in2state[2][:, 1:, 1:] += \
-                np.tensordot(holder0_bias, temp_result, 1)
-        if self.is_mpq_used(1, 1):
-            temp_tensor = np.einsum(self._time_in2state[1][:, :-1], (0, 2),
-                                    dirac4input, (1, 3), (0, 1, 2, 3))
-            temp_result = np.tensordot(self.mpq[(1, 1)], temp_tensor, 2)
-            temp_result += np.swapaxes(temp_result, 1, 2)
-            temp_result *= 1/2
-            self._time_in2state[2][:, 1:, 1:] += \
-                    np.tensordot(holder0_bias, temp_result, 1)
-        if self.is_mpq_used(0, 2):
-            temp_tensor = np.einsum(dirac4input, (0, 2),
-                                    dirac4input, (1, 3), (0, 1, 2, 3))
-            temp_result = np.tensordot(self.mpq[(0, 2)], temp_tensor, 2)
-            self._time_in2state[2][:, 1:, 1:] += \
-                    np.tensordot(holder0_bias, temp_result, 1)
 
-        for ind in range(1,2*(N-1)):
-            ind_vec = np.arange(max(1, ind-N+2), min(N, ind+1))
-            self._time_in2state[2][:, ind_vec, ind_vec[::-1]] += \
-            w_filter.dot(self._time_in2state[2][:, ind_vec-1, ind_vec[::-1]-1])
+        # Computation of the Mpq/Npq functions (given as tensors)
+        def pq_computation(n, p, q, order_set, dict_pq):
+            temp_arg = ()
+            min_ind = p + q
+            for count in range(p):
+                max_ind = min_ind + order_set[count]
+                temp_arg += (self._time_in2state[order_set[count]],)
+                temp_arg += ([count] + list(range(min_ind, max_ind)),)
+                min_ind = max_ind
+            for count in range(q):
+                temp_arg += (dirac4input, [p+count, min_ind+count])
+            temp_arg += (list(range(p + q + n)),)
+            return np.tensordot(dict_pq[(p, q)], np.einsum(*temp_arg), p+q)
 
-        self.volterra_kernels[2] = np.squeeze( \
-                                     np.tensordot(self.C_m,
-                                                  self._time_in2state[2], 1))
+        # Correction of the bias due to ADC converter (with holder of order 0)
+        def holder_bias(mpq_output, n):
+            idx = [slice(None)] + [slice(N-1)] * n
+            return np.tensordot(holder0_bias, mpq_output[idx], 1)
+
+        # Loop (dynamical equation)
+        for n, elt in dict_mpq_set.items():
+            for p, q, order_set, nb in elt:
+                mpq_output = nb * pq_computation(n, p, q, order_set, self.mpq)
+                idx = [slice(None)] + [slice(1, N)] * n
+                self._time_in2state[n][idx] += holder_bias(mpq_output, n)
+
+        # Symmetrization
+        for ind in range(self.dim['state']):
+            self._time_in2state[n][ind] = symmetrization( \
+                                                   self._time_in2state[n][ind])
+
+        # Recursive term
+        for n in range(2, order_max+1):
+            for ind in range(n,n*(N-1)+1):
+                for indexes in itr.filterfalse(lambda x: sum(x)-ind,
+                                               itr.product(range(1, N),
+                                                           repeat=n)):
+                    idx_in = [slice(None)] + [(m-1) for m in indexes]
+                    idx_out = [slice(None)] + list(indexes)
+                    self._time_in2state[n][idx_out] += \
+                            np.tensordot(w, self._time_in2state[n][idx_in], 1)
+
+        # Output equation (only linear term C_m)
+        for n in range(1, order_max+1):
+            self.volterra_kernels[n] = np.squeeze( \
+                                         np.tensordot(self.C_m,
+                                                      self._time_in2state[n],
+                                                      1))
 
 
     def _compute_frequency_kernels(self, fs, N, order_max, from_time=False):
@@ -417,6 +439,7 @@ class StateSpace:
         #TODO plot + beau (grilles, axes, titres, labels, ticks, ...)
         #TODO faire save
         #TODO faire docstring
+        #TODO faire appel à fct dans plotbox
 
         from mpl_toolkits.mplot3d import Axes3D
         import matplotlib.pyplot as plt
@@ -748,6 +771,38 @@ class Filter:
         return print_str
 
 
+#==============================================================================
+# Functions
+#==============================================================================
+
+def symmetrization(array):
+    """
+    Symmetrize a multidimensional square array (each dimension must have the
+    same length).
+
+    Parameters
+    ----------
+    array : numpy.ndarray
+        Array to symmetrize.
+
+    Returns
+    -------
+    array_sym : numpy.ndarray
+        Symmetrized array.
+    """
+
+    from math import factorial
+
+    shape = array.shape
+    assert len(set(shape)) == 1, 'Multidimensional array is not square ' + \
+        '(has shape {})'.format(shape)
+    n = len(array.shape)
+
+    array_sym = np.zeros(shape, dtype=array.dtype)
+    for ind in itr.permutations(range(n), n):
+        array_sym += np.transpose(array, ind)
+    return array_sym / factorial(n)
+
 
 #==============================================================================
 # Main script
@@ -759,13 +814,19 @@ if __name__ == '__main__':
     """
 
     import pyvi.simulation.systems as systems
+    from pyvi.tools.plotbox import plot_kernel_time
 
     print(systems.system_test(mode='tensor'))
     print(systems.loudspeaker_sica(mode='function'))
 
     system = systems.second_order_w_nl_damping(gain=1, f0=100, damping=0.2,
                                                nl_coeff=[1e-1, 3e-5])
-    fs = 2000
-    T = 0.06
-    system.compute_volterra_kernels(fs, T, which='both')
-    system.plot_kernels()
+    fs = 1000
+    T = 0.015
+    system.compute_volterra_kernels(fs, T, order_max=3, which='both')
+#    system.plot_kernels()
+
+    plot_kernel_time(system._time_vector, system.volterra_kernels[1])
+    plot_kernel_time(system._time_vector, system.volterra_kernels[2],
+                     style='wireframe')
+
