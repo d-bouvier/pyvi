@@ -178,7 +178,7 @@ def simulation(input_sig, system, fs=44100, nl_order_max=1, hold_opt=1,
     ##########################
 
     # Dynamical equation
-    for n, elt in dict_mpq_set.items():
+    for n, elt in sorted(dict_mpq_set.items()):
         for p, q, order_set, nb in elt:
             mpq_output = nb * \
                     pq_computation(p, q, [m-1 for m in order_set], system.mpq)
