@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Module for saving data and figures.
+Tooolbox for saving data and figures.
 
 Notes
 -----
