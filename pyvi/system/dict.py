@@ -29,7 +29,7 @@ Uses:
 # Importations
 #==============================================================================
 
-from pyvi.system.statespace import StateSpace
+from pyvi.system.statespace import NumericalStateSpace, SymbolicStateSpace
 import numpy as np
 
 
@@ -221,3 +221,77 @@ def system_test(mode='tensor'):
 
     return StateSpace(A_m, B_m, C_m, D_m, h_mpq_bool, h_npq_bool,
                       mpq_dict, npq_dict, sym_bool=True, mode=mode)
+
+
+def truc(mode='num'):
+    """
+    Function that create and returns the StateSpace object corresponding to a
+    simple system for testing and debugging the simulation.
+
+    Returns
+    -------
+    Object of class StateSpace.
+
+    """
+
+    if mode == 'num':
+        # State-space matrices
+        A_m = np.array([[0, 1],
+                        [- 10000, - 40]]) # State-to-state matrix
+        B_m = np.array([[0], [1]]); # Input-to-state matrix
+        C_m = np.array([[1, 0]]) # State-to-output matrix
+        D_m = np.array([[1]]) # Input-to-output matrix
+
+        # Mpq & Npq in 'tensor' mode
+        m20 = np.zeros((2, 2, 2))
+        m20[1, 1, 1] = 1
+        m11 = np.zeros((2, 2, 1))
+        m11[0, 1, 0] = -1
+        m02 = np.zeros((2, 1, 1))
+        m02[0, 0, 0] = 0.1
+
+        n20 = np.zeros((1, 2, 2))
+        n20[0, 1, 1] = 1
+        n11 = np.zeros((1, 2, 1))
+        n11[0, 1, 0] = -1
+        n02 = np.zeros((1, 1, 1))
+        n02[0, 0, 0] = -1
+
+    if mode == 'symb':
+        import sympy as sp
+        a, b, c, d, e, f = sp.symbols('a,b,c,d,e,f')
+        ma, mb, mc, na, nb, nc = sp.symbols('ma,mb,mc,na,nb,nc')
+
+        # State-space matrices
+        A_m = sp.Matrix([[0, a],
+                        [b, c]]) # State-to-state matrix
+        B_m = sp.Matrix([[0], [d]]); # Input-to-state matrix
+        C_m = sp.Matrix([[e, 0]]) # State-to-output matrix
+        D_m = sp.Matrix([[f]]) # Input-to-output matrix
+
+        # Mpq & Npq in 'tensor' mode
+        m20 = sp.tensor.array.MutableDenseNDimArray(np.zeros(8), (2, 2, 2))
+        m20[1, 1, 1] = ma
+        m11 = sp.tensor.array.MutableDenseNDimArray(np.zeros(4), (2, 2, 1))
+        m11[0, 1, 0] = mb
+        m02 = sp.tensor.array.MutableDenseNDimArray(np.zeros(2), (2, 1, 1))
+        m02[0, 0, 0] = mc
+
+        n20 = sp.tensor.array.MutableDenseNDimArray(np.zeros(4), (1, 2, 2))
+        n20[0, 1, 1] = na
+        n11 = sp.tensor.array.MutableDenseNDimArray(np.zeros(2), (1, 2, 1))
+        n11[0, 1, 0] = nb
+        n02 = sp.tensor.array.MutableDenseNDimArray(np.zeros(1), (1, 1, 1))
+        n02[0, 0, 0] = nc
+
+    # Dictionnaries of Mpq & Npq
+    mpq_dict = {(2, 0): m20, (1, 1): m11, (0, 2): m02}
+    npq_dict = {(2, 0): n20, (1, 1): n11, (0, 2): n02}
+
+
+    if mode == 'num':
+        return NumericalStateSpace(A_m, B_m, C_m, D_m, mpq_dict, npq_dict,
+                                   pq_symmetry=True)
+    if mode == 'symb':
+        return SymbolicStateSpace(A_m, B_m, C_m, D_m, mpq_dict, npq_dict,
+                                   pq_symmetry=True)
