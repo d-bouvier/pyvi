@@ -1,27 +1,23 @@
 # -*- coding: utf-8 -*-
 """
-Paths for the pyVI package.
+Module for saving data and figures.
 
 Notes
 -----
 @author:    bouvier@ircam.fr
             Damien Bouvier, IRCAM, Paris
 
-Last modified on 3 Nov. 2016
-Developed for Python 3.5.1
-Uses:
- - numpy 1.11.1
- - matplolib 1.5.1
- - os, pickle
+Last modified on 24 Apr. 2017
+Developed for Python 3.6.1
 """
 
 #==============================================================================
 #Importations
 #==============================================================================
 
-import os
-import pickle
+import os, pickle
 import numpy as np
+
 
 #==============================================================================
 # Global variables

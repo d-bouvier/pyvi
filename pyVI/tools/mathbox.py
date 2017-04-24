@@ -1,16 +1,14 @@
 # -*- coding: utf-8 -*-
 """
-Module for useful small math functions.
+Tooolbox for useful small math functions.
 
 Notes
 -----
 @author:    bouvier@ircam.fr
             Damien Bouvier, IRCAM, Paris
 
-Last modified on 28 Mar. 2016
-Developed for Python 3.5.1
-Uses:
- - numpy 1.11.1
+Last modified on 24 Apr. 2017
+Developed for Python 3.6.1
 """
 
 #==============================================================================
@@ -31,10 +29,16 @@ def rms(sig):
     return np.sqrt( np.mean(np.abs(sig)**2) )
 
 
+def db(val, ref=1):
+    """
+    Conversion to dB.
+    """
+    return 20 * np.log10(val / ref)
+
 def safe_db(num, den):
     """
-    dB computation with verification that neither the denominator or numerator
-    are equal to zero.
+    COnversion to dB with verification that neither the denominator nor
+    numerator are equal to zero.
     """
     if den == 0:
         return np.Inf
