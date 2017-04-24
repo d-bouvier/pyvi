@@ -10,7 +10,7 @@ make_list_pq :
 elimination :
     Eliminates the multilinear pq-functions unused in the system.
 state_combinatorics :
-    Compute, for each Mpq function at a given order n, the different sets of
+    Compute, for each pq-function at a given order n, the different sets of
     state-homogenous-order that are the inputs of the multilinear pq-function.
 make_dict_pq_set :
     Return the list of sets characterising multilinear pq-functions used in a
@@ -21,12 +21,8 @@ Notes
 @author: bouvier (bouvier@ircam.fr)
          Damien Bouvier, IRCAM, Paris
 
-Last modified on 3 Nov. 2016
-Developed for Python 3.5.1
-Uses:
- - numpy 1.11.1
- - scipy 0.18.0
- - itertools
+Last modified on 24 Apr. 2017
+Developed for Python 3.6.1
 """
 
 #==============================================================================
@@ -41,57 +37,6 @@ from pyvi.tools.mathbox import binomial
 #==============================================================================
 # Functions
 #==============================================================================
-
-def multilinear_combinatorics(used_pq={}, order_max=3):
-    """Returns combinatorics for a given set of multilinear functions.
-
-    This function takes a set of (p, q) values (p and q being integers) and an
-    optionnal maximum order, and returns a dictionary 'list_orders' structured
-    as follows:
-    - 'list_orders' keys are nonlinear order, and the corresponging value is
-       a dictionnary 'pq_by_order';
-    - 'pq_by_order' keys are tuple (p, q), and the corresponding value is the
-       set of all possible combination for the order of the state-input of the
-       corresponding multilinear function."""
-
-    dict_pq_by_order = dict()
-    dict_sets = dict()
-    list_orders = [1]
-
-    # Compute, for each order of nonlinearity, the set of (p, q) functions
-    for n in range(2, order_max+1):
-        # Take the (p, q) functions of previous order (if it exists)
-        dict_pq_by_order[n] = dict_pq_by_order.get(n-1, set()).copy()
-        # Discard the (0, n-1) function for the order n
-        dict_pq_by_order[n].discard((0, n-1))
-        # Add the new (p, q) functions (such that p+q=n)
-        dict_pq_by_order[n].update({(n-q, q) for q in range(n+1)} & used_pq)
-        # If there is no (p, q) function at this order, discard the key 'n'
-        if len(dict_pq_by_order[n]) == 0:
-            del dict_pq_by_order[n]
-
-    # Compute, for a given order and (p, q) function, the set of possible input
-    for n in sorted(dict_pq_by_order):
-        dict_sets[n] = dict()
-        # Loop on all (p, q) functions for this order
-        for (p, q) in dict_pq_by_order[n]:
-            dict_sets[n][(p, q)] = set()
-            # Loop on all permutations with repetitions of p elements taken
-            # from all inferior nonlinear orders
-            for possible_set in itertbx.product(list_orders, repeat=p):
-                # Discard all those not giving homogeneous order n
-                if sum(possible_set) == n-q:
-                    dict_sets[n][(p, q)].add(possible_set)
-            # Discard this (p, q) function if no possible inputs were found
-            if len(dict_sets[n][(p, q)]) == 0:
-                del dict_sets[n][(p, q)]
-        # Discard this order if no (p, q) function is used
-        if len(dict_sets[n]) == 0:
-            del dict_sets[n]
-        else:
-            list_orders.append(n)
-
-    return dict_sets
 
 
 def make_list_pq(nl_order_max):
@@ -133,15 +78,15 @@ def make_list_pq(nl_order_max):
     return list_pq
 
 
-def elimination(h_pq_bool, list_pq):
+def elimination(pq_dict, list_pq):
     """
     Eliminates the multilinear pq-functions unused in the system.
 
     Parameters
     ----------
-    h_pq_bool : function (int, int: boolean)
-        Indicates, for given p & q, if the multilinear pq-function is used in
-        the system.
+    pq_dict : dict {(int, int): numpy.ndarray}
+        Dictionnary listing all the tensor representing the pq-functions of the
+        system.
     list_pq : numpy.ndarray
         Array of all combination [n, p, q].
 
@@ -159,14 +104,14 @@ def elimination(h_pq_bool, list_pq):
         # list_pq[idx,0] represents n
         # list_pq[idx,1] represents p
         # list_pq[idx,2] represents q
-        mask_pq[idx] = h_pq_bool(list_pq[idx,1], list_pq[idx,2])
+        mask_pq[idx] = (list_pq[idx,1], list_pq[idx,2]) in pq_dict.keys()
 
     return list_pq[mask_pq]
 
 
 def state_combinatorics(list_pq, nl_order_max, sym_bool=False):
     """
-    Compute, for each Mpq function at a given order n, the different sets of
+    Compute, for each pq-function at a given order n, the different sets of
     state-homogenous-order that are the inputs of the multilinear pq-function.
     All sets are created, even those identical in respect to the order (so, if
     the multilinear pq-function are symmetric, there is redudancy).
@@ -226,16 +171,16 @@ def state_combinatorics(list_pq, nl_order_max, sym_bool=False):
     return pq_sets
 
 
-def make_dict_pq_set(h_pq_bool, nl_order_max, sym_bool=False):
+def make_dict_pq_set(pq_dict, nl_order_max, sym_bool=False):
     """
     Return the list of sets characterising multilinear pq-functions used in a
     system.
 
     Parameters
     ----------
-    h_pq_bool : function (int, int: boolean)
-        Indicates, for given p & q, if the multilinear pq-function is used in
-        the system.
+    pq_dict : dict {(int, int): numpy.ndarray}
+        Dictionnary listing all the tensor representing the pq-functions of the
+        system.
     nl_order_max : int
         Maximum order of nonlinearity.
     print_opt : boolean, optional
@@ -260,7 +205,7 @@ def make_dict_pq_set(h_pq_bool, nl_order_max, sym_bool=False):
 
     ## Main ##
     list_pq = make_list_pq(nl_order_max)
-    list_pq = elimination(h_pq_bool, list_pq)
+    list_pq = elimination(pq_dict, list_pq)
     pq_sets = state_combinatorics(list_pq, nl_order_max, sym_bool)
 
     return pq_sets
@@ -271,10 +216,24 @@ def make_dict_pq_set(h_pq_bool, nl_order_max, sym_bool=False):
 #==============================================================================
 
 if __name__ == '__main__':
-    N = 5
+    N = 4
+    pq_dict = {(2, 0): 1,
+               (1, 1): 1}
+
+    def print_sets(sets):
+        for n, value in pq_sets.items():
+            print(n)
+            for elt in value:
+                print(' ', elt)
+
     list_pq = make_list_pq(N)
+    print('pq-list\n-------', *list_pq, sep='\n')
     pq_sets = state_combinatorics(list_pq, N, True)
-    for n, value in pq_sets.items():
-        print(n)
-        for elt in value:
-            print(' ', elt)
+    print('pq-sets\n-------')
+    print_sets(pq_sets)
+
+    list_pq = elimination(pq_dict, list_pq)
+    print('pq-list (filtered)\n-----------------', *list_pq, sep='\n')
+    pq_sets = state_combinatorics(list_pq, N, True)
+    print('pq-sets (filtered)\n-----------------')
+    print_sets(pq_sets)
