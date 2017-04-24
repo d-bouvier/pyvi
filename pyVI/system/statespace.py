@@ -298,7 +298,11 @@ if __name__ == '__main__':
 
     import pyvi.system.dict as systems
 
-    sys_num = systems.truc(mode='num')
+    sys_num = systems.test(mode='numeric')
     print(sys_num)
-    sys_symb = systems.truc(mode='symb')
+    sys_symb = systems.test(mode='symbolic')
     print(sys_symb)
+
+
+    print(systems.loudspeaker_sica())
+    print(systems.nl_damping())
