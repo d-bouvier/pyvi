@@ -21,9 +21,8 @@ Uses:
 
 import numpy as np
 from scipy.linalg import solve_triangular
-from scipy.special import binom as binomial
 import itertools as itr
-from pyvi.tools.mathbox import rms, safe_db
+from pyvi.tools.mathbox import rms, safe_db, binomial
 from math import factorial
 
 
@@ -67,7 +66,7 @@ def identification(input_sig, output_sig, M=1, order_max=1,
 
         for n in range(order_max):
             # Number of combination term
-            nb_term = int(binomial(M + n, n + 1))
+            nb_term = binomial(M + n, n + 1)
 
             # QR decomposition
             q_n, r_n = np.linalg.qr(phi_m[:,ind_start:ind_start+nb_term])
@@ -113,7 +112,7 @@ def identification_cplx(input_sig, output_sig, M=1, order_max=1, phi=None,
     if all_terms:
         for n in range(1, order_max+1):
             # Number of combination term
-            nb_term = int(binomial(M + n - 1, n))
+            nb_term = binomial(M + n - 1, n)
 
             # cas termes reels
             if real:
@@ -175,7 +174,7 @@ def construct_phi_matrix(signal, M, order_max=1):
     #TODO optimiser calcul (si possible)
 
     # Initialization
-    nb_terms = int(binomial(M + order_max, order_max)) - 1
+    nb_terms = binomial(M + order_max, order_max) - 1
     phi = np.zeros((nb_terms, signal.shape[0]))
     padded_signal = np.pad(signal, (M-1, 0), 'constant')
     list_ind = np.arange(M-1, padded_signal.shape[0])
@@ -207,7 +206,7 @@ def construct_phi_cplx(signal, M, order_max=1, real=True):
 
     # Main loop
     for n in range(1, order_max+1):
-        nb_terms = int(binomial(M + n - 1, n))
+        nb_terms = binomial(M + n - 1, n)
 
         for q in range(0, 1+n//2):
             phi[(n, q)] = np.zeros((signal.shape[0], nb_terms),
@@ -328,7 +327,7 @@ def vector_to_kernels(f, M, order_max=1):
     """
 
     # Check dimension
-    length = int(binomial(M + order_max, order_max)) - 1
+    length = binomial(M + order_max, order_max) - 1
     assert f.shape[0] == length, \
            'The vector of Volterra coefficients has wrong length ' + \
            '(got {}, expected {}).'.format(f.shape[0], length)
@@ -339,7 +338,7 @@ def vector_to_kernels(f, M, order_max=1):
 
     # Loop on all orders of nonlinearity
     for n in range(1, order_max+1):
-        nb_term = int(binomial(M + n - 1, n))
+        nb_term = binomial(M + n - 1, n)
         kernels[n] = vector_to_kernel(f[current_ind:current_ind+nb_term], M, n)
         current_ind += nb_term
 
@@ -367,7 +366,7 @@ def vector_to_kernel(vec, M, order):
     """
 
     # Check dimension
-    length = int(binomial(M + order - 1, order))
+    length = binomial(M + order - 1, order)
     assert vec.shape[0] == length, 'The vector of coefficients for ' + \
             'Volterra kernel of order {} has wrong length'.format(order) + \
             '(got {}, expected {}).'.format(vec.shape[0], length)

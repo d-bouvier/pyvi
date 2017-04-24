@@ -35,7 +35,7 @@ Uses:
 
 import itertools as itertbx
 import numpy as np
-from scipy.special import binom as binomial
+from pyvi.tools.mathbox import binomial
 
 
 #==============================================================================
@@ -213,7 +213,7 @@ def state_combinatorics(list_pq, nl_order_max, sym_bool=False):
                 for value in set(index):
                     nb_appearance = index.count(value)
                     current_max += nb_appearance
-                    nb_repetitions *= int(binomial(current_max, nb_appearance))
+                    nb_repetitions *= binomial(current_max, nb_appearance)
                 pq_sets[elt[0]].append((int(elt[1]), int(elt[2]), index,
                                         nb_repetitions))
         else:

@@ -37,7 +37,7 @@ def db(val, ref=1):
 
 def safe_db(num, den):
     """
-    COnversion to dB with verification that neither the denominator nor
+    Conversion to dB with verification that neither the denominator nor
     numerator are equal to zero.
     """
     if den == 0:
@@ -45,3 +45,11 @@ def safe_db(num, den):
     if num == 0:
         return - np.Inf
     return 20 * np.log10(num / den)
+
+def binomial(n, k):
+    """
+    Binomial coefficient returning an integer.
+    """
+
+    from scipy.special import binom as fct_binomial
+    return int(fct_binomial(n, k))
