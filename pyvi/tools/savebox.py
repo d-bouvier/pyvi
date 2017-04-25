@@ -7,7 +7,7 @@ Notes
 @author:    bouvier@ircam.fr
             Damien Bouvier, IRCAM, Paris
 
-Last modified on 24 Apr. 2017
+Last modified on 25 Apr. 2017
 Developed for Python 3.6.1
 """
 
@@ -16,7 +16,7 @@ Developed for Python 3.6.1
 #==============================================================================
 
 import os, pickle
-import numpy as np
+from numpy import savez, load
 
 
 #==============================================================================
@@ -78,7 +78,7 @@ def save_data_numpy(array_dict, name, folder):
 
     folder_path = folder_str(folder)
     full_path = folder_path + os.sep + name + '.npz'
-    np.savez(full_path, **array_dict)
+    savez(full_path, **array_dict)
 
 
 def save_figure(handle_fig, name, folder):
@@ -108,4 +108,4 @@ def load_data_numpy(name, folder):
 
     folder_path = folder_str(folder)
     full_path = folder_path + os.sep + name + '.npz'
-    return np.load(full_path)
+    return load(full_path)
