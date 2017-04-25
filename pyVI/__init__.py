@@ -15,4 +15,4 @@ Dependances:
  - matplotlib 2.0.0
 """
 
-from pyvi.config import __author__, __maintainer__, __version__
+from .config import __author__, __maintainer__, __version__

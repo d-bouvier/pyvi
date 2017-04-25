@@ -19,7 +19,7 @@ Notes
 @author: bouvier (bouvier@ircam.fr)
          Damien Bouvier, IRCAM, Paris
 
-Last modified on 24 Apr. 2017
+Last modified on 25 Apr. 2017
 Developed for Python 3.6.1
 """
 
@@ -29,6 +29,7 @@ Developed for Python 3.6.1
 
 from pyvi.system.statespace import NumericalStateSpace, SymbolicStateSpace
 import numpy as np
+import sympy as sp
 
 
 #==============================================================================
@@ -181,8 +182,6 @@ def test(mode='numeric'):
         n02[0, 0, 0] = -1
 
     elif mode in ['symbolic', 'symb']:
-        import sympy as sp
-        from sympy.tensor.array import MutableDenseNDimArray
         a, b, c, d, e, f = sp.symbols('a,b,c,d,e,f')
         ma, mb, mc, na, nb, nc = sp.symbols('ma,mb,mc,na,nb,nc')
 
@@ -194,18 +193,18 @@ def test(mode='numeric'):
         D_m = sp.Matrix([[f]]) # Input-to-output matrix
 
         # Mpq & Npq in 'tensor' mode
-        m20 = MutableDenseNDimArray(np.zeros(8), (2, 2, 2))
+        m20 = sp.tensor.array.MutableDenseNDimArray(np.zeros(8), (2, 2, 2))
         m20[1, 1, 1] = ma
-        m11 = MutableDenseNDimArray(np.zeros(4), (2, 2, 1))
+        m11 = sp.tensor.array.MutableDenseNDimArray(np.zeros(4), (2, 2, 1))
         m11[0, 1, 0] = mb
-        m02 = MutableDenseNDimArray(np.zeros(2), (2, 1, 1))
+        m02 = sp.tensor.array.MutableDenseNDimArray(np.zeros(2), (2, 1, 1))
         m02[0, 0, 0] = mc
 
-        n20 = MutableDenseNDimArray(np.zeros(4), (1, 2, 2))
+        n20 = sp.tensor.array.MutableDenseNDimArray(np.zeros(4), (1, 2, 2))
         n20[0, 1, 1] = na
-        n11 = MutableDenseNDimArray(np.zeros(2), (1, 2, 1))
+        n11 = sp.tensor.array.MutableDenseNDimArray(np.zeros(2), (1, 2, 1))
         n11[0, 1, 0] = nb
-        n02 = MutableDenseNDimArray(np.zeros(1), (1, 1, 1))
+        n02 = sp.tensor.array.MutableDenseNDimArray(np.zeros(1), (1, 1, 1))
         n02[0, 0, 0] = nc
 
     # Dictionnaries of Mpq & Npq
