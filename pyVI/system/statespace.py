@@ -28,7 +28,6 @@ Developed for Python 3.6.1
 # Importations
 #==============================================================================
 
-import numpy as np
 import sympy as sp
 from abc import abstractmethod
 
@@ -70,8 +69,6 @@ class StateSpace:
         Indicates if multilinear Mpq and Npq tensors functions are symmetric.
     linear : boolean
         True if the system is linear.
-
-
     """
 
     def __init__(self, A_m, B_m, C_m, D_m, mpq_dict={}, npq_dict={},
@@ -181,6 +178,17 @@ class StateSpace:
             self._check_dim_nl_tensor(p, q, mpq, 'M', self.dim['state'])
         for (p, q), npq in self.npq.items():
             self._check_dim_nl_tensor(p, q, npq, 'M', self.dim['output'])
+
+        # Warn that problems may occur if input or output dimension is not 1
+        if (self.dim['input'] != 1) or (self.dim['output'] != 1):
+            import warnings as warnings
+            message = '\nInput and output dimension are not both equal to 1' + \
+                      ' (it is respectively {} '.format(self.dim['input']) + \
+                      'and {}).\n'.format(self.dim['output']) + \
+                      'Kernels computation, order separation and system ' + \
+                      'identification will not work.\n'
+            warnings.showwarning(message, UserWarning, __file__, 190, line='')
+
         # If no error is raised
         self._dim_ok = True
 
@@ -302,7 +310,6 @@ if __name__ == '__main__':
     print(sys_num)
     sys_symb = systems.test(mode='symbolic')
     print(sys_symb)
-
 
     print(systems.loudspeaker_sica())
     print(systems.nl_damping())
