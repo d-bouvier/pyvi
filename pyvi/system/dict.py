@@ -1,43 +1,42 @@
 # -*- coding: utf-8 -*-
 """
-Module that gives functions defining physical or theoretical systems.
+Module that gives functions creating physical or theoretical systems.
 
 Functions for system parameters
 -------------------------------
 loudspeaker_sica :
-    Returns a StateSpace object corresponding to the SICA Z000900 loudspeaker.
-second_order :
-    Returns a StateSpace object corresponding to a second_order system with
-    nonlinear stiffness.
-simple_system :
-    Returns a StateSpace object corresponding to a simple system for simulation
-    test.
+    Returns NumericalStateSpace object corresponding to the SICA Z000900
+    loudspeaker.
+nl_damping :
+    Returns a NumericalStateSpace object corresponding to a second_order system
+    with nonlinear stiffness.
+test :
+    Returns either a NumricalStateSpace or SymbolicStateSpace object of a
+    theoretical system for tests.
 
 Notes
 -----
 @author: bouvier (bouvier@ircam.fr)
          Damien Bouvier, IRCAM, Paris
 
-Last modified on 3 Nov. 2016
-Developed for Python 3.5.1
-Uses:
- - numpy 1.11.1
- - pyvi 0.1
+Last modified on 25 Apr. 2017
+Developed for Python 3.6.1
 """
 
 #==============================================================================
 # Importations
 #==============================================================================
 
-from pyvi.system.statespace import StateSpace
+from pyvi.system.statespace import NumericalStateSpace, SymbolicStateSpace
 import numpy as np
+import sympy as sp
 
 
 #==============================================================================
 # System parameters
 #==============================================================================
 
-def loudspeaker_sica(version='tristan', output='pos', mode='function'):
+def loudspeaker_sica(version='tristan', output='pos'):
     """
     Function that create and returns the StateSpace object corresponding to the
     SICA Z000900 loudspeaker
@@ -49,12 +48,10 @@ def loudspeaker_sica(version='tristan', output='pos', mode='function'):
         Version to simulate.
     output : {'pos', 'current'}, optional
         Defines the output of the system
-    mode : {'tensor', 'function'}, optional
-        Mode in which are stored Mpq and Npq multilinear functions
 
     Returns
     -------
-    Object of class System.
+    Object of class NumericalStateSpace.
 
     """
 
@@ -90,33 +87,20 @@ def loudspeaker_sica(version='tristan', output='pos', mode='function'):
         C_m = np.array([[1, 0, 0]])
     D_m = np.zeros((1, 1)) # Input-to-output matrix
 
-    # Handles for fonction saying if Mpq and Npq functions are used
-    h_mpq_bool = (lambda p, q: (p<=3) & (q==0))
-    h_npq_bool = (lambda p, q: False)
-
      # Dictionnaries of Mpq & Npq tensors
-    if mode == 'tensor':
-        m20 = np.zeros((3, 3, 3))
-        m20[2, 1, 1] = -k[1]/Mms
-        m30 = np.zeros((3, 3, 3, 3))
-        m30[2, 1, 1, 1] = -k[2]/Mms
-    elif mode == 'function':
-        m20 = lambda x1, x2: [0*x1[1], \
-                              0*x1[1], \
-                              -k[1]/Mms * x1[1] * x2[1]]
-        m30 = lambda x1, x2, x3: [0*x1[1], \
-                                  0*x1[1], \
-                                  -k[2]/Mms * x1[1] * x2[1] * x3[1]]
-
+    m20 = np.zeros((3, 3, 3))
+    m20[2, 1, 1] = -k[1]/Mms
+    m30 = np.zeros((3, 3, 3, 3))
+    m30[2, 1, 1, 1] = -k[2]/Mms
 
     mpq_dict = {(2, 0): m20, (3, 0): m30}
     npq_dict = dict()
 
-    return StateSpace(A_m, B_m, C_m, D_m, h_mpq_bool, h_npq_bool,
-                      mpq_dict, npq_dict, sym_bool=True, mode=mode)
+    return NumericalStateSpace(A_m, B_m, C_m, D_m, mpq_dict, npq_dict,
+                               pq_symmetry=True)
 
 
-def second_order_w_nl_damping(gain=1, f0=100, damping=0.2, nl_coeff=[0, 1e-6]):
+def nl_damping(gain=1, f0=100, damping=0.2, nl_coeff=[0, 1e-6]):
     """
     Function that create and returns the StateSpace object corresponding to a
     second order system with nonlinear stiffness.
@@ -134,7 +118,7 @@ def second_order_w_nl_damping(gain=1, f0=100, damping=0.2, nl_coeff=[0, 1e-6]):
 
     Returns
     -------
-    Object of class StateSpace.
+    Object of class NumericalStateSpace.
 
     """
 
@@ -158,33 +142,30 @@ def second_order_w_nl_damping(gain=1, f0=100, damping=0.2, nl_coeff=[0, 1e-6]):
         temp_mpq[(1,)*(p_count+1)] = val
         mpq_dict[(p_count, 0)] = temp_mpq.copy()
 
-    # Handles for fonction saying if Mpq and Npq functions are used
-    h_mpq_bool = (lambda p, q: (p<=p_count) & (q==0))
-    h_npq_bool = (lambda p, q: False)
-
-    return StateSpace(A_m, B_m, C_m, D_m, h_mpq_bool, h_npq_bool,
-                      mpq_dict, npq_dict, sym_bool=True, mode='tensor')
+    return NumericalStateSpace(A_m, B_m, C_m, D_m, mpq_dict, npq_dict,
+                               pq_symmetry=True,)
 
 
-def system_test(mode='tensor'):
+def test(mode='numeric'):
     """
     Function that create and returns the StateSpace object corresponding to a
     simple system for testing and debugging the simulation.
 
     Returns
     -------
-    Object of class StateSpace.
+    Object of class NumericalStateSpace (if ``mode`` is 'numeric') or
+    SymbolicStateSpace (if ``mode`` is 'symbolic').
 
     """
 
-    # State-space matrices
-    A_m = np.array([[0, 1],
-                    [- 10000, - 40]]) # State-to-state matrix
-    B_m = np.array([[0], [1]]); # Input-to-state matrix
-    C_m = np.array([[1, 0]]) # State-to-output matrix
-    D_m = np.array([[1]]) # Input-to-output matrix
+    if mode in ['numeric', 'num']:
+        # State-space matrices
+        A_m = np.array([[0, 1],
+                        [- 10000, - 40]]) # State-to-state matrix
+        B_m = np.array([[0], [1]]); # Input-to-state matrix
+        C_m = np.array([[1, 0]]) # State-to-output matrix
+        D_m = np.array([[1]]) # Input-to-output matrix
 
-    if mode == 'tensor':
         # Mpq & Npq in 'tensor' mode
         m20 = np.zeros((2, 2, 2))
         m20[1, 1, 1] = 1
@@ -200,24 +181,40 @@ def system_test(mode='tensor'):
         n02 = np.zeros((1, 1, 1))
         n02[0, 0, 0] = -1
 
-    elif mode == 'function':
-        # Mpq & Npq in 'function' mode
-        m20 = lambda x1, x2: [0*x1[0], x1[1] * x2[1]]
-        m11 = lambda x, u: [-x[1]*u[0], 0*x[0]]
-        m02 = lambda u1, u2: [0.1*u1[0]*u2[0], 0*u1[0]]
+    elif mode in ['symbolic', 'symb']:
+        a, b, c, d, e, f = sp.symbols('a,b,c,d,e,f')
+        ma, mb, mc, na, nb, nc = sp.symbols('ma,mb,mc,na,nb,nc')
 
-        n20 = lambda x1, x2: x1[1]*x2[1]
-        n11 = lambda x, u: -x[1]*u[0]
-        n02 = lambda u1, u2: 0.01*u1[0]*u2[0]
+        # State-space matrices
+        A_m = sp.Matrix([[0, a],
+                        [b, c]]) # State-to-state matrix
+        B_m = sp.Matrix([[0], [d]]); # Input-to-state matrix
+        C_m = sp.Matrix([[e, 0]]) # State-to-output matrix
+        D_m = sp.Matrix([[f]]) # Input-to-output matrix
 
-    # Handles for fonction saying if Mpq and Npq functions are used
-    h_mpq_bool = (lambda p, q: (p+q == 2))
-    h_npq_bool = (lambda p, q: (p+q == 2))
+        # Mpq & Npq in 'tensor' mode
+        m20 = sp.tensor.array.MutableDenseNDimArray(np.zeros(8), (2, 2, 2))
+        m20[1, 1, 1] = ma
+        m11 = sp.tensor.array.MutableDenseNDimArray(np.zeros(4), (2, 2, 1))
+        m11[0, 1, 0] = mb
+        m02 = sp.tensor.array.MutableDenseNDimArray(np.zeros(2), (2, 1, 1))
+        m02[0, 0, 0] = mc
+
+        n20 = sp.tensor.array.MutableDenseNDimArray(np.zeros(4), (1, 2, 2))
+        n20[0, 1, 1] = na
+        n11 = sp.tensor.array.MutableDenseNDimArray(np.zeros(2), (1, 2, 1))
+        n11[0, 1, 0] = nb
+        n02 = sp.tensor.array.MutableDenseNDimArray(np.zeros(1), (1, 1, 1))
+        n02[0, 0, 0] = nc
 
     # Dictionnaries of Mpq & Npq
     mpq_dict = {(2, 0): m20, (1, 1): m11, (0, 2): m02}
     npq_dict = {(2, 0): n20, (1, 1): n11, (0, 2): n02}
 
 
-    return StateSpace(A_m, B_m, C_m, D_m, h_mpq_bool, h_npq_bool,
-                      mpq_dict, npq_dict, sym_bool=True, mode=mode)
+    if mode in ['numeric', 'num']:
+        return NumericalStateSpace(A_m, B_m, C_m, D_m, mpq_dict, npq_dict,
+                                   pq_symmetry=True)
+    elif mode in ['symbolic', 'symb']:
+        return SymbolicStateSpace(A_m, B_m, C_m, D_m, mpq_dict, npq_dict,
+                                   pq_symmetry=True)

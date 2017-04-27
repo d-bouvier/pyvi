@@ -5,10 +5,8 @@ Toolbox for plots.
 @author: bouvier (bouvier@ircam.fr)
          Damien Bouvier, IRCAM, Paris
 
-Last modified on 04 Oct. 2016
-Developed for Python 3.5.1
-Uses:
- - matplolib 1.5.1
+Last modified on 24 Apr. 2017
+Developed for Python 3.6.1
 """
 
 #==============================================================================
@@ -16,8 +14,6 @@ Uses:
 #==============================================================================
 
 import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
-import numpy as np
 
 
 #==============================================================================
@@ -178,6 +174,8 @@ def plot_kernel_freq(vec, kernel, style='surface', title=None, N=20,
         ``logscale``.
     """
 
+    import numpy as np
+
     order = kernel.ndim
     kernel_amp = np.abs(kernel)
     kernel_phase = np.angle(kernel)
@@ -270,6 +268,21 @@ if __name__ == '__main__':
 
     plot_sig_coll(np.stack((sig_1, sig_2, sig_1 - sig_2), axis=1),
                   time_vec, name='Test réel (Collection)', ylim=[-1.1, 1.1],
-                  title_plots=['Sinus', 'Cosinus', 'Sinus saturated'])
+                  title_plots=['Sinus', 'Cosinus', 'Sinus saturé'])
     plot_sig_coll(np.stack((sig_3, sig_4), axis=1), time_vec, xlim=[0, 3],
                   name='Test complexe (Collection)')
+
+    M = 40
+    vec = time_vec[:M]
+    sig_5 = sig_1[:M]
+    sig_6 = sig_2[:M]
+
+    plot_kernel_time(vec, sig_5, title='Test noyau temp - ordre 1')
+    plot_kernel_time(vec, np.tensordot(sig_5, sig_6, 0), style='contour',
+                     title="Test noyau temp - ordre 2 - mode 'contour'")
+    plot_kernel_time(vec, np.tensordot(sig_5, sig_6, 0), style='surface',
+                     title="Test noyau temp - ordre 2 - mode 'surface'")
+    plot_kernel_time(vec, np.tensordot(sig_5, sig_6, 0), style='wireframe',
+                     title="Test noyau temp - ordre 2 - mode 'wireframe'")
+
+

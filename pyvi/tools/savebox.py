@@ -1,27 +1,23 @@
 # -*- coding: utf-8 -*-
 """
-Paths for the pyVI package.
+Tooolbox for saving data and figures.
 
 Notes
 -----
 @author:    bouvier@ircam.fr
             Damien Bouvier, IRCAM, Paris
 
-Last modified on 3 Nov. 2016
-Developed for Python 3.5.1
-Uses:
- - numpy 1.11.1
- - matplolib 1.5.1
- - os, pickle
+Last modified on 25 Apr. 2017
+Developed for Python 3.6.1
 """
 
 #==============================================================================
 #Importations
 #==============================================================================
 
-import os
-import pickle
-import numpy as np
+import os, pickle
+from numpy import savez, load
+
 
 #==============================================================================
 # Global variables
@@ -82,7 +78,7 @@ def save_data_numpy(array_dict, name, folder):
 
     folder_path = folder_str(folder)
     full_path = folder_path + os.sep + name + '.npz'
-    np.savez(full_path, **array_dict)
+    savez(full_path, **array_dict)
 
 
 def save_figure(handle_fig, name, folder):
@@ -112,4 +108,4 @@ def load_data_numpy(name, folder):
 
     folder_path = folder_str(folder)
     full_path = folder_path + os.sep + name + '.npz'
-    return np.load(full_path)
+    return load(full_path)

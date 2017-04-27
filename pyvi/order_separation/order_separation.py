@@ -20,9 +20,8 @@ Uses:
 
 import numpy as np
 from scipy import fftpack
-from scipy.special import binom as binomial
 from pyvi.simulation.simulation import simulation
-from pyvi.tools.mathbox import rms, safe_db
+from pyvi.tools.mathbox import rms, safe_db, binomial
 from pyvi.tools.paths import save_data_pickle, save_data_numpy
 from datetime import datetime
 
