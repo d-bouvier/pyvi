@@ -27,7 +27,7 @@ Developed for Python 3.6.1
 # Importations
 #==============================================================================
 
-from statespace import NumericalStateSpace, SymbolicStateSpace
+from .statespace import NumericalStateSpace, SymbolicStateSpace
 import numpy as np
 from sympy import symbols, Matrix
 from sympy.tensor.array import MutableDenseNDimArray

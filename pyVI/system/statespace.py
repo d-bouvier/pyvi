@@ -28,7 +28,7 @@ Developed for Python 3.6.1
 # Importations
 #==============================================================================
 
-import sympy as sp
+from sympy import pretty
 from abc import abstractmethod
 
 
@@ -148,7 +148,7 @@ class StateSpace:
                     ('Feedthrough {} D', 'input-to-output', self.D_m)]:
             print_str += Style.GREEN + Style.BRIGHT + name.format('matrice') + \
                         ' (' + desc + ')' + Style.RESET + '\n' + \
-                         sp.pretty(mat) + '\n'
+                         pretty(mat) + '\n'
         if not self.linear:
             if len(self.mpq):
                 print_str += list_nl_fct(self.mpq, 'M')

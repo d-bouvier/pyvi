@@ -14,6 +14,8 @@ Developed for Python 3.6.1
 #==============================================================================
 
 import matplotlib.pyplot as plt
+from numpy import meshgrid
+from mpl_toolkits.mplot3d import Axes3D
 
 
 #==============================================================================
@@ -117,7 +119,7 @@ def plot_kernel_time(vec, kernel, style='surface', title=None, N=20):
     elif order ==2:
         if not title:
             title = 'Volterra kernel of order 2'
-        time_x, time_y = np.meshgrid(vec, vec)
+        time_x, time_y = meshgrid(vec, vec)
         plt.figure(title)
         plt.clf()
 
