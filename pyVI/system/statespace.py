@@ -128,7 +128,7 @@ class StateSpace:
 
     def __str__(self):
         """Prints the system's equation."""
-        from pyvi.tools.utilities import Style
+        from ..utilities.misc import Style
 
         def list_nl_fct(dict_fct, name):
             temp_str = Style.RED + \
@@ -273,7 +273,7 @@ class NumericalStateSpace(StateSpace):
     @abstractmethod
     def plot_kernels(self):
         #TODO docstring
-        #TODO utiliser fct dans tools/plotbox
+        #TODO utiliser fct dans utilities/plotbox
         raise NotImplementedError
 
 

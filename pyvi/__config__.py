@@ -14,4 +14,4 @@ __maintainer__ = "Damien Bouvier"
 __version__ = "0.3"
 
 from . import system
-from . import tools
+from . import utilities
