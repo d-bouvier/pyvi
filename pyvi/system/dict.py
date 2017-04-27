@@ -27,9 +27,10 @@ Developed for Python 3.6.1
 # Importations
 #==============================================================================
 
-from pyvi.system.statespace import NumericalStateSpace, SymbolicStateSpace
+from statespace import NumericalStateSpace, SymbolicStateSpace
 import numpy as np
-import sympy as sp
+from sympy import symbols, Matrix
+from sympy.tensor.array import MutableDenseNDimArray
 
 
 #==============================================================================
@@ -182,29 +183,29 @@ def test(mode='numeric'):
         n02[0, 0, 0] = -1
 
     elif mode in ['symbolic', 'symb']:
-        a, b, c, d, e, f = sp.symbols('a,b,c,d,e,f')
-        ma, mb, mc, na, nb, nc = sp.symbols('ma,mb,mc,na,nb,nc')
+        a, b, c, d, e, f = symbols('a,b,c,d,e,f')
+        ma, mb, mc, na, nb, nc = symbols('ma,mb,mc,na,nb,nc')
 
         # State-space matrices
-        A_m = sp.Matrix([[0, a],
-                        [b, c]]) # State-to-state matrix
-        B_m = sp.Matrix([[0], [d]]); # Input-to-state matrix
-        C_m = sp.Matrix([[e, 0]]) # State-to-output matrix
-        D_m = sp.Matrix([[f]]) # Input-to-output matrix
+        A_m = Matrix([[0, a],
+                      [b, c]]) # State-to-state matrix
+        B_m = Matrix([[0], [d]]); # Input-to-state matrix
+        C_m = Matrix([[e, 0]]) # State-to-output matrix
+        D_m = Matrix([[f]]) # Input-to-output matrix
 
         # Mpq & Npq in 'tensor' mode
-        m20 = sp.tensor.array.MutableDenseNDimArray(np.zeros(8), (2, 2, 2))
+        m20 = MutableDenseNDimArray(np.zeros(8), (2, 2, 2))
         m20[1, 1, 1] = ma
-        m11 = sp.tensor.array.MutableDenseNDimArray(np.zeros(4), (2, 2, 1))
+        m11 = MutableDenseNDimArray(np.zeros(4), (2, 2, 1))
         m11[0, 1, 0] = mb
-        m02 = sp.tensor.array.MutableDenseNDimArray(np.zeros(2), (2, 1, 1))
+        m02 = MutableDenseNDimArray(np.zeros(2), (2, 1, 1))
         m02[0, 0, 0] = mc
 
-        n20 = sp.tensor.array.MutableDenseNDimArray(np.zeros(4), (1, 2, 2))
+        n20 = MutableDenseNDimArray(np.zeros(4), (1, 2, 2))
         n20[0, 1, 1] = na
-        n11 = sp.tensor.array.MutableDenseNDimArray(np.zeros(2), (1, 2, 1))
+        n11 = MutableDenseNDimArray(np.zeros(2), (1, 2, 1))
         n11[0, 1, 0] = nb
-        n02 = sp.tensor.array.MutableDenseNDimArray(np.zeros(1), (1, 1, 1))
+        n02 = MutableDenseNDimArray(np.zeros(1), (1, 1, 1))
         n02[0, 0, 0] = nc
 
     # Dictionnaries of Mpq & Npq
