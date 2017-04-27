@@ -293,23 +293,3 @@ class SymbolicStateSpace(StateSpace):
     def print2latex(self):
         """Create a LaTex document with the state-space representation."""
         raise NotImplementedError
-
-
-#==============================================================================
-# Main script
-#==============================================================================
-
-if __name__ == '__main__':
-    """
-    Main script for testing.
-    """
-
-    import pyvi.system.dict as systems
-
-    sys_num = systems.test(mode='numeric')
-    print(sys_num)
-    sys_symb = systems.test(mode='symbolic')
-    print(sys_symb)
-
-    print(systems.loudspeaker_sica())
-    print(systems.nl_damping())
