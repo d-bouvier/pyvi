@@ -31,7 +31,7 @@ Developed for Python 3.6.1
 
 import itertools as itertbx
 import numpy as np
-from pyvi.tools.mathbox import binomial
+from ..utilities.mathbox import binomial
 
 
 #==============================================================================
@@ -211,29 +211,7 @@ def make_dict_pq_set(pq_dict, nl_order_max, sym_bool=False):
     return pq_sets
 
 
-#==============================================================================
-# Main script
-#==============================================================================
 
-if __name__ == '__main__':
-    N = 4
-    pq_dict = {(2, 0): 1,
-               (1, 1): 1}
 
-    def print_sets(sets):
-        for n, value in pq_sets.items():
-            print(n)
-            for elt in value:
-                print(' ', elt)
 
-    list_pq = make_list_pq(N)
-    print('pq-list\n-------', *list_pq, sep='\n')
-    pq_sets = state_combinatorics(list_pq, N, True)
-    print('pq-sets\n-------')
-    print_sets(pq_sets)
 
-    list_pq = elimination(pq_dict, list_pq)
-    print('pq-list (filtered)\n-----------------', *list_pq, sep='\n')
-    pq_sets = state_combinatorics(list_pq, N, True)
-    print('pq-sets (filtered)\n-----------------')
-    print_sets(pq_sets)
