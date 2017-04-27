@@ -15,4 +15,4 @@ Dependances:
  - matplotlib 2.0.0
 """
 
-from .config import __author__, __maintainer__, __version__
+from .__config__ import __author__, __maintainer__, __version__
