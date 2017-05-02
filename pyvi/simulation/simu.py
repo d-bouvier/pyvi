@@ -1,26 +1,19 @@
 # -*- coding: utf-8 -*-
 """
-Summary
--------
-Set of functions for the numerical simulation of a nonlinear systems given
-its state-space representation.
+Module forthe numerical simulation of a systems given by a NumericalStateSpace.
 
-System simulation
------------------
+Function
+--------
 simulation :
     Compute the simulation of a nonlinear system for a given input.
 
 Notes
 -----
-@author:    bouvier@ircam.fr
-            Damien Bouvier, IRCAM, Paris
+@author: bouvier (bouvier@ircam.fr)
+         Damien Bouvier, IRCAM, Paris
 
-Last modified on 3 Nov. 2016
-Developed for Python 3.5.1
-Uses:
- - numpy 1.11.1
- - pivy 0.1
- - scipy 0.18.0
+Last modified on 2 May. 2017
+Developed for Python 3.6.1
 """
 
 #==============================================================================
@@ -28,17 +21,16 @@ Uses:
 #==============================================================================
 
 import numpy as np
-from scipy import linalg
-from pyvi.tools.combinatorics import make_dict_pq_set
-from scipy.signal import resample_poly
 
 
 #==============================================================================
 # Functions
 #==============================================================================
 
-def simulation(input_sig, system, fs=44100, nl_order_max=1, hold_opt=1,
-               out='output', resampling=False):
+def simulation(input_sig, dimensions: dict, nl_order_max: int,
+               filter_mat, B_m, C_m, D_m, mpq: dict, npq: dict,
+               mpq_combinatoric: dict, npq_combinatoric: dict,
+               holder_bias_mat: dict):
     """
     Compute the simulation of a nonlinear system for a given input.
 
@@ -74,220 +66,100 @@ def simulation(input_sig, system, fs=44100, nl_order_max=1, hold_opt=1,
         ``out`` == 'all')
 
     """
+    #TODO update docstring
 
     ####################
     ## Initialization ##
     ####################
 
-    # Enforce good shape when input dimension is 1
-    sig_len_tmp = max(input_sig.shape)
     input_sig = input_sig.copy()
     dtype = input_sig.dtype
-    if system.dim['input'] == 1:
-        system.B_m.shape = (system.dim['state'], system.dim['input'])
-        system.D_m.shape = (system.dim['output'], system.dim['input'])
-        input_sig.shape = (system.dim['input'], sig_len_tmp)
 
-    # Upsampling (if wanted)
-    if resampling:
-        fs = nl_order_max * fs
-        input_sig = resample_poly(input_sig, nl_order_max, 1, axis=1)
-
-    # Compute parameters
-    sig_len = input_sig.shape[1]
-    sampling_time = 1/fs
-    w_filter = linalg.expm(system.A_m * sampling_time)
-    A_inv = np.linalg.inv(system.A_m)
+    # Enforce good shape when input dimension is 1
+    if dimensions['input'] == 1:
+        sig_len = input_sig.shape[0]
+        B_m.shape = (dimensions['state'], dimensions['input'])
+        D_m.shape = (dimensions['output'], dimensions['input'])
+        input_sig.shape = (dimensions['input'], sig_len)
+    else:
+        sig_len = input_sig.shape[0]
 
     # By-order state and output initialization
-    state_by_order = np.zeros((nl_order_max, system.dim['state'], sig_len),
+    state_by_order = np.zeros((nl_order_max, dimensions['state'], sig_len),
                               dtype)
-    output_by_order = np.zeros((nl_order_max, system.dim['output'], sig_len),
+    output_by_order = np.zeros((nl_order_max, dimensions['output'], sig_len),
                                dtype)
-
-    # Compute list of Mpq combinations and tensors/functions
-    dict_mpq_set = make_dict_pq_set(system.is_mpq_used, nl_order_max,
-                                    system.sym_bool)
-    # Add the linear part (the B matrix) to the mpq dict
-    dict_mpq_set[1] = [(0, 1, [], 1)]
-    if system.mode == 'tensor':
-        system.mpq[0, 1] = system.B_m
-    elif system.mode == 'function':
-        system.mpq[0, 1] = lambda u: system.B_m.dot(u)
-
-    # Compute list of Npq combinations and tensors/functions
-    dict_npq_set = make_dict_pq_set(system.is_npq_used, nl_order_max,
-                                    system.sym_bool)
-    # Add the linear part (respectively the D and C matrices) to the npq dict
-    dict_npq_set[1] = [(0, 1, [], 1)]
-    if system.mode == 'tensor':
-        system.npq[0, 1] = system.D_m
-    elif system.mode == 'function':
-        system.npq[0, 1] = lambda u: system.D_m.dot(u)
-
-    for n in range(1, nl_order_max+1):
-        dict_npq_set[n].insert(0, (1, 0, [n], 1))
-    if system.mode == 'tensor':
-        system.npq[1, 0] = system.C_m
-    elif system.mode == 'function':
-        system.npq[1, 0] = lambda u: system.C_m.dot(u)
-
 
     ##########################################
     ## Creation of functions for simulation ##
     ##########################################
 
-    # Computation of the Mpq/Npq functions (given as tensors or functions)
-    if system.mode == 'tensor':
-        def pq_computation(p, q, order_set, dict_pq):
-            temp_arg = ()
-            for count in range(p):
-                temp_arg += (state_by_order[order_set[count]],)
-                temp_arg += ([count, p+q],)
-            for count in range(q):
-                temp_arg += (input_sig, [p+count, p+q])
-            temp_arg += (list(range(p+q+1)),)
-            return np.tensordot(dict_pq[(p, q)], np.einsum(*temp_arg), p+q)
-    elif system.mode == 'function':
-        def pq_computation(p, q, order_set, dict_pq):
-            temp_arg = tuple(state_by_order[order_set]) + (input_sig,)*q
-            return np.array(dict_pq[(p, q)](*temp_arg))
+    # Computation of the Mpq/Npq functions (given as tensors)
+    def pq_computation(p, q, order_set, pq_tensor):
+        temp_arg = ()
+        for count in range(p):
+            temp_arg += (state_by_order[order_set[count]],)
+            temp_arg += ([count, p+q],)
+        for count in range(q):
+            temp_arg += (input_sig, [p+count, p+q])
+        temp_arg += (list(range(p+q+1)),)
+        return np.tensordot(pq_tensor, np.einsum(*temp_arg), p+q)
 
     # Correction of the bias due to ADC converter (with holder of order 0 or 1)
-    if hold_opt == 0:
-        bias_1sample_lag = A_inv.dot(w_filter) - A_inv
+    if len(holder_bias_mat) == 1:
+        delta_1sample_lag = holder_bias_mat[0]
         def holder_bias(mpq_output):
-            return bias_1sample_lag.dot(mpq_output[:,0:-1])
-    elif hold_opt == 1:
-        A_inv_squared = A_inv.dot(A_inv)
-        bias_1sample_lag = A_inv.dot(w_filter) - fs * \
-                           (A_inv_squared.dot(w_filter) - A_inv_squared)
-        bias_0sample_lag = A_inv.dot(w_filter) - A_inv - bias_1sample_lag
+            return delta_1sample_lag.dot(mpq_output[:,0:-1])
+    elif len(holder_bias_mat) == 2:
+        delta_0sample_lag = holder_bias_mat[0] - holder_bias_mat[1]
+        delta_1sample_lag = holder_bias_mat[1]
         def holder_bias(mpq_output):
-            return bias_1sample_lag.dot(mpq_output[:,0:-1]) + \
-                   bias_0sample_lag.dot(mpq_output[:,1::])
+            return delta_0sample_lag.dot(mpq_output[:,1::]) + \
+                   delta_1sample_lag.dot(mpq_output[:,0:-1])
 
-    # Filter function (simply a matrix product by 'w_filter')
+    # Filter function (simply a matrix product by 'filter_mat')
     def filtering(n):
         for k in np.arange(sig_len-1):
-            state_by_order[n-1,:,k+1] += w_filter.dot(state_by_order[n-1,:,k])
-
+            state_by_order[n-1,:,k+1] += filter_mat.dot(state_by_order[n-1,:,k])
 
     ##########################
     ## Numerical simulation ##
     ##########################
 
-    # Dynamical equation
-    for n, elt in sorted(dict_mpq_set.items()):
+    ## Dynamical equation ##
+    # Linear state
+    state_by_order[0,:,1::] += holder_bias(np.dot(B_m, input_sig))
+    filtering(1)
+    # Nonlinear states (due to Mpq functions)
+    for n, elt in sorted(mpq_combinatoric.items()):
         for p, q, order_set, nb in elt:
             mpq_output = nb * \
-                    pq_computation(p, q, [m-1 for m in order_set], system.mpq)
+                    pq_computation(p, q, [m-1 for m in order_set], mpq[(p, q)])
             state_by_order[n-1,:,1::] += holder_bias(mpq_output)
         filtering(n)
 
-    # Output equation
-    for n, elt in dict_npq_set.items():
+    ## Output equation ##
+    # Output term due to matrix D
+    output_by_order[0] += np.dot(D_m, input_sig)
+    # Output terms due to matrix C
+    for n in range(nl_order_max):
+        output_by_order[n] += np.dot(C_m, state_by_order[n])
+    # Other nonlinear output terms (due to Npq functions)
+    for n, elt in sorted(npq_combinatoric.items()):
         for p, q, order_set, nb in elt:
             output_by_order[n-1,:,:] += nb * \
-                    pq_computation(p, q, [m-1 for m in order_set], system.npq)
-
+                    pq_computation(p, q, [m-1 for m in order_set], npq[(p, q)])
 
     ######################
     ## Function outputs ##
     ######################
 
-    # Downsampling(if necessary)
-    if resampling:
-        fs = nl_order_max * fs
-        input_sig = resample_poly(input_sig, 1, nl_order_max, axis=1)
-        state_by_order = resample_poly(state_by_order, 1, nl_order_max,
-                                       axis=2)
-        output_by_order = resample_poly(output_by_order, 1, nl_order_max,
-                                        axis=2)
-
     # Reshaping state (if necessary)
-    if system.dim['state'] == 1:
+    if dimensions['state'] == 1:
         state_by_order = state_by_order[:, 0, :]
 
     # Reshaping output (if necessary)
-    if system.dim['output'] == 1:
+    if dimensions['output'] == 1:
         output_by_order = output_by_order[:, 0, :]
 
-    # Returns signals chosen by user
-    if out == 'output':
-        return output_by_order.sum(0)
-    elif out == 'output_by_order':
-        return output_by_order
-    elif out == 'state':
-        return state_by_order.sum(0)
-    elif out == 'all':
-        return output_by_order.sum(0), state_by_order, output_by_order
-    else:
-        return output_by_order.sum(0)
-
-
-#==============================================================================
-# Main script
-#==============================================================================
-
-if __name__ == '__main__':
-    """
-    Main script for testing.
-    """
-
-    from pyvi.simulation.systems import loudspeaker_sica, system_test
-    import matplotlib.pyplot as plt
-    import time
-
-    ## Test if simulation works correctly ##
-    sig_test = np.ones((10000,))
-    out = simulation(sig_test, system_test(mode='tensor'),
-                     nl_order_max=3, hold_opt=0)
-    out = simulation(sig_test, system_test(mode='tensor'),
-                     nl_order_max=3, hold_opt=1)
-    out = simulation(sig_test, system_test(mode='tensor'),
-                     nl_order_max=3, hold_opt=0)
-    out = simulation(sig_test, system_test(mode='tensor'),
-                     nl_order_max=3, hold_opt=1)
-
-
-    ## Loudspeaker simulation ##
-    # Input signal
-    fs = 44100
-    T = 1
-    f1 = 100
-    f2 = 100
-    amp = 10
-    time_vector = np.arange(0, T, step=1/fs)
-    f0_vector = np.linspace(f1, f2, num=len(time_vector))
-    sig = amp * np.sin(2 * np.pi * f0_vector * time_vector)
-
-    # Simulation
-    start1 = time.time()
-    out_t = simulation(sig, loudspeaker_sica(mode='tensor', output='current'),
-                       fs=fs, nl_order_max=3, hold_opt=0)
-    end1 = time.time()
-    plt.figure('Input- Output (1)')
-    plt.clf()
-    plt.subplot(2, 1, 1)
-    plt.plot(time_vector, sig)
-    plt.subplot(2, 1, 2)
-    plt.plot(time_vector, out_t)
-
-    start2 = time.time()
-    out_f = simulation(sig, loudspeaker_sica(mode='tensor', output='current'),
-                       fs=fs, nl_order_max=3, hold_opt=0, resampling=True)
-    end2 = time.time()
-    plt.figure('Input- Output (2)')
-    plt.clf()
-    plt.subplot(2, 1, 1)
-    plt.plot(time_vector, sig)
-    plt.subplot(2, 1, 2)
-    plt.plot(time_vector, out_f)
-
-    plt.figure('Difference')
-    plt.clf()
-    plt.plot(time_vector, out_t - out_f)
-
-    print('Without resampling: {}s'.format(end1-start1))
-    print('With resampling:    {}s'.format(end2-start2))
+    return output_by_order.sum(0)
