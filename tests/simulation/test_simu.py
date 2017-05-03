@@ -18,7 +18,7 @@ Developed for Python 3.6.1
 import numpy as np
 import time
 from pyvi.system.dict import test, loudspeaker_sica
-from pyvi.utilities.plotbox import plot_sig_io
+from pyvi.utilities.plotbox import plot_sig_io, plot_sig_coll
 
 
 #==============================================================================
@@ -33,16 +33,16 @@ if __name__ == '__main__':
     ## Test if simulation works correctly ##
     sig_test = np.ones((10000,))
     system_test = test(mode='numeric')
-    out1 = system_test.simulation(sig_test, hold_opt=0, resampling=False)
+    out1 = system_test.simulation(sig_test, holder_order=0, resampling=False)
     assert out1.shape == sig_test.shape, 'Shape error in simulation output' + \
             ' with holder of order 0 and without resampling.'
-    out2 = system_test.simulation(sig_test, hold_opt=1, resampling=False)
+    out2 = system_test.simulation(sig_test, holder_order=1, resampling=False)
     assert out1.shape == sig_test.shape, 'Shape error in simulation output' + \
             ' with holder of order 1 and without resampling.'
-    out3 = system_test.simulation(sig_test, hold_opt=0, resampling=True)
+    out3 = system_test.simulation(sig_test, holder_order=0, resampling=True)
     assert out1.shape == sig_test.shape, 'Shape error in simulation output' + \
             ' with holder of order 0 and with resampling.'
-    out4 = system_test.simulation(sig_test, hold_opt=1, resampling=True)
+    out4 = system_test.simulation(sig_test, holder_order=1, resampling=True)
     assert out1.shape == sig_test.shape, 'Shape error in simulation output' + \
             ' with holder of order 1 and with resampling.'
 
@@ -59,7 +59,7 @@ if __name__ == '__main__':
     system = loudspeaker_sica(output='current')
     options ={'fs': fs,
               'nl_order_max': 3,
-              'hold_opt': 1,
+              'holder_order': 1,
               'resampling': False}
 
     # Simulation
@@ -67,15 +67,18 @@ if __name__ == '__main__':
     out1 = system.simulation(sig, **options)
     end1 = time.time()
 
-    options['resampling'] = True
+    options['holder_order'] = 0
     start2 = time.time()
     out2 = system.simulation(sig, **options)
     end2 = time.time()
 
     # Results
-    plot_sig_io(sig, out1, time_vector, name='Input-output (w/o resampling)')
-    print('Computation time (w/o resampling): {}s'.format(end1-start1))
+    plot_sig_io(sig, out1, time_vector, name='Input-output (holder of order 1)')
+    print('Computation time (holder of order 1): {}s'.format(end1-start1))
 
-    plot_sig_io(sig, out1, time_vector, name='Input-output (w/ resampling)')
-    print('Computation time (w/ resampling):  {}s'.format(end2-start2))
+    plot_sig_io(sig, out2, time_vector, name='Input-output (holder of order 0)')
+    print('Computation time (holder of order 0):  {}s'.format(end2-start2))
 
+    diff = out1 - out2
+    diff.shape = diff.shape +(1,)
+    plot_sig_coll(diff, time_vector, name='Difference')
