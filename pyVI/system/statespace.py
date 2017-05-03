@@ -32,6 +32,9 @@ from sympy import pretty
 from abc import abstractmethod
 from ..simulation.tools import StateSpaceSimulationParameters
 from ..simulation.simu import simulation as simulation_fct
+from ..simulation.kernels import (time_kernel_computation,
+                                  freq_kernel_computation,
+                                  freq_kernel_computation_from_time_kernels)
 
 
 #==============================================================================
@@ -252,6 +255,20 @@ class NumericalStateSpace(StateSpace):
                self.mpq, self.npq, self._simu.mpq_combinatoric,
                self._simu.npq_combinatoric, self._simu.holder_bias_mat)
 
+    def compute_kernels(self, T, which='both', **options):
+        #TODO docstring
+        self._create_simulation_parameters(**options)
+
+        if which == 'time':
+            return self._compute_time_kernels(T)[0]
+        elif which == 'both':
+            volterra_kernels, in2state = self._compute_time_kernels(T)
+            transfer_kernels = \
+                    self._compute_freq_kernels_from_time_kernels(T, in2state)
+            return volterra_kernels, transfer_kernels
+        elif which == 'freq':
+            return self._compute_freq_kernels(T)
+
     #=============================================#
 
     def _create_simulation_parameters(self, **options):
@@ -261,26 +278,27 @@ class NumericalStateSpace(StateSpace):
                                                     self.pq_symmetry, **options)
 
     @abstractmethod
-    def compute_volterra_kernels(self):
+    def _compute_time_kernels(self, T):
         #TODO docstring
-        raise NotImplementedError
+        return time_kernel_computation(T, self._simu.fs, self.dim,
+                                       self._simu.nl_order_max,
+                                       self._simu.filter_mat,
+                                       self.B_m, self.C_m, self.D_m,
+                                       self.mpq, self.npq,
+                                       self._simu.mpq_combinatoric,
+                                       self._simu.npq_combinatoric,
+                                       self._simu.holder_bias_mat)
 
     @abstractmethod
-    def _compute_time_kernels(self):
+    def _compute_freq_kernels_from_time_kernels(self):
         #TODO docstring
         #TODO utiliser fct dans simulation/kernels
         raise NotImplementedError
 
     @abstractmethod
-    def _compute_frequency_kernels(self):
+    def _compute_freq_kernels(self):
         #TODO docstring
         #TODO utiliser fct dans simulation/kernels
-        raise NotImplementedError
-
-    @abstractmethod
-    def plot_kernels(self):
-        #TODO docstring
-        #TODO utiliser fct dans utilities/plotbox
         raise NotImplementedError
 
     @abstractmethod
