@@ -107,15 +107,17 @@ def simulation(input_sig, dimensions: dict, nl_order_max: int,
 
     # Correction of the bias due to ADC converter (with holder of order 0 or 1)
     if len(holder_bias_mat) == 1:
-        delta_1sample_lag = holder_bias_mat[0]
-        def holder_bias(mpq_output):
-            return delta_1sample_lag.dot(mpq_output[:,0:-1])
+        bias_1sample_lag = holder_bias_mat[0]
+        def holder_bias(mpq_output, n):
+            state_by_order[n-1,:,1::] += np.dot(bias_1sample_lag,
+                                                mpq_output[:,0:-1])
     elif len(holder_bias_mat) == 2:
-        delta_0sample_lag = holder_bias_mat[0] - holder_bias_mat[1]
-        delta_1sample_lag = holder_bias_mat[1]
-        def holder_bias(mpq_output):
-            return delta_0sample_lag.dot(mpq_output[:,1::]) + \
-                   delta_1sample_lag.dot(mpq_output[:,0:-1])
+        bias_0sample_lag = holder_bias_mat[0] - holder_bias_mat[1]
+        bias_1sample_lag = holder_bias_mat[1]
+        def holder_bias(mpq_output, n):
+            state_by_order[n-1,:,:] += np.dot(bias_0sample_lag, mpq_output)
+            state_by_order[n-1,:,1::] += np.dot(bias_1sample_lag,
+                                                mpq_output[:,0:-1])
 
     # Filter function (simply a matrix product by 'filter_mat')
     def filtering(n):
@@ -128,14 +130,14 @@ def simulation(input_sig, dimensions: dict, nl_order_max: int,
 
     ## Dynamical equation ##
     # Linear state
-    state_by_order[0,:,1::] += holder_bias(np.dot(B_m, input_sig))
+    holder_bias(np.dot(B_m, input_sig), 1)
     filtering(1)
     # Nonlinear states (due to Mpq functions)
     for n, elt in sorted(mpq_combinatoric.items()):
         for p, q, order_set, nb in elt:
             mpq_output = nb * \
                     pq_computation(p, q, [m-1 for m in order_set], mpq[(p, q)])
-            state_by_order[n-1,:,1::] += holder_bias(mpq_output)
+            holder_bias(mpq_output, n)
         filtering(n)
 
     ## Output equation ##
