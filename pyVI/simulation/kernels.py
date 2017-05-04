@@ -130,7 +130,7 @@ def time_kernel_computation(T, fs: int, dimensions: dict, nl_order_max: int,
     ## Output equation ##
     # Linear and nonlinear terms due to matrix C
     for n in range(1, nl_order_max+1):
-        kernels_in2out[n] =  np.tensordot(C_m, kernels_in2state[n], 1)
+        kernels_in2out[n] = np.tensordot(C_m, kernels_in2state[n], 1)
     # Linear term due to matrix D
     kernels_in2out[1] += D_m.dot(dirac)
     # Other nonlinear terms (due to Npq functions)
@@ -139,7 +139,7 @@ def time_kernel_computation(T, fs: int, dimensions: dict, nl_order_max: int,
             kernels_in2out[n] += nb * pq_computation(n, p, q, order_set,
                                                      npq[(p, q)])
         for ind in range(dimensions['output']):
-            kernels_in2state[n][ind] = \
+            kernels_in2out[n][ind] = \
                         array_symmetrization(kernels_in2state[n][ind])
 
     ######################
