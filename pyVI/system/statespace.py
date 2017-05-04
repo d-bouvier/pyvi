@@ -30,6 +30,8 @@ Developed for Python 3.6.1
 
 from sympy import pretty
 from abc import abstractmethod
+import warnings as warnings
+from ..utilities.misc import Style
 from ..simulation.tools import StateSpaceSimulationParameters
 from ..simulation.simu import simulation as simulation_fct
 from ..simulation.kernels import (time_kernel_computation,
@@ -133,7 +135,6 @@ class StateSpace:
 
     def __str__(self):
         """Prints the system's equation."""
-        from ..utilities.misc import Style
 
         def list_nl_fct(dict_fct, name):
             temp_str = Style.RED + \
@@ -186,7 +187,6 @@ class StateSpace:
 
         # Warn that problems may occur if input or output dimension is not 1
         if (self.dim['input'] != 1) or (self.dim['output'] != 1):
-            import warnings as warnings
             message = '\nInput and output dimension are not both equal to 1' + \
                       ' (it is respectively {} '.format(self.dim['input']) + \
                       'and {}).\n'.format(self.dim['output']) + \

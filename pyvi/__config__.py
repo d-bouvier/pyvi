@@ -5,7 +5,7 @@ Configuration script for pyvi package.
 @author: bouvier (bouvier@ircam.fr)
          Damien Bouvier, IRCAM, Paris
 
-Last modified on 24 Apr. 2017
+Last modified on 04 May 2017
 Developed for Python 3.6.1
 """
 

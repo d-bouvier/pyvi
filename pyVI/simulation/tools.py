@@ -14,7 +14,7 @@ Notes
 @author: bouvier (bouvier@ircam.fr)
          Damien Bouvier, IRCAM, Paris
 
-Last modified on 2 May. 2017
+Last modified on 04 May 2017
 Developed for Python 3.6.1
 """
 
@@ -22,7 +22,7 @@ Developed for Python 3.6.1
 # Importations
 #==============================================================================
 
-import numpy as np
+from numpy import identity, dot
 from scipy import linalg
 from .combinatorics import make_pq_combinatorics
 
@@ -46,7 +46,7 @@ class StateSpaceSimulationParameters:
 
         # Filter matrix
         sampling_time = 1/self.fs
-        self.A_inv = np.linalg.inv(A_m)
+        self.A_inv = linalg.inv(A_m)
         self.filter_mat = linalg.expm(A_m * sampling_time)
 
         # List of Mpq combinations
@@ -58,10 +58,10 @@ class StateSpaceSimulationParameters:
                                                       pq_symmetry)
 
         # Holder bias matrices
-        temp_mat = self.filter_mat - np.identity(dim_state)
+        temp_mat = self.filter_mat - identity(dim_state)
         self.holder_bias_mat = dict()
-        self.holder_bias_mat[0] = np.dot(self.A_inv, temp_mat)
+        self.holder_bias_mat[0] = dot(self.A_inv, temp_mat)
         if self.holder_order == 1:
-            self.holder_bias_mat[1] = np.dot(self.A_inv, self.filter_mat) - \
-            (1/sampling_time) * np.dot(np.dot(self.A_inv, self.A_inv), temp_mat)
+            self.holder_bias_mat[1] = dot(self.A_inv, self.filter_mat) - \
+                (1/sampling_time) * dot(dot(self.A_inv, self.A_inv), temp_mat)
 
