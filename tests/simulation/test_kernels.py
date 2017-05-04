@@ -37,17 +37,21 @@ if __name__ == '__main__':
 
     # Test system
     system_test = test(mode='numeric')
+    t_kernels = system_test.compute_kernels(T, which='time', **options)
     t_kernels, f_kernels = system_test.compute_kernels(T, which='both',
                                                        **options)
+    f_kernels = system_test.compute_kernels(T, which='freq', **options)
 
     # Second-order system with nonlinear damping
     system = nl_damping(gain=1, f0=100, damping=0.2, nl_coeff=[1e-1, 3e-5])
     time_kernels, freq_kernels_from_time = system.compute_kernels(T,
                                                                   which='both',
                                                                   **options)
+    freq_kernels = system.compute_kernels(T, which='freq', **options)
+
     N = len(time_kernels[1])
     time_vec = np.linspace(0, (N-1)/options['fs'], num=N)
-    freq_vec = np.linspace(0, options['fs'], num=len(time_vec), endpoint=False)
+    freq_vec = np.fft.fftshift(np.fft.fftfreq(N, d=1/options['fs']))
 
     plot_kernel_time(time_vec, time_kernels[1])
     plot_kernel_time(time_vec, time_kernels[2], style='surface')
@@ -57,3 +61,7 @@ if __name__ == '__main__':
     plot_kernel_freq(freq_vec, freq_kernels_from_time[2], style='surface',
                      title='Transfer kernel of order 2 ' + \
                            '(computed from Volterra kernel).')
+    plot_kernel_freq(freq_vec, freq_kernels[1],
+                     title='Transfer kernel of order 1')
+    plot_kernel_freq(freq_vec, freq_kernels[2], style='surface',
+                     title='Transfer kernel of order 2')

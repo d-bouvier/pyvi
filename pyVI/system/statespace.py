@@ -294,7 +294,13 @@ class NumericalStateSpace(StateSpace):
         if time_kernels is not None:
             return freq_kernel_computation_from_time_kernels(time_kernels)
         else:
-            return freq_kernel_computation()
+            return freq_kernel_computation(T, self._simu.fs, self.dim,
+                                       self._simu.nl_order_max,
+                                       self.A_m, self.B_m, self.C_m, self.D_m,
+                                       self.mpq, self.npq,
+                                       self._simu.mpq_combinatoric,
+                                       self._simu.npq_combinatoric,
+                                       self._simu.holder_order)
 
     @abstractmethod
     def convert2symbolic(self, values_dict):
