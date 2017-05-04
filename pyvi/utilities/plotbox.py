@@ -14,7 +14,7 @@ Developed for Python 3.6.1
 #==============================================================================
 
 import matplotlib.pyplot as plt
-from numpy import meshgrid
+import numpy as np
 from mpl_toolkits.mplot3d import Axes3D
 
 
@@ -120,7 +120,7 @@ def plot_kernel_time(vec, kernel, style='wireframe', title=None,
     elif order ==2:
         if not title:
             title = 'Volterra kernel of order 2'
-        time_x, time_y = meshgrid(vec, vec)
+        time_x, time_y = np.meshgrid(vec, vec)
         plt.figure(title)
         plt.clf()
 
@@ -177,8 +177,6 @@ def plot_kernel_freq(vec, kernel, style='wireframe', title=None,
         an int, and all frequency axis will be plotted using a logscale of base
         ``logscale``.
     """
-
-    import numpy as np
 
     order = kernel.ndim
     kernel_amp = np.abs(kernel)
