@@ -30,10 +30,10 @@ if __name__ == '__main__':
     """
 
     # Parameters
-    options = {'fs': 700,
+    options = {'fs': 2000,
                'nl_order_max': 2,
                'holder_order': 1}
-    T =0.05
+    T = 0.03
 
     # Test system
     system_test = test(mode='numeric')
@@ -54,14 +54,14 @@ if __name__ == '__main__':
     freq_vec = np.fft.fftshift(np.fft.fftfreq(N, d=1/options['fs']))
 
     plot_kernel_time(time_vec, time_kernels[1])
-    plot_kernel_time(time_vec, time_kernels[2], style='surface')
+    plot_kernel_time(time_vec, time_kernels[2], style='wireframe')
     plot_kernel_freq(freq_vec, freq_kernels_from_time[1],
                      title='Transfer kernel of order 1 ' + \
                            '(computed from Volterra kernel).')
-    plot_kernel_freq(freq_vec, freq_kernels_from_time[2], style='surface',
+    plot_kernel_freq(freq_vec, freq_kernels_from_time[2], style='wireframe',
                      title='Transfer kernel of order 2 ' + \
                            '(computed from Volterra kernel).')
     plot_kernel_freq(freq_vec, freq_kernels[1],
                      title='Transfer kernel of order 1')
-    plot_kernel_freq(freq_vec, freq_kernels[2], style='surface',
+    plot_kernel_freq(freq_vec, freq_kernels[2], style='wireframe',
                      title='Transfer kernel of order 2')

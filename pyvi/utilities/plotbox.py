@@ -183,7 +183,7 @@ def plot_kernel_freq(vec, kernel, style='wireframe', title=None,
     kernel_phase = np.angle(kernel)
     amplabel = 'Magnitude'
     if db:
-        kernel_amp = 20*np.log10(kernel_amp)
+        kernel_amp = 20 * np.log10(kernel_amp)
         amplabel += ' (dB)'
     if unwrap_angle:
         for n in range(order):
@@ -210,7 +210,7 @@ def plot_kernel_freq(vec, kernel, style='wireframe', title=None,
 
     elif order ==2:
         if not title:
-            title = 'Trnsfer kernel of order 2'
+            title = 'Transfer kernel of order 2'
         freq_x, freq_y = np.meshgrid(vec[idx], vec, indexing='ij')
         plt.figure(title)
         plt.clf()
