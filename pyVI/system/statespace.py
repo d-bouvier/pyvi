@@ -20,7 +20,7 @@ Notes
 @author: bouvier (bouvier@ircam.fr)
          Damien Bouvier, IRCAM, Paris
 
-Last modified on 2 May. 2017
+Last modified on 04 May 2017
 Developed for Python 3.6.1
 """
 
@@ -260,11 +260,11 @@ class NumericalStateSpace(StateSpace):
         self._create_simulation_parameters(**options)
 
         if which == 'time':
-            return self._compute_time_kernels(T)[0]
+            return self._compute_time_kernels(T)
         elif which == 'both':
-            volterra_kernels, in2state = self._compute_time_kernels(T)
+            volterra_kernels = self._compute_time_kernels(T)
             transfer_kernels = \
-                    self._compute_freq_kernels_from_time_kernels(T, in2state)
+                    self._compute_freq_kernels(T, time_kernels=volterra_kernels)
             return volterra_kernels, transfer_kernels
         elif which == 'freq':
             return self._compute_freq_kernels(T)
@@ -289,17 +289,12 @@ class NumericalStateSpace(StateSpace):
                                        self._simu.npq_combinatoric,
                                        self._simu.holder_bias_mat)
 
-    @abstractmethod
-    def _compute_freq_kernels_from_time_kernels(self):
+    def _compute_freq_kernels(self, T, time_kernels=None):
         #TODO docstring
-        #TODO utiliser fct dans simulation/kernels
-        raise NotImplementedError
-
-    @abstractmethod
-    def _compute_freq_kernels(self):
-        #TODO docstring
-        #TODO utiliser fct dans simulation/kernels
-        raise NotImplementedError
+        if time_kernels is not None:
+            return freq_kernel_computation_from_time_kernels(time_kernels)
+        else:
+            return freq_kernel_computation()
 
     @abstractmethod
     def convert2symbolic(self, values_dict):

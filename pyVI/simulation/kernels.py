@@ -15,7 +15,7 @@ Notes
 @author: bouvier (bouvier@ircam.fr)
          Damien Bouvier, IRCAM, Paris
 
-Last modified on 25 Apr. 2017
+Last modified on 04 May 2017
 Developed for Python 3.6.1
 """
 
@@ -24,6 +24,7 @@ Developed for Python 3.6.1
 #==============================================================================
 
 import numpy as np
+from scipy.fftpack import fftn
 from itertools import filterfalse, product
 from ..utilities.mathbox import array_symmetrization
 
@@ -153,14 +154,20 @@ def time_kernel_computation(T, fs: int, dimensions: dict, nl_order_max: int,
             kernels_in2state[n] = np.squeeze(kernels_in2state[n])
             kernels_in2out[n] = np.squeeze(kernels_in2out[n])
 
-    return kernels_in2out, kernels_in2state
+    return kernels_in2out
+
 
 def freq_kernel_computation():
     #TODO docstring
     #TODO fonction
     print('Rien')
 
-def freq_kernel_computation_from_time_kernels():
+
+def freq_kernel_computation_from_time_kernels(volterra_kernels):
     #TODO docstring
-    #TODO fonction
-    print('Rien')
+
+    transfer_kernels = dict()
+    for n, kernel in volterra_kernels.items():
+        transfer_kernels[n] = np.fft.fftshift(fftn(kernel))
+
+    return transfer_kernels
