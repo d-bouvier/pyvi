@@ -34,8 +34,6 @@ if __name__ == '__main__':
                'nl_order_max': 2,
                'holder_order': 1}
     T =0.05
-    time_vec = np.arange(0, T + (1/options['fs']), step=1/options['fs'])
-    freq_vec = np.linspace(0, options['fs'], num=len(time_vec), endpoint=False)
 
     # Test system
     system_test = test(mode='numeric')
@@ -47,6 +45,9 @@ if __name__ == '__main__':
     time_kernels, freq_kernels_from_time = system.compute_kernels(T,
                                                                   which='both',
                                                                   **options)
+    N = len(time_kernels[1])
+    time_vec = np.linspace(0, (N-1)/options['fs'], num=N)
+    freq_vec = np.linspace(0, options['fs'], num=len(time_vec), endpoint=False)
 
     plot_kernel_time(time_vec, time_kernels[1])
     plot_kernel_time(time_vec, time_kernels[2], style='surface')

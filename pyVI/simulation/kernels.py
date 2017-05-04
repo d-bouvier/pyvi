@@ -43,11 +43,8 @@ def time_kernel_computation(T, fs: int, dimensions: dict, nl_order_max: int,
     ## Initialization ##
     ####################
 
-    # Time vector
-    time_vec = np.arange(0, T + (1/fs), step=1/fs)
-    len_kernels = time_vec.shape[0]
-
     # Input-to-state and input-to-output kernels initialization
+    len_kernels = 1 + int(fs * T)
     kernels_in2state = dict()
     kernels_in2out = dict()
     for n in range(1, nl_order_max+1):
