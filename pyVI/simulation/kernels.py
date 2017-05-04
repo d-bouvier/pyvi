@@ -52,7 +52,7 @@ def time_kernel_computation(T, fs: int, dimensions: dict, nl_order_max: int,
 
     # Dirac-delta
     dirac = np.zeros((dimensions['input'], len_kernels))
-    dirac[0] = 1
+    dirac[:, 0] = 1
 
     # Enforce good shape when input dimension is 1
     if dimensions['input'] == 1:
