@@ -151,7 +151,7 @@ def plot_kernel_time(vec, kernel, style='wireframe', title=None,
 
 
 def plot_kernel_freq(vec, kernel, style='wireframe', title=None,
-                     db=True, unwrap_angle=True, logscale=0,
+                     db=True, unwrap_angle=True, logscale=False,
                      linewidth=0.5, nb_levels=20):
     """
     Plots a discrete time kernel of order 1 or 2.
@@ -188,6 +188,7 @@ def plot_kernel_freq(vec, kernel, style='wireframe', title=None,
     if unwrap_angle:
         for n in range(order):
             kernel_phase = np.unwrap(kernel_phase, n)
+    idx = slice(len(vec)//2,len(vec))
 
     if order ==1:
         if not title:
@@ -196,51 +197,62 @@ def plot_kernel_freq(vec, kernel, style='wireframe', title=None,
         plt.clf()
         ax1 = plt.subplot(211)
         ax2 = plt.subplot(212)
-        if logscale:
-            ax1.semilogx(vec, kernel_amp, basex=logscale)
-            ax2.semilogx(vec, kernel_phase, basex=logscale)
-        else:
-            ax1.plot(vec, np.abs(kernel))
-            ax2.plot(vec, np.angle(kernel))
+        ax1.plot(vec[idx], kernel_amp[idx])
+        ax2.plot(vec[idx], kernel_phase[idx])
         ax1.set_ylabel(amplabel)
-        ax2.set_xlabel('Frequency (s)')
+        ax2.set_xlabel('Frequency (Hz)')
         ax2.set_ylabel('Phase (radians)')
+        if logscale:
+            ax1.set_xscale('log')
+            ax2.set_xscale('log')
+        ax1.set_xlim([0, vec[-1]])
+        ax2.set_xlim([0, vec[-1]])
 
     elif order ==2:
         if not title:
             title = 'Trnsfer kernel of order 2'
-        freq_x, freq_y = np.meshgrid(vec, vec)
+        freq_x, freq_y = np.meshgrid(vec[idx], vec, indexing='ij')
         plt.figure(title)
         plt.clf()
 
         if style == 'contour':
             ax1 = plt.subplot(211)
             ax2 = plt.subplot(212)
-            ax1.contourf(freq_x, freq_y, kernel_amp, nb_levels)
-            ax2.contourf(freq_x, freq_y, kernel_phase, nb_levels)
+            ax1.contourf(freq_x, freq_y, kernel_amp[idx,:], nb_levels)
+            ax2.contourf(freq_x, freq_y, kernel_phase[idx,:], nb_levels)
         if style == 'surface':
             ax1 = plt.subplot(211, projection='3d')
             ax2 = plt.subplot(212, projection='3d')
-            ax1.plot_surface(freq_x, freq_y, kernel_amp,antialiased=True,
-                                     cmap='jet', rstride=1, cstride=1)
-            ax2.plot_surface(freq_x, freq_y, kernel_phase, antialiased=True,
-                             cmap='jet', rstride=1, cstride=1)
+            ax1.plot_surface(freq_x, freq_y, kernel_amp[idx,:],
+                             antialiased=True, cmap='jet', rstride=1, cstride=1)
+            ax2.plot_surface(freq_x, freq_y, kernel_phase[idx,:],
+                             antialiased=True, cmap='jet', rstride=1, cstride=1)
         if style == 'wireframe':
             ax1 = plt.subplot(211, projection='3d')
             ax2 = plt.subplot(212, projection='3d')
-            ax1.plot_wireframe(freq_x, freq_y, kernel_amp, linewidth=linewidth,
-                               antialiased=True, cmap='jet')
-            ax2.plot_wireframe(freq_x, freq_y, kernel_phase,
-                               linewidth=linewidth,
-                               antialiased=True, cmap='jet')
+            ax1.plot_wireframe(freq_x, freq_y, kernel_amp[idx,:],
+                               linewidth=linewidth, antialiased=True)
+            ax2.plot_wireframe(freq_x, freq_y, kernel_phase[idx,:],
+                               linewidth=linewidth, antialiased=True)
 
-        ax1.set_xlabel('Frequency (s)')
-        ax1.set_ylabel('Frequency (s)')
-        ax2.set_xlabel('Frequency (s)')
-        ax2.set_ylabel('Frequency (s)')
-        if not (style == 'contour'):
+        if style == 'contour':
+            ax2.set_xlabel('Frequency (Hz)')
+            ax1.set_ylabel(amplabel)
+            ax2.set_ylabel('Phase (radians)')
+        else:
+            ax1.set_xlabel('Frequency (Hz)')
+            ax1.set_ylabel('Frequency (Hz)')
+            ax2.set_xlabel('Frequency (Hz)')
+            ax2.set_ylabel('Frequency (Hz)')
             ax1.set_zlabel(amplabel)
             ax2.set_zlabel('Phase (radians)')
+        if logscale:
+            ax1.set_xscale('symlog')
+            ax1.set_yscale('symlog')
+            ax2.set_xscale('symlog')
+            ax2.set_yscale('symlog')
+        ax1.set_xlim([0, vec[-1]])
+        ax2.set_xlim([0, vec[-1]])
 
     else:
         print('No plot possible, the kernel is of order {}.'.format(order))
