@@ -20,7 +20,7 @@ Notes
 @author: bouvier (bouvier@ircam.fr)
          Damien Bouvier, IRCAM, Paris
 
-Last modified on 25 Apr. 2017
+Last modified on 04 May 2017
 Developed for Python 3.6.1
 """
 
@@ -30,6 +30,11 @@ Developed for Python 3.6.1
 
 from sympy import pretty
 from abc import abstractmethod
+from ..simulation.tools import StateSpaceSimulationParameters
+from ..simulation.simu import simulation as simulation_fct
+from ..simulation.kernels import (time_kernel_computation,
+                                  freq_kernel_computation,
+                                  freq_kernel_computation_from_time_kernels)
 
 
 #==============================================================================
@@ -242,6 +247,61 @@ class NumericalStateSpace(StateSpace):
     """
     #TODO docstring
 
+    def simulation(self, input_signal, **options):
+        #TODO docstring
+        self._create_simulation_parameters(**options)
+        return simulation_fct(input_signal, self.dim, self._simu.nl_order_max,
+               self._simu.filter_mat, self.B_m, self.C_m, self.D_m,
+               self.mpq, self.npq, self._simu.mpq_combinatoric,
+               self._simu.npq_combinatoric, self._simu.holder_bias_mat)
+
+    def compute_kernels(self, T, which='both', **options):
+        #TODO docstring
+        self._create_simulation_parameters(**options)
+
+        if which == 'time':
+            return self._compute_time_kernels(T)
+        elif which == 'both':
+            volterra_kernels = self._compute_time_kernels(T)
+            transfer_kernels = \
+                    self._compute_freq_kernels(T, time_kernels=volterra_kernels)
+            return volterra_kernels, transfer_kernels
+        elif which == 'freq':
+            return self._compute_freq_kernels(T)
+
+    #=============================================#
+
+    def _create_simulation_parameters(self, **options):
+        #TODO docstring
+        self._simu = StateSpaceSimulationParameters(self.A_m, self.dim['state'],
+                                                    self.mpq, self.npq,
+                                                    self.pq_symmetry, **options)
+
+    @abstractmethod
+    def _compute_time_kernels(self, T):
+        #TODO docstring
+        return time_kernel_computation(T, self._simu.fs, self.dim,
+                                       self._simu.nl_order_max,
+                                       self._simu.filter_mat,
+                                       self.B_m, self.C_m, self.D_m,
+                                       self.mpq, self.npq,
+                                       self._simu.mpq_combinatoric,
+                                       self._simu.npq_combinatoric,
+                                       self._simu.holder_bias_mat)
+
+    def _compute_freq_kernels(self, T, time_kernels=None):
+        #TODO docstring
+        if time_kernels is not None:
+            return freq_kernel_computation_from_time_kernels(time_kernels)
+        else:
+            return freq_kernel_computation(T, self._simu.fs, self.dim,
+                                       self._simu.nl_order_max,
+                                       self.A_m, self.B_m, self.C_m, self.D_m,
+                                       self.mpq, self.npq,
+                                       self._simu.mpq_combinatoric,
+                                       self._simu.npq_combinatoric,
+                                       self._simu.holder_order)
+
     @abstractmethod
     def convert2symbolic(self, values_dict):
         """Create a SymbolicStateSpace object of the system."""
@@ -252,30 +312,6 @@ class NumericalStateSpace(StateSpace):
         #TODO docstring
         #TODO utiliser fct dans simulation/kernels
         raise NotImplementedError
-
-    @abstractmethod
-    def compute_volterra_kernels(self):
-        #TODO docstring
-        raise NotImplementedError
-
-    @abstractmethod
-    def _compute_time_kernels(self):
-        #TODO docstring
-        #TODO utiliser fct dans simulation/kernels
-        raise NotImplementedError
-
-    @abstractmethod
-    def _compute_frequency_kernels(self):
-        #TODO docstring
-        #TODO utiliser fct dans simulation/kernels
-        raise NotImplementedError
-
-    @abstractmethod
-    def plot_kernels(self):
-        #TODO docstring
-        #TODO utiliser fct dans utilities/plotbox
-        raise NotImplementedError
-
 
 class SymbolicStateSpace(StateSpace):
     """

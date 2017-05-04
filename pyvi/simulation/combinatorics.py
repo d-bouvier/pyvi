@@ -12,7 +12,7 @@ elimination :
 state_combinatorics :
     Compute, for each pq-function at a given order n, the different sets of
     state-homogenous-order that are the inputs of the multilinear pq-function.
-make_dict_pq_set :
+make_pq_combinatorics :
     Return the list of sets characterising multilinear pq-functions used in a
     system.
 
@@ -21,7 +21,7 @@ Notes
 @author: bouvier (bouvier@ircam.fr)
          Damien Bouvier, IRCAM, Paris
 
-Last modified on 25 Apr. 2017
+Last modified on 2 May. 2017
 Developed for Python 3.6.1
 """
 
@@ -31,7 +31,7 @@ Developed for Python 3.6.1
 
 import itertools as itertbx
 import numpy as np
-from pyvi.tools.mathbox import binomial
+from ..utilities.mathbox import binomial
 
 
 #==============================================================================
@@ -171,7 +171,7 @@ def state_combinatorics(list_pq, nl_order_max, sym_bool=False):
     return pq_sets
 
 
-def make_dict_pq_set(pq_dict, nl_order_max, sym_bool=False):
+def make_pq_combinatorics(pq_dict, nl_order_max, sym_bool):
     """
     Return the list of sets characterising multilinear pq-functions used in a
     system.
@@ -188,52 +188,23 @@ def make_dict_pq_set(pq_dict, nl_order_max, sym_bool=False):
 
     Returns
     -------
-    mpq_sets : dict of lists
+    pq_comb : dict of lists
         Dict of keys n, each associated to a list of tuple (p, q, k, nb) with:
-    - n : int
-        Order of nonlinearity where the multilinear pq-function is used.
-    - p : int
-        Number of state-entry for the multilinear pq-function.
-    - q : int
-        Number of input-entry for the multilinear pq-function.
-    - k : tuple (of length p)
-        Homogenous orders for the state-entries.
-    - nb : int
-        Number of unordered sets equals to k, including k.
+        - n : int
+            Order of nonlinearity where the multilinear pq-function is used.
+        - p : int
+            Number of state-entry for the multilinear pq-function.
+        - q : int
+            Number of input-entry for the multilinear pq-function.
+        - k : tuple (of length p)
+            Homogenous orders for the state-entries.
+        - nb : int
+            Number of unordered sets equals to k, including k.
 
     """
 
-    ## Main ##
     list_pq = make_list_pq(nl_order_max)
     list_pq = elimination(pq_dict, list_pq)
-    pq_sets = state_combinatorics(list_pq, nl_order_max, sym_bool)
+    pq_comb = state_combinatorics(list_pq, nl_order_max, sym_bool)
 
-    return pq_sets
-
-
-#==============================================================================
-# Main script
-#==============================================================================
-
-if __name__ == '__main__':
-    N = 4
-    pq_dict = {(2, 0): 1,
-               (1, 1): 1}
-
-    def print_sets(sets):
-        for n, value in pq_sets.items():
-            print(n)
-            for elt in value:
-                print(' ', elt)
-
-    list_pq = make_list_pq(N)
-    print('pq-list\n-------', *list_pq, sep='\n')
-    pq_sets = state_combinatorics(list_pq, N, True)
-    print('pq-sets\n-------')
-    print_sets(pq_sets)
-
-    list_pq = elimination(pq_dict, list_pq)
-    print('pq-list (filtered)\n-----------------', *list_pq, sep='\n')
-    pq_sets = state_combinatorics(list_pq, N, True)
-    print('pq-sets (filtered)\n-----------------')
-    print_sets(pq_sets)
+    return pq_comb
