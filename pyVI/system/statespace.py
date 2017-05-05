@@ -123,7 +123,7 @@ class StateSpace:
 
         # Check dimensions and characteristics/categorization
         self._check_dim()
-        self._ckeck_categories()
+#        self._ckeck_categories()
 
     def __repr__(self):
         """Lists all attributes and their values."""
