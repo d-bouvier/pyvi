@@ -70,8 +70,8 @@ if __name__ == '__main__':
         print('Mpq                             :', system.mpq.keys())
         print('Npq                             :', system.npq.keys())
         print('_is_linear                      :', system.linear)
-        print('_is_dyn_eqn_linear_analytic     :',
-              system.dyn_eqn_linear_analytic)
+        print('_is_state_eqn_linear_analytic   :',
+              system.state_eqn_linear_analytic)
         print('_are_dynamical_nl_only_on_state :',
               system.dynamical_nl_only_on_state)
         print('_are_nl_colinear                :', system.nl_colinear)

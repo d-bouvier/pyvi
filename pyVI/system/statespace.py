@@ -264,7 +264,7 @@ class StateSpace:
     def _ckeck_categories(self):
         """Check in which categories the system belongs."""
         self._is_linear()
-        self._is_dyn_eqn_linear_analytic()
+        self._is_state_eqn_linear_analytic()
         self._are_dynamical_nl_only_on_state()
         self._are_nl_colinear()
 
@@ -274,12 +274,12 @@ class StateSpace:
         self._output_eqn_linear = len(self.npq) == 0
         self.linear = self._state_eqn_linear and self._output_eqn_linear
 
-    def _is_dyn_eqn_linear_analytic(self):
-        """Check if the system dynamical equation is linear-analytic."""
-        self.dyn_eqn_linear_analytic = True
+    def _is_state_eqn_linear_analytic(self):
+        """Check if the system input-to-state equation is linear-analytic."""
+        self.state_eqn_linear_analytic = True
         for p, q in self.mpq.keys():
             if q > 1:
-                self.dyn_eqn_linear_analytic = False
+                self.state_eqn_linear_analytic = False
                 break
 
     def _are_dynamical_nl_only_on_state(self):
