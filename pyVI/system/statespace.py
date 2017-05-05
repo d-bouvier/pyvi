@@ -183,7 +183,7 @@ class StateSpace:
         for (p, q), mpq in self.mpq.items():
             self._check_dim_nl_tensor(p, q, mpq, 'M', self.dim['state'])
         for (p, q), npq in self.npq.items():
-            self._check_dim_nl_tensor(p, q, npq, 'M', self.dim['output'])
+            self._check_dim_nl_tensor(p, q, npq, 'N', self.dim['output'])
 
         # If no error is raised
         self._is_single_input()
