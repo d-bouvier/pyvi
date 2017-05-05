@@ -53,3 +53,31 @@ if __name__ == '__main__':
             print('            _type :', test_system._type)
             print('    _single_input :', test_system._single_input)
             print('   _single_output :', test_system._single_output)
+
+
+    d_in = 1
+    d_out = 1
+    A = np.zeros((N, N))
+    B = np.zeros((N, d_in))
+    C = np.zeros((d_out, N))
+    D = np.zeros((d_out, d_in))
+    m20 = np.zeros((N, N, N))
+    m11 = np.zeros((N, N, d_in))
+    m02 = np.zeros((N, d_in, d_in))
+    n20 = np.zeros((d_out, N, N))
+
+    def f_print(system: StateSpace):
+        print('Mpq                             :', system.mpq.keys())
+        print('Npq                             :', system.mpq.keys())
+        print('_is_linear                      :', system.linear)
+        print('_is_linear_analytic             :', system.linear_analytic)
+        print('_are_dynamical_nl_only_on_state :',
+              system.dynamical_nl_only_on_state)
+        print('_are_nl_colinear                :', system.nl_colinear)
+        print()
+    f_print(StateSpace(A, B, C, D, npq_dict={(2, 0): n20}))
+    f_print(StateSpace(A, B, C, D, mpq_dict={(2, 0): m20}))
+    f_print(StateSpace(A, B, C, D, mpq_dict={(1, 1): m11}))
+    f_print(StateSpace(A, B, C, D, mpq_dict={(0, 2): m02}))
+    f_print(StateSpace(A, B, C, D, mpq_dict={(2, 0): m20, (1, 1): m11}))
+    f_print(StateSpace(A, B, C, D, mpq_dict={(2, 0): m20, (0, 2): m02}))

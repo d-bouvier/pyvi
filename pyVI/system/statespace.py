@@ -123,7 +123,7 @@ class StateSpace:
 
         # Check dimensions and characteristics/categorization
         self._check_dim()
-#        self._ckeck_categories()
+        self._ckeck_categories()
 
     def __repr__(self):
         """Lists all attributes and their values."""
@@ -271,17 +271,14 @@ class StateSpace:
         self._output_eqn_linear = len(self.npq) == 0
         self.linear = self._state_eqn_linear and self._output_eqn_linear
 
-    @abstractmethod
     def _is_linear_analytic(self):
-        raise NotImplementedError
+        self.linear_analytic = 'unknown'
 
-    @abstractmethod
     def _are_dynamical_nl_only_on_state(self):
-        raise NotImplementedError
+        self.dynamical_nl_only_on_state = 'unknown'
 
-    @abstractmethod
     def _are_nl_colinear(self):
-        raise NotImplementedError
+        self.nl_colinear = 'unknown'
 
 
 class NumericalStateSpace(StateSpace):
