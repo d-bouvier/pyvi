@@ -13,6 +13,8 @@ Developed for Python 3.6.1
 # Importations
 #==============================================================================
 
+import numpy as np
+from pyvi.system.statespace import StateSpace
 import pyvi.system.dict as systems
 
 
@@ -39,3 +41,15 @@ if __name__ == '__main__':
     assert sys_num._dim_ok == sys_symb._dim_ok, \
         "Similar Numerical and Symbolic StateSpace objects have different " + \
         "attribute '_dim_ok'"
+
+    N = 3
+    for dim_in in [1, 2]:
+        for dim_out in [1, 2]:
+            test_system = StateSpace(np.zeros((N, N)), np.zeros((N, dim_in)),
+                                     np.zeros((dim_out, N)),
+                                     np.zeros((dim_out, dim_in)))
+            print('Dimensions (I/S/O): {}, {}, {})'.format(dim_in, N, dim_out))
+            print('              dim :', test_system.dim)
+            print('            _type :', test_system._type)
+            print('    _single_input :', test_system._single_input)
+            print('   _single_output :', test_system._single_output)
