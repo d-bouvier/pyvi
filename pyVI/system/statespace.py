@@ -283,7 +283,13 @@ class StateSpace:
                 break
 
     def _are_dynamical_nl_only_on_state(self):
-        self.dynamical_nl_only_on_state = 'unknown'
+        """Check if the dynamical nonlinearities are only on the state."""
+        self.dynamical_nl_only_on_state = self.state_eqn_linear_analytic
+        if self.dynamical_nl_only_on_state:
+            for p, q in self.mpq.keys():
+                if q > 0:
+                    self.dynamical_nl_only_on_state = False
+                    break
 
     def _are_nl_colinear(self):
         self.nl_colinear = 'unknown'
