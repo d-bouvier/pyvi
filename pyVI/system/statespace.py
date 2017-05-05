@@ -238,6 +238,7 @@ class StateSpace:
                                                       self.dim['input'])
 
     def _is_single_input(self):
+        """Check if the input dimension is one."""
         self._single_input = self.dim['input'] == 1
         # Warn that problems may occur if input dimension is not 1
         if not self._single_input:
@@ -248,6 +249,7 @@ class StateSpace:
             warnings.showwarning(message, UserWarning, __file__, 248, line='')
 
     def _is_single_output(self):
+        """Check if the output dimension is one."""
         self._single_output = self.dim['output'] == 1
         # Warn that problems may occur if output dimension is not 1
         if not self._single_output:
@@ -260,6 +262,7 @@ class StateSpace:
     #=============================================#
 
     def _ckeck_categories(self):
+        """Check in which categories the system belongs."""
         self._is_linear()
         self._is_dyn_eqn_linear_analytic()
         self._are_dynamical_nl_only_on_state()
@@ -272,7 +275,7 @@ class StateSpace:
         self.linear = self._state_eqn_linear and self._output_eqn_linear
 
     def _is_dyn_eqn_linear_analytic(self):
-        """Check if the system 's dynamical equation is linear-analytic."""
+        """Check if the system dynamical equation is linear-analytic."""
         self.dyn_eqn_linear_analytic = True
         for p, q in self.mpq.keys():
             if q > 1:
