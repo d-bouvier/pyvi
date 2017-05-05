@@ -185,19 +185,20 @@ class StateSpace:
         for (p, q), npq in self.npq.items():
             self._check_dim_nl_tensor(p, q, npq, 'M', self.dim['output'])
 
-        # Warn that problems may occur if input or output dimension is not 1
-        if (self.dim['input'] != 1) or (self.dim['output'] != 1):
-            message = '\nInput and output dimension are not both equal to 1' + \
-                      ' (it is respectively {} '.format(self.dim['input']) + \
-                      'and {}).\n'.format(self.dim['output']) + \
-                      'Kernels computation, order separation and system ' + \
-                      'identification will not work.\n'
-            warnings.showwarning(message, UserWarning, __file__, 190, line='')
-
         # If no error is raised
         self._is_single_input()
         self._is_single_output()
         self._dim_ok = True
+
+        # Checking system type
+        if self._single_input and self._single_output:
+            self._type = 'SISO'
+        elif self._single_input:
+            self._type = 'SIMO'
+        elif self._single_output:
+            self._type = 'MISO'
+        else:
+            self._type = 'MIMO'
 
     def _check_dim_matrices(self):
         """Verify shape of the matrices used in the linear part."""
@@ -236,13 +237,25 @@ class StateSpace:
                    '{} (got {}, expected {}).'.format(1+p+ind, shape[1+p+ind],
                                                       self.dim['input'])
 
-    @abstractmethod
     def _is_single_input(self):
-        raise NotImplementedError
+        self._single_input = self.single_dim['input'] == 1
+        # Warn that problems may occur if input dimension is not 1
+        if not self._single_input:
+            message = '\nInput dimension is not equal to 1' + \
+                      ' (it is {}).\n'.format(self.dim['input']) + \
+                      'Simulation, kernel computation, order separation and' + \
+                      ' system  identification may not work as intended.\n'
+            warnings.showwarning(message, UserWarning, __file__, 249, line='')
 
-    @abstractmethod
     def _is_single_output(self):
-        raise NotImplementedError
+        self._single_output = self.single_dim['output'] == 1
+        # Warn that problems may occur if output dimension is not 1
+        if not self._single_output:
+            message = '\nOutput dimension is not equal to 1' + \
+                      ' (it is {}).\n'.format(self.dim['output']) + \
+                      'Simulation, kernel computation, order separation and' + \
+                      ' system  identification may not work as intended.\n'
+            warnings.showwarning(message, UserWarning, __file__, 260, line='')
 
     #=============================================#
 
