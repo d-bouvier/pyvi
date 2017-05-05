@@ -238,24 +238,24 @@ class StateSpace:
                                                       self.dim['input'])
 
     def _is_single_input(self):
-        self._single_input = self.single_dim['input'] == 1
+        self._single_input = self.dim['input'] == 1
         # Warn that problems may occur if input dimension is not 1
         if not self._single_input:
             message = '\nInput dimension is not equal to 1' + \
                       ' (it is {}).\n'.format(self.dim['input']) + \
                       'Simulation, kernel computation, order separation and' + \
                       ' system  identification may not work as intended.\n'
-            warnings.showwarning(message, UserWarning, __file__, 249, line='')
+            warnings.showwarning(message, UserWarning, __file__, 248, line='')
 
     def _is_single_output(self):
-        self._single_output = self.single_dim['output'] == 1
+        self._single_output = self.dim['output'] == 1
         # Warn that problems may occur if output dimension is not 1
         if not self._single_output:
             message = '\nOutput dimension is not equal to 1' + \
                       ' (it is {}).\n'.format(self.dim['output']) + \
                       'Simulation, kernel computation, order separation and' + \
                       ' system  identification may not work as intended.\n'
-            warnings.showwarning(message, UserWarning, __file__, 260, line='')
+            warnings.showwarning(message, UserWarning, __file__, 258, line='')
 
     #=============================================#
 
