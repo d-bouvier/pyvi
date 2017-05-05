@@ -183,7 +183,7 @@ class StateSpace:
         for (p, q), mpq in self.mpq.items():
             self._check_dim_nl_tensor(p, q, mpq, 'M', self.dim['state'])
         for (p, q), npq in self.npq.items():
-            self._check_dim_nl_tensor(p, q, npq, 'M', self.dim['output'])
+            self._check_dim_nl_tensor(p, q, npq, 'N', self.dim['output'])
 
         # Warn that problems may occur if input or output dimension is not 1
         if (self.dim['input'] != 1) or (self.dim['output'] != 1):
