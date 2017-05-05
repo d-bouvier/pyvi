@@ -121,9 +121,9 @@ class StateSpace:
         self.npq = npq_dict
         self.pq_symmetry = pq_symmetry
 
-        # Check dimension and linearity
+        # Check dimensions and characteristics/categorization
         self._check_dim()
-        self._is_linear()
+        self._ckeck_categories()
 
     def __repr__(self):
         """Lists all attributes and their values."""
@@ -195,6 +195,8 @@ class StateSpace:
             warnings.showwarning(message, UserWarning, __file__, 190, line='')
 
         # If no error is raised
+        self._is_single_input()
+        self._is_single_output()
         self._dim_ok = True
 
     def _check_dim_matrices(self):
@@ -234,11 +236,39 @@ class StateSpace:
                    '{} (got {}, expected {}).'.format(1+p+ind, shape[1+p+ind],
                                                       self.dim['input'])
 
+    @abstractmethod
+    def _is_single_input(self):
+        raise NotImplementedError
+
+    @abstractmethod
+    def _is_single_output(self):
+        raise NotImplementedError
+
+    #=============================================#
+
+    def _ckeck_categories(self):
+        self._is_linear()
+        self._is_linear_analytic()
+        self._are_dynamical_nl_only_on_state()
+        self._are_nl_colinear()
+
     def _is_linear(self):
         """Check if the system is linear."""
         self._state_eqn_linear = len(self.mpq) == 0
         self._output_eqn_linear = len(self.npq) == 0
         self.linear = self._state_eqn_linear and self._output_eqn_linear
+
+    @abstractmethod
+    def _is_linear_analytic(self):
+        raise NotImplementedError
+
+    @abstractmethod
+    def _are_dynamical_nl_only_on_state(self):
+        raise NotImplementedError
+
+    @abstractmethod
+    def _are_nl_colinear(self):
+        raise NotImplementedError
 
 
 class NumericalStateSpace(StateSpace):
