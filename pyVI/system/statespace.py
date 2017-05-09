@@ -29,6 +29,8 @@ Developed for Python 3.6.1
 #==============================================================================
 
 from sympy import pretty
+from numpy import tensordot, allclose
+from scipy.linalg import norm
 from abc import abstractmethod
 import warnings as warnings
 from ..utilities.misc import Style
@@ -121,9 +123,9 @@ class StateSpace:
         self.npq = npq_dict
         self.pq_symmetry = pq_symmetry
 
-        # Check dimension and linearity
+        # Check dimensions and characteristics/categorization
         self._check_dim()
-        self._is_linear()
+        self._ckeck_categories()
 
     def __repr__(self):
         """Lists all attributes and their values."""
@@ -185,17 +187,20 @@ class StateSpace:
         for (p, q), npq in self.npq.items():
             self._check_dim_nl_tensor(p, q, npq, 'N', self.dim['output'])
 
-        # Warn that problems may occur if input or output dimension is not 1
-        if (self.dim['input'] != 1) or (self.dim['output'] != 1):
-            message = '\nInput and output dimension are not both equal to 1' + \
-                      ' (it is respectively {} '.format(self.dim['input']) + \
-                      'and {}).\n'.format(self.dim['output']) + \
-                      'Kernels computation, order separation and system ' + \
-                      'identification will not work.\n'
-            warnings.showwarning(message, UserWarning, __file__, 190, line='')
-
         # If no error is raised
+        self._is_single_input()
+        self._is_single_output()
         self._dim_ok = True
+
+        # Checking system type
+        if self._single_input and self._single_output:
+            self._type = 'SISO'
+        elif self._single_input:
+            self._type = 'SIMO'
+        elif self._single_output:
+            self._type = 'MISO'
+        else:
+            self._type = 'MIMO'
 
     def _check_dim_matrices(self):
         """Verify shape of the matrices used in the linear part."""
@@ -234,11 +239,58 @@ class StateSpace:
                    '{} (got {}, expected {}).'.format(1+p+ind, shape[1+p+ind],
                                                       self.dim['input'])
 
+    def _is_single_input(self):
+        """Check if the input dimension is one."""
+        self._single_input = self.dim['input'] == 1
+        # Warn that problems may occur if input dimension is not 1
+        if not self._single_input:
+            message = '\nInput dimension is not equal to 1' + \
+                      ' (it is {}).\n'.format(self.dim['input']) + \
+                      'Simulation, kernel computation, order separation and' + \
+                      ' system  identification may not work as intended.\n'
+            warnings.showwarning(message, UserWarning, __file__, 248, line='')
+
+    def _is_single_output(self):
+        """Check if the output dimension is one."""
+        self._single_output = self.dim['output'] == 1
+        # Warn that problems may occur if output dimension is not 1
+        if not self._single_output:
+            message = '\nOutput dimension is not equal to 1' + \
+                      ' (it is {}).\n'.format(self.dim['output']) + \
+                      'Simulation, kernel computation, order separation and' + \
+                      ' system  identification may not work as intended.\n'
+            warnings.showwarning(message, UserWarning, __file__, 258, line='')
+
+    #=============================================#
+
+    def _ckeck_categories(self):
+        """Check in which categories the system belongs."""
+        self._is_linear()
+        self._is_state_eqn_linear_analytic()
+        self._are_dynamical_nl_only_on_state()
+
     def _is_linear(self):
         """Check if the system is linear."""
         self._state_eqn_linear = len(self.mpq) == 0
         self._output_eqn_linear = len(self.npq) == 0
         self.linear = self._state_eqn_linear and self._output_eqn_linear
+
+    def _is_state_eqn_linear_analytic(self):
+        """Check if the system input-to-state equation is linear-analytic."""
+        self.state_eqn_linear_analytic = True
+        for p, q in self.mpq.keys():
+            if q > 1:
+                self.state_eqn_linear_analytic = False
+                break
+
+    def _are_dynamical_nl_only_on_state(self):
+        """Check if the dynamical nonlinearities are only on the state."""
+        self.dynamical_nl_only_on_state = self.state_eqn_linear_analytic
+        if self.dynamical_nl_only_on_state:
+            for p, q in self.mpq.keys():
+                if q > 0:
+                    self.dynamical_nl_only_on_state = False
+                    break
 
 
 class NumericalStateSpace(StateSpace):
@@ -268,6 +320,26 @@ class NumericalStateSpace(StateSpace):
             return volterra_kernels, transfer_kernels
         elif which == 'freq':
             return self._compute_freq_kernels(T)
+
+    #=============================================#
+
+    def _ckeck_categories(self):
+        """Check in which categories the system belongs."""
+        self._is_linear()
+        self._is_state_eqn_linear_analytic()
+        self._are_dynamical_nl_only_on_state()
+        self._are_nl_colinear()
+
+    def _are_nl_colinear(self):
+        """Check colinearity of dynamical nonlinearities and input-to-state."""
+        self.nl_colinear = True
+        norm_B = norm(self.B_m, ord=2)
+        for (p, q), mpq in self.mpq.items():
+            temp = tensordot(self.B_m.transpose(), mpq, 1).squeeze()
+            norm_mpq = norm(mpq, ord=2, axis=0).squeeze()
+            if not allclose(temp, norm_B*norm_mpq):
+                self.nl_colinear = False
+                break
 
     #=============================================#
 
