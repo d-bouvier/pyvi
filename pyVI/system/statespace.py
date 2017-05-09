@@ -29,6 +29,8 @@ Developed for Python 3.6.1
 #==============================================================================
 
 from sympy import pretty
+from numpy import tensordot, allclose
+from scipy.linalg import norm
 from abc import abstractmethod
 import warnings as warnings
 from ..utilities.misc import Style
@@ -266,7 +268,6 @@ class StateSpace:
         self._is_linear()
         self._is_state_eqn_linear_analytic()
         self._are_dynamical_nl_only_on_state()
-        self._are_nl_colinear()
 
     def _is_linear(self):
         """Check if the system is linear."""
@@ -290,9 +291,6 @@ class StateSpace:
                 if q > 0:
                     self.dynamical_nl_only_on_state = False
                     break
-
-    def _are_nl_colinear(self):
-        self.nl_colinear = 'unknown'
 
 
 class NumericalStateSpace(StateSpace):
@@ -322,6 +320,26 @@ class NumericalStateSpace(StateSpace):
             return volterra_kernels, transfer_kernels
         elif which == 'freq':
             return self._compute_freq_kernels(T)
+
+    #=============================================#
+
+    def _ckeck_categories(self):
+        """Check in which categories the system belongs."""
+        self._is_linear()
+        self._is_state_eqn_linear_analytic()
+        self._are_dynamical_nl_only_on_state()
+        self._are_nl_colinear()
+
+    def _are_nl_colinear(self):
+        """Check colinearity of dynamical nonlinearities and input-to-state."""
+        self.nl_colinear = True
+        norm_B = norm(self.B_m, ord=2)
+        for (p, q), mpq in self.mpq.items():
+            temp = tensordot(self.B_m.transpose(), mpq, 1).squeeze()
+            norm_mpq = norm(mpq, ord=2, axis=0).squeeze()
+            if not allclose(temp, norm_B*norm_mpq):
+                self.nl_colinear = False
+                break
 
     #=============================================#
 
