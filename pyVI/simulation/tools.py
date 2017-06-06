@@ -43,6 +43,7 @@ class StateSpaceSimulationParameters:
         self.nl_order_max = options.get('nl_order_max', 3)
         self.holder_order = options.get('holder_order', 1)
         self.resampling = options.get('resampling', False)
+        self.out_opt = options.get('out_opt', 'output')
 
         # Filter matrix
         sampling_time = 1/self.fs

@@ -305,7 +305,8 @@ class NumericalStateSpace(StateSpace):
         return simulation_fct(input_signal, self.dim, self._simu.nl_order_max,
                self._simu.filter_mat, self.B_m, self.C_m, self.D_m,
                self.mpq, self.npq, self._simu.mpq_combinatoric,
-               self._simu.npq_combinatoric, self._simu.holder_bias_mat)
+               self._simu.npq_combinatoric, self._simu.holder_bias_mat,
+               self._simu.out_opt)
 
     def compute_kernels(self, T, which='both', **options):
         #TODO docstring
