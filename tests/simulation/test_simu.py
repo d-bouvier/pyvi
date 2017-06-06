@@ -45,6 +45,17 @@ if __name__ == '__main__':
     out4 = system_test.simulation(sig_test, holder_order=1, resampling=True)
     assert out1.shape == sig_test.shape, 'Shape error in simulation output' + \
             ' with holder of order 1 and with resampling.'
+    out5 = system_test.simulation(sig_test, nl_order_max=3,
+                                  out_opt='output_by_order')
+    assert out5.shape == (3, ) + sig_test.shape, 'Shape error in simulation' + \
+            ' output when output_by_order is wanted.'
+    out6 = system_test.simulation(sig_test, nl_order_max=3, out_opt='state')
+    assert out6.shape == (system_test.dim['state'],) + sig_test.shape, \
+            'Shape error in simulation output when state is wanted.'
+    out7 = system_test.simulation(sig_test, nl_order_max=3,
+                                  out_opt='state_by_order')
+    assert out7.shape == (3, system_test.dim['state']) + sig_test.shape, \
+            'Shape error in simulation output when state_by_order is wanted.'
 
     ## Loudspeaker simulation ##
     # Input signal
