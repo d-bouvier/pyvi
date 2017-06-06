@@ -30,7 +30,7 @@ import numpy as np
 def simulation(input_sig, dimensions: dict, nl_order_max: int,
                filter_mat, B_m, C_m, D_m, mpq: dict, npq: dict,
                mpq_combinatoric: dict, npq_combinatoric: dict,
-               holder_bias_mat: dict):
+               holder_bias_mat: dict, out_opt: str):
     """
     Compute the simulation of a nonlinear system for a given input.
 
@@ -164,4 +164,13 @@ def simulation(input_sig, dimensions: dict, nl_order_max: int,
     if dimensions['output'] == 1:
         output_by_order = output_by_order[:, 0, :]
 
-    return output_by_order.sum(0)
+    if out_opt == 'output':
+        return output_by_order.sum(0)
+    if out_opt == 'output_by_order':
+        return output_by_order
+    if out_opt == 'state':
+        return state_by_order.sum(0)
+    if out_opt == 'state_by_order':
+        return state_by_order
+    if out_opt == 'all':
+        return output_by_order, state_by_order
