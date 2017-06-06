@@ -37,13 +37,13 @@ if __name__ == '__main__':
     assert out1.shape == sig_test.shape, 'Shape error in simulation output' + \
             ' with holder of order 0 and without resampling.'
     out2 = system_test.simulation(sig_test, holder_order=1, resampling=False)
-    assert out1.shape == sig_test.shape, 'Shape error in simulation output' + \
+    assert out2.shape == sig_test.shape, 'Shape error in simulation output' + \
             ' with holder of order 1 and without resampling.'
     out3 = system_test.simulation(sig_test, holder_order=0, resampling=True)
-    assert out1.shape == sig_test.shape, 'Shape error in simulation output' + \
+    assert out3.shape == sig_test.shape, 'Shape error in simulation output' + \
             ' with holder of order 0 and with resampling.'
     out4 = system_test.simulation(sig_test, holder_order=1, resampling=True)
-    assert out1.shape == sig_test.shape, 'Shape error in simulation output' + \
+    assert out4.shape == sig_test.shape, 'Shape error in simulation output' + \
             ' with holder of order 1 and with resampling.'
     out5 = system_test.simulation(sig_test, nl_order_max=3,
                                   out_opt='output_by_order')
