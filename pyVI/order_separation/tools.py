@@ -24,9 +24,9 @@ from ..utilities.mathbox import rms, safe_db
 def estimation_measure(signals_ref, signals_est, db=True):
     """
     Compute the relative error between orders and their estimates.
-
-
     """
+    #TODO docstring
+
     error_sig = np.abs(signals_ref - signals_est)
     error_measure = []
 
