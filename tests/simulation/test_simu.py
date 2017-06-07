@@ -109,3 +109,44 @@ if __name__ == '__main__':
     diff = out1 - out2
     diff.shape = diff.shape +(1,)
     plot_sig_coll(diff, time_vector, name='Difference')
+
+
+    ########################
+    ## Kernel computation ##
+    ########################
+
+    # Parameters
+    options = {'fs': 2000,
+               'nl_order_max': 2,
+               'holder_order': 1}
+    T = 0.03
+
+    # Test system
+    sys_simu = SimuObj(test(mode='numeric'), **options)
+    t_kernels = sys_simu.compute_kernels(T, which='time')
+    t_kernels, f_kernels = sys_simu.compute_kernels(T, which='both')
+    f_kernels = sys_simu.compute_kernels(T, which='freq')
+
+    # Second-order system with nonlinear damping
+    damping_sys = nl_damping(gain=1, f0=100, damping=0.2, nl_coeff=[1e-1, 3e-5])
+    damping_simu = SimuObj(damping_sys, **options)
+    time_kernels, freq_kernels_from_time = \
+                                damping_simu.compute_kernels(T, which='both')
+    freq_kernels = damping_simu.compute_kernels(T, which='freq')
+
+    N = len(time_kernels[1])
+    time_vec = np.linspace(0, (N-1)/options['fs'], num=N)
+    freq_vec = np.fft.fftshift(np.fft.fftfreq(N, d=1/options['fs']))
+
+    plot_kernel_time(time_vec, time_kernels[1])
+    plot_kernel_time(time_vec, time_kernels[2], style='wireframe')
+    plot_kernel_freq(freq_vec, freq_kernels_from_time[1],
+                     title='Transfer kernel of order 1 ' + \
+                           '(computed from Volterra kernel).')
+    plot_kernel_freq(freq_vec, freq_kernels_from_time[2], style='wireframe',
+                     title='Transfer kernel of order 2 ' + \
+                           '(computed from Volterra kernel).')
+    plot_kernel_freq(freq_vec, freq_kernels[1],
+                     title='Transfer kernel of order 1')
+    plot_kernel_freq(freq_vec, freq_kernels[2], style='wireframe',
+                     title='Transfer kernel of order 2')
