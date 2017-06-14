@@ -260,17 +260,47 @@ class PS(SeparationMethod):
 
 class PAS(PS, AS):
     """
+    Class for Phase-based Separation method.
+
+    Parameters
+    ----------
+    N : int, optional (default=3)
+        Number of orders to separate (truncation order of the Volterra series).
+    gain : float, optional (default=1.51)
+        Gain factor in amplitude between  the input test signals.
+
+    Attributes
+    ----------
+    N : int
+    K : int
+    factors : (K, 1) array_like
+    gain : float
+    negative_gain : boolean (class Attribute, always False)
+    rho : float (class Attribute, always 1)
+    w : float
+    nb_amp : int
+    amp_vec : (nb_amp, 1) array_like
+    nb_phase : int
+    nb_term : int
+        Total number of combinatorial terms.
+
+    Methods
+    -------
+    gen_inputs(signal)
+        Creates and returns the collection of input test signals
+    process_output(output_coll, , raw_mode=False)
+        Process output signals and returns the separated order
+
+    See also
+    --------
+    PS, AS: Parents class
+    SeparationMethod
     """
-    #TODO docstring
 
     negative_gain = False
     rho = 1
 
     def __init__(self, N=3, gain=1.51):
-        """
-        """
-        #TODO docstring
-
         self.gain = gain
         self.nb_amp = (N + 1) // 2
         self.amp_vec = self._gen_amp_factors(self.nb_amp)
@@ -285,15 +315,45 @@ class PAS(PS, AS):
 
     def gen_inputs(self, signal):
         """
+        Creates and returns the collection of input test signals.
+
+        Parameters
+        ----------
+        signal : array_like
+            Input signal.
+
+        Returns
+        -------
+        input_coll : (K, ...)
+            Collection of the K input test signals.
+
+        See also
+        --------
+        SeparationMethod.gen_inputs
         """
-        #TODO docstring
 
         return 2 * np.real(SeparationMethod.gen_inputs(self, signal))
 
     def process_outputs(self, output_coll, raw_mode=False):
         """
+        Process outputs signals and returns the separated orders.
+
+        Parameters
+        ----------
+        output_coll : (K, ...) array_like
+            Collection of the K output signals.
+        raw_mode : (boolean,  optional (default=False)
+            Collection of the K output signals.
+
+        Returns
+        -------
+        if ``raw_mode`` == False:
+            output_by_order : (N, ...) array_like
+                Estimation of the N first nonlinear homogeneous orders.
+        if ``raw_mode`` == True:
+            combinatorial_terms : dict((int, int): array_like)
+                Estimation of the N first nonlinear homogeneous orders.
         """
-        #TODO docstring
 
         sig_shape = output_coll.shape[1:]
 
