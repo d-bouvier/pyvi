@@ -101,13 +101,41 @@ class SeparationMethod:
 
 class AS(SeparationMethod):
     """
+    Class for Amplitude-based Separation method.
+
+    Parameters
+    ----------
+    N : int, optional (default=3)
+        Number of orders to separate (truncation order of the Volterra series).
+    gain : float, optional (default=1.51)
+        Gain factor in amplitude between  the input test signals.
+    negative_gain : boolean, optional (default=True)
+        Defines if amplitudes with negative values can be used.
+    K : int, optional (default=None)
+        Number of tests signals needed for the method; must be greater
+        than N; if None, will be set equal to N.
+
+    Attributes
+    ----------
+    N : int
+    K : int
+    factors : (K, 1) array_like
+    gain : float
+    negative_gain : boolean
+
+    Methods
+    -------
+    gen_inputs(signal)
+        Creates and returns the collection of input test signals
+    process_output(output_coll)
+        Process output signals and returns the separated order
+
+    See also
+    --------
+    SeparationMethod: Parent class
     """
-    #TODO docstring
 
     def __init__(self, N=3, gain=1.51, negative_gain=True, K=None):
-        """
-        """
-        #TODO docstring
 
         nb_test = N if K is None else K
         self.gain = gain
@@ -117,8 +145,8 @@ class AS(SeparationMethod):
 
     def _gen_amp_factors(self, nb_test):
         """
+        Generates the vector of amplitude factors.
         """
-        #TODO docstring
 
         tmp_vec = np.arange(nb_test)
         return (-1)**(tmp_vec*self.negative_gain) * \
@@ -126,8 +154,18 @@ class AS(SeparationMethod):
 
     def process_outputs(self, output_coll):
         """
+        Process outputs signals and returns the separated orders.
+
+        Parameters
+        ----------
+        output_coll : (K, ...) array_like
+            Collection of the K output signals.
+
+        Returns
+        -------
+        output_by_order : (N, ...) array_like
+            Estimation of the N first nonlinear homogeneous orders.
         """
-        #TODO docstring
 
         mixing_mat = np.vander(self.factors, N=self.N+1, increasing=True)[:,1::]
         return self._inverse_vandermonde_mat(output_coll, mixing_mat)
@@ -135,11 +173,10 @@ class AS(SeparationMethod):
     @staticmethod
     def _inverse_vandermonde_mat(output_coll, mixing_mat):
         """
+        Resolves the vandermonde system via inverse or pseudo-inverse.
         """
-        #TODO docstring
 
         is_square = mixing_mat.shape[0] == mixing_mat.shape[1]
-
         if is_square: # Square matrix
             return np.dot(np.linalg.inv(mixing_mat), output_coll)
         else: # Non-square matrix (pseudo-inverse)
