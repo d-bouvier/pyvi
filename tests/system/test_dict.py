@@ -26,10 +26,10 @@ if __name__ == '__main__':
     """
 
 
-    sys_num = systems.test(mode='numeric')
+    sys_num = systems.create_test(mode='numeric')
     print(sys_num)
-    sys_symb = systems.test(mode='symbolic')
+    sys_symb = systems.create_test(mode='symbolic')
     print(sys_symb)
 
-    print(systems.loudspeaker_sica())
-    print(systems.nl_damping())
+    print(systems.create_loudspeaker_sica())
+    print(systems.create_nl_damping())
