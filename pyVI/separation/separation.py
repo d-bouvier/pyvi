@@ -272,13 +272,13 @@ class PAS(PS, AS):
         #TODO docstring
 
         self.gain = gain
-        self.K_amp = (N + 1) // 2
-        self.amp_vec = AS._gen_amp_factors(self, self.K_amp)
+        self.nb_amp = (N + 1) // 2
+        self.amp_vec = self._gen_amp_factors(self.nb_amp)
 
-        self.K_phase = 2*N + 1
-        phase_vec = PS._gen_phase_factors(self, self.K_phase)
+        self.nb_phase = 2*N + 1
+        phase_vec = self._gen_phase_factors(self.nb_phase)
 
-        nb_test = self.K_phase * self.K_amp
+        nb_test = self.nb_phase * self.nb_amp
         self.nb_term = (N * (N + 3)) // 2
         factors = np.tensordot(self.amp_vec, phase_vec, axes=0).flatten()
         SeparationMethod.__init__(self, N, nb_test, factors)
@@ -297,43 +297,44 @@ class PAS(PS, AS):
 
         sig_shape = output_coll.shape[1:]
 
-        out_per_phase = np.zeros((self.K_amp, self.K_phase) + sig_shape,
+        out_per_phase = np.zeros((self.nb_amp, self.nb_phase) + sig_shape,
                                  dtype='complex128')
         if raw_mode:
             combinatorial_terms = dict()
         else:
-            out_by_order = np.zeros((self.N,) + sig_shape, dtype='complex128')
+            output_by_order = np.zeros((self.N,) + sig_shape,
+                                       dtype='complex128')
 
         mixing_mat = np.vander(self.amp_vec, N=self.N+1, increasing=True)[:,1::]
 
         # Inverse DFT for each set with same amplitude
-        for idx in range(self.K_amp):
-            start = idx * self.K_phase
-            end = start + self.K_phase
+        for idx in range(self.nb_amp):
+            start = idx * self.nb_phase
+            end = start + self.nb_phase
             out_per_phase[idx] = PS._inverse_fft(output_coll[start:end],
-                                                 self.K_phase)
+                                                 self.nb_phase)
 
         # Computation of indexes and necessary vector
         tmp = np.arange(1, self.N+1)
         first_nl_order = np.concatenate((tmp[1:2], tmp, tmp[::-1]))
 
         # Inverse Vandermonde matrix for each set with same phase
-        for phase_idx in range(self.K_phase):
+        for phase_idx in range(self.nb_phase):
             col_idx = np.arange(first_nl_order[phase_idx], self.N+1, 2) - 1
             tmp = AS._inverse_vandermonde_mat(out_per_phase[:, phase_idx],
                                               mixing_mat[:, col_idx])
             if raw_mode:
                 for ind in range(tmp.shape[0]):
                     n = first_nl_order[phase_idx] + 2*ind
-                    q = ((n - phase_idx) % self.K_phase) // 2
+                    q = ((n - phase_idx) % self.nb_phase) // 2
                     combinatorial_terms[(n, q)] = tmp[ind] / binomial(n, q)
             else:
                 for ind in range(tmp.shape[0]):
                     n = first_nl_order[phase_idx] + 2*ind
-                    out_by_order[n-1] += tmp[ind]
+                    output_by_order[n-1] += tmp[ind]
 
         # Function output
         if raw_mode:
             return combinatorial_terms
         else:
-            return np.real_if_close(out_by_order)
+            return np.real_if_close(output_by_order)
