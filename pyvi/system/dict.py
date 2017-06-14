@@ -4,13 +4,13 @@ Module that gives functions creating physical or theoretical systems.
 
 Functions for system parameters
 -------------------------------
-loudspeaker_sica :
+create_loudspeaker_sica :
     Returns NumericalStateSpace object corresponding to the SICA Z000900
     loudspeaker.
-nl_damping :
+create_nl_damping :
     Returns a NumericalStateSpace object corresponding to a second_order system
     with nonlinear stiffness.
-test :
+create_test :
     Returns either a NumricalStateSpace or SymbolicStateSpace object of a
     theoretical system for tests.
 
@@ -37,7 +37,7 @@ from sympy.tensor.array import MutableDenseNDimArray
 # System parameters
 #==============================================================================
 
-def loudspeaker_sica(version='tristan', output='pos'):
+def create_loudspeaker_sica(version='tristan', output='pos'):
     """
     Function that create and returns the StateSpace object corresponding to the
     SICA Z000900 loudspeaker
@@ -101,7 +101,7 @@ def loudspeaker_sica(version='tristan', output='pos'):
                                pq_symmetry=True)
 
 
-def nl_damping(gain=1, f0=100, damping=0.2, nl_coeff=[0, 1e-6]):
+def create_nl_damping(gain=1, f0=100, damping=0.2, nl_coeff=[0, 1e-6]):
     """
     Function that create and returns the StateSpace object corresponding to a
     second order system with nonlinear stiffness.
@@ -147,7 +147,7 @@ def nl_damping(gain=1, f0=100, damping=0.2, nl_coeff=[0, 1e-6]):
                                pq_symmetry=True,)
 
 
-def test(mode='numeric'):
+def create_test(mode='numeric'):
     """
     Function that create and returns the StateSpace object corresponding to a
     simple system for testing and debugging the simulation.
