@@ -2,6 +2,22 @@
 """
 Toolbox for nonlinear order separation.
 
+This package creates classes for nonlinear homogeneous order separation of
+Volterra series.
+
+Class
+-----
+SeparationMethod :
+    Base class for order separation methods.
+AS :
+    Class for Amplitude-based Separation method.
+PS :
+    Class for Phase-based Separation method.
+PAS :
+    Class for Phase-and-Amplitude-based Separation method.
+
+Notes
+-----
 @author: bouvier (bouvier@ircam.fr)
          Damien Bouvier, IRCAM, Paris
 
@@ -15,40 +31,71 @@ Developed for Python 3.6.1
 
 import numpy as np
 from scipy.fftpack import ifft
-from ..system.statespace import NumericalStateSpace
 from ..utilities.mathbox import binomial
-#TODO add condition number
+
 
 #==============================================================================
 # Class
 #==============================================================================
 
+#TODO add condition number
+
 class SeparationMethod:
     """
+    Base class for order separation methods.
+
+    Parameters
+    ----------
+    N : int
+        Number of orders to separate (truncation order of the Volterra series)
+    K : int
+        Number of tests signals needed for the method
+    factors : (K, 1) array_like
+        Factors applied to the base signal in order to create the test signals
+
+    Attributes
+    ----------
+    N, K, factors
+
+    Methods
+    -------
+    gen_inputs(signal)
+        Creates and returns the collection of input test signals
+    process_output(output_coll)
+        Process output signals and returns the separated order
     """
-    #TODO docstring
 
     def __init__(self, N, K, factors):
-        """
-        """
-        #TODO docstring
-
         self.N = N
         self.K = K
-#        self.dtype = dtype
         self.factors = factors
 
     def gen_inputs(self, signal):
         """
+        Creates and returns the collection of input test signals.
+
+        Parameters
+        ----------
+        signal : array_like
+            Input signal.
+
+        Returns
+        -------
+        input_coll : (K, ...)
+            Collection of the K input test signals.
         """
-        #TODO docstring
 
         return np.tensordot(self.factors, signal, axes=0)
 
     def process_outputs(self, output_coll):
         """
+        Process outputs signals and returns the separated order.
+
+        Parameters
+        ----------
+        output_coll : (K, ...) array_like
+            Collection of the K output signals.
         """
-        #TODO docstring
         pass
 
 
