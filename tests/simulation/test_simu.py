@@ -17,7 +17,8 @@ Developed for Python 3.6.1
 
 import numpy as np
 import time
-from pyvi.system.dict import test, loudspeaker_sica, nl_damping
+from pyvi.system.dict import (create_test, create_loudspeaker_sica,
+                              create_nl_damping)
 from pyvi.simulation.simu import SimulationObject as SimuObj
 from pyvi.utilities.plotbox import (plot_sig_io, plot_sig_coll,
                                     plot_kernel_time, plot_kernel_freq)
@@ -37,7 +38,7 @@ if __name__ == '__main__':
     ########################################
 
     sig = np.ones((10000,))
-    system = test(mode='numeric')
+    system = create_test(mode='numeric')
 
     out1 = SimuObj(system, holder_order=0, resampling=False).simulation(sig)
     out2 = SimuObj(system, holder_order=1, resampling=False).simulation(sig)
@@ -79,7 +80,7 @@ if __name__ == '__main__':
     f0_vector = np.linspace(f1, f2, num=len(time_vector))
     signal = amp * np.sin(2 * np.pi * f0_vector * time_vector)
 
-    loudspeaker = loudspeaker_sica(output='current')
+    loudspeaker = create_loudspeaker_sica(output='current')
     options ={'fs': fs,
               'nl_order_max': 3,
               'holder_order': 1,
@@ -122,13 +123,14 @@ if __name__ == '__main__':
     T = 0.03
 
     # Test system
-    sys_simu = SimuObj(test(mode='numeric'), **options)
+    sys_simu = SimuObj(create_test(mode='numeric'), **options)
     t_kernels = sys_simu.compute_kernels(T, which='time')
     t_kernels, f_kernels = sys_simu.compute_kernels(T, which='both')
     f_kernels = sys_simu.compute_kernels(T, which='freq')
 
     # Second-order system with nonlinear damping
-    damping_sys = nl_damping(gain=1, f0=100, damping=0.2, nl_coeff=[1e-1, 3e-5])
+    damping_sys = create_nl_damping(gain=1, f0=100, damping=0.2,
+                                    nl_coeff=[1e-1, 3e-5])
     damping_simu = SimuObj(damping_sys, **options)
     time_kernels, freq_kernels_from_time = \
                                 damping_simu.compute_kernels(T, which='both')

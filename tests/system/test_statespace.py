@@ -27,8 +27,8 @@ if __name__ == '__main__':
     Main script for testing.
     """
 
-    sys_num = systems.test(mode='numeric')
-    sys_symb = systems.test(mode='symbolic')
+    sys_num = systems.create_test(mode='numeric')
+    sys_symb = systems.create_test(mode='symbolic')
     assert sys_num._type == sys_symb._type, \
         "Similar Numerical and Symbolic StateSpace objects have different " + \
         "attribute '_type'"
