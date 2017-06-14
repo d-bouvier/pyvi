@@ -16,7 +16,7 @@ Developed for Python 3.6.1
 #==============================================================================
 
 import numpy as np
-from pyvi.system.dict import nl_damping
+from pyvi.system.dict import create_nl_damping
 from pyvi.simulation.simu import SimulationObject
 import pyvi.separation.separation as sep
 import matplotlib.pyplot as plt
@@ -42,7 +42,7 @@ if __name__ == '__main__':
     input_real = np.real(input_cplx)
 
     nl_order_max = 3
-    system = SimulationObject(nl_damping(nl_coeff=[1e-1, 3e-5]), fs=fs,
+    system = SimulationObject(create_nl_damping(nl_coeff=[1e-1, 3e-5]), fs=fs,
                               nl_order_max=nl_order_max)
 
     PS = sep.PS(N=nl_order_max)

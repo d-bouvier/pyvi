@@ -14,7 +14,7 @@ Developed for Python 3.6.1
 #==============================================================================
 
 import numpy as np
-from pyvi.order_separation.tools import estimation_measure
+from pyvi.separation.tools import error_measure
 
 
 #==============================================================================
@@ -34,8 +34,8 @@ if __name__ == '__main__':
     for sigma in [0, 0.001, 0.01, 0.1, 1]:
         sig_est = sig + np.random.normal(scale=sigma, size=size)
 
-        error = estimation_measure(sig, sig_est, db=False)
-        error_db = estimation_measure(sig, sig_est)
+        error = error_measure(sig, sig_est, db=False)
+        error_db = error_measure(sig, sig_est)
         print('Added noise factor:', sigma)
         print('Relative error     :', error)
         print('Relative error (dB):', error_db)
