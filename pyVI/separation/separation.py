@@ -185,28 +185,62 @@ class AS(SeparationMethod):
 
 class PS(SeparationMethod):
     """
+    Class for Phase-based Separation method.
+
+    Parameters
+    ----------
+    N : int, optional (default=3)
+        Number of orders to separate (truncation order of the Volterra series).
+    rho : float, optional (default=1.)
+        Rejection factor value for dealing with the order aliasing effect.
+
+    Attributes
+    ----------
+    N : int
+    K : int
+    factors : (K, 1) array_like
+    rho : float
+    w : float
+        Complex unit-root used as dephasing factor.
+
+    Methods
+    -------
+    gen_inputs(signal)
+        Creates and returns the collection of input test signals
+    process_output(output_coll)
+        Process output signals and returns the separated order
+
+    See also
+    --------
+    SeparationMethod: Parent class
     """
-    #TODO docstring
 
-    def __init__(self, N=3, rho=1):
-        """
-        """
-        #TODO docstring
-
+    def __init__(self, N=3, rho=1.):
         self.rho = rho
         SeparationMethod.__init__(self, N, N, self._gen_phase_factors(N))
 
     def _gen_phase_factors(self, nb_test):
         """
+        Generates the vector of dephasing factors.
         """
-        #TODO docstring
+
         self.w = np.exp(- 1j * 2 * np.pi / nb_test)
         return self.rho * self.w**np.arange(nb_test)
 
     def process_outputs(self, output_coll):
         """
+        Process outputs signals and returns the separated orders.
+
+        Parameters
+        ----------
+        output_coll : (K, ...) array_like
+            Collection of the K output signals.
+
+        Returns
+        -------
+        output_by_order : (N, ...) array_like
+            Estimation of the N first nonlinear homogeneous orders.
         """
-        #TODO docstring
 
         estimation = self._inverse_fft(output_coll, self.N)
         if self.rho == 1:
@@ -218,8 +252,8 @@ class PS(SeparationMethod):
     @staticmethod
     def _inverse_fft(output_coll, N):
         """
+        Invert Discrete Fourier Transform using the FFT algorithm.
         """
-        #TODO docstring
 
         return ifft(output_coll, n=N, axis=0)
 
