@@ -22,11 +22,11 @@ import numpy as np
 # Functions
 #==============================================================================
 
-def rms(sig):
+def rms(sig, axes=None):
     """
     Computation of the root-mean-square of a vector.
     """
-    return np.sqrt( np.mean(np.abs(sig)**2) )
+    return np.sqrt( np.mean(np.abs(sig)**2, axes=axes) )
 
 
 def db(val, ref=1):
