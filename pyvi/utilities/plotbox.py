@@ -56,8 +56,8 @@ def plot_sig_io(input_sig, output_sig, time_vec, name=None,
 
 
 def plot_sig_coll(sig_coll, time_vec, name=None, title_plots=None,
-                  xlim=[None, None], ylim=[None, None], dim=1):
-    nb_sig = sig_coll.shape[dim]
+                  xlim=[None, None], ylim=[None, None]):
+    nb_sig = sig_coll.shape[0]
     complex_bool = 'complex' in str(sig_coll.dtype)
     if title_plots is None:
         title_plots = ['Signal {}'.format(n+1) for n in range(nb_sig)]
@@ -68,19 +68,19 @@ def plot_sig_coll(sig_coll, time_vec, name=None, title_plots=None,
     if complex_bool:
         for n in range(nb_sig):
             plt.subplot(nb_sig, 2, 2*n+1)
-            plt.plot(time_vec, sig_coll[:, n].real, 'b')
+            plt.plot(time_vec, sig_coll[n].real, 'b')
             plt.title(title_plots[n] + ' - real part')
             plt.xlim(xlim)
             plt.ylim(ylim)
             plt.subplot(nb_sig, 2, 2*n+2)
-            plt.plot(time_vec, sig_coll[:, n].imag, 'r')
+            plt.plot(time_vec, sig_coll[n].imag, 'r')
             plt.title(title_plots[n] + ' - imaginary part')
             plt.xlim(xlim)
             plt.ylim(ylim)
     else:
         for n in range(nb_sig):
             plt.subplot(nb_sig, 1, n+1)
-            plt.plot(time_vec, sig_coll[:, n], 'b')
+            plt.plot(time_vec, sig_coll[n], 'b')
             plt.title(title_plots[n])
             plt.xlim(xlim)
             plt.ylim(ylim)
