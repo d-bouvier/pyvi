@@ -7,7 +7,7 @@ Notes
 @author:    bouvier@ircam.fr
             Damien Bouvier, IRCAM, Paris
 
-Last modified on 24 Apr. 2017
+Last modified on 22 June 2017
 Developed for Python 3.6.1
 """
 
@@ -22,11 +22,11 @@ import numpy as np
 # Functions
 #==============================================================================
 
-def rms(sig, axes=None):
+def rms(sig, axis=None):
     """
     Computation of the root-mean-square of a vector.
     """
-    return np.sqrt( np.mean(np.abs(sig)**2, axes=axes) )
+    return np.sqrt( np.mean(np.abs(sig)**2, axis=axis) )
 
 
 def db(val, ref=1):
