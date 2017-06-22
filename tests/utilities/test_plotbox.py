@@ -46,10 +46,10 @@ if __name__ == '__main__':
     plot_sig_io(sig_3, sig_4, vector, name='Test complexe', xlim=[0, 3])
 
     # Test of plot_coll()
-    plot_sig_coll(np.stack((sig_1, sig_2, sig_1 - sig_2), axis=1),
+    plot_sig_coll(np.stack((sig_1, sig_2, sig_1 - sig_2), axis=0),
                   vector, name='Test réel (Collection)', ylim=[-1.1, 1.1],
                   title_plots=['Sinus', 'Cosinus', 'Sinus saturé'])
-    plot_sig_coll(np.stack((sig_3, sig_4), axis=1), vector, xlim=[0, 3],
+    plot_sig_coll(np.stack((sig_3, sig_4), axis=0), vector, xlim=[0, 3],
                   name='Test complexe (Collection)')
 
     # Test of plot_kernel_time()
