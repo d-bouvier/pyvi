@@ -41,11 +41,24 @@ def safe_db(num, den):
     Conversion to dB with verification that neither the denominator nor
     numerator are equal to zero.
     """
-    if den == 0:
-        return np.Inf
-    if num == 0:
-        return - np.Inf
-    return 20 * np.log10(num / den)
+
+    # Initialization
+    assert num.shape == den.shape, 'Dimensions of num and den not equal.'
+    result = np.zeros(num.shape)
+
+    # Searching where denominator or numerator is null
+    idx_den_null = np.where(den == 0)
+    idx_num_null = np.where(num == 0)
+    idx_not_null = np.ones(num.shape, np.bool)
+    idx_not_null[idx_den_null] = 0
+    idx_not_null[idx_num_null] = 0
+
+    # Computation
+    result[idx_den_null] = np.Inf
+    result[idx_num_null] = - np.Inf
+    result[idx_not_null] = db(num[idx_not_null], den[idx_not_null])
+
+    return result
 
 
 def binomial(n, k):
