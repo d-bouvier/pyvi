@@ -7,7 +7,7 @@ Notes
 @author:    bouvier@ircam.fr
             Damien Bouvier, IRCAM, Paris
 
-Last modified on 24 Apr. 2017
+Last modified on 22 June 2017
 Developed for Python 3.6.1
 """
 
@@ -22,11 +22,11 @@ import numpy as np
 # Functions
 #==============================================================================
 
-def rms(sig):
+def rms(sig, axis=None):
     """
     Computation of the root-mean-square of a vector.
     """
-    return np.sqrt( np.mean(np.abs(sig)**2) )
+    return np.sqrt( np.mean(np.abs(sig)**2, axis=axis) )
 
 
 def db(val, ref=1):
@@ -41,11 +41,24 @@ def safe_db(num, den):
     Conversion to dB with verification that neither the denominator nor
     numerator are equal to zero.
     """
-    if den == 0:
-        return np.Inf
-    if num == 0:
-        return - np.Inf
-    return 20 * np.log10(num / den)
+
+    # Initialization
+    assert num.shape == den.shape, 'Dimensions of num and den not equal.'
+    result = np.zeros(num.shape)
+
+    # Searching where denominator or numerator is null
+    idx_den_null = np.where(den == 0)
+    idx_num_null = np.where(num == 0)
+    idx_not_null = np.ones(num.shape, np.bool)
+    idx_not_null[idx_den_null] = 0
+    idx_not_null[idx_num_null] = 0
+
+    # Computation
+    result[idx_den_null] = np.Inf
+    result[idx_num_null] = - np.Inf
+    result[idx_not_null] = db(num[idx_not_null], den[idx_not_null])
+
+    return result
 
 
 def binomial(n, k):

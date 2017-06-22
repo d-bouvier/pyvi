@@ -5,7 +5,7 @@ Tools for measuring order separation error.
 @author: bouvier (bouvier@ircam.fr)
          Damien Bouvier, IRCAM, Paris
 
-Last modified on 06 June 2017
+Last modified on 22 June 2017
 Developed for Python 3.6.1
 """
 
@@ -13,7 +13,6 @@ Developed for Python 3.6.1
 # Importations
 #==============================================================================
 
-import numpy as np
 from ..utilities.mathbox import rms, safe_db
 
 
@@ -27,16 +26,9 @@ def error_measure(signals_ref, signals_est, db=True):
     """
     #TODO docstring
 
-    error_sig = np.abs(signals_ref - signals_est)
-    error_measure = []
-
-    for n in range(signals_est.shape[0]):
-        rms_error = rms(error_sig[n])
-        rms_ref = rms(signals_ref[n])
-        if db:
-            val = safe_db(rms_error, rms_ref)
-        else:
-            val = rms_error / rms_ref
-        error_measure.append(val)
-
-    return error_measure
+    rms_error = rms(signals_ref - signals_est, axis=1)
+    rms_ref = rms(signals_ref, axis=1)
+    if db:
+        return safe_db(rms_error, rms_ref)
+    else:
+        return rms_error / rms_ref
