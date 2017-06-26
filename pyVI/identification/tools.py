@@ -63,6 +63,92 @@ def error_measure(kernels_ref, kernels_est, db=True):
     return errors
 
 
+def vector_to_kernel(vec_kernel, M, n, form='sym'):
+    """
+    Rearrange a vector containing the coefficients of a Volterra kernel of order
+    ``n`` into a numpy.ndarray representing the Volterra kernel.
+
+    Parameters
+    ----------
+    vec_kernel : numpy.ndarray
+        Vector regrouping all symmetric coefficients of a Volterra kernel.
+    M : int
+        Memory length of the kernel.
+    n : int
+        Kernel order.
+    form : {'sym', 'tri', 'symmetric', 'triangular'}, optional (default='sym')
+        Form of the returned Volterra kernel (symmetric or triangular)
+
+    Returns
+    -------
+    kernel : numpy.ndarray
+        The corresponding Volterra kernel.
+    """
+    #TODO update docstring
+
+    # Check dimension
+    length = binomial(M + n - 1, n)
+    assert len(vec_kernel) == length, 'The vector of coefficients for ' + \
+            'Volterra kernel of order {} has wrong length'.format(n) + \
+            '(got {}, expected {}).'.format(vec_kernel.shape[0], length)
+
+    # Initialization
+    kernel = np.zeros((M,)*n, dtype=vec_kernel.dtype)
+    current_ind = 0
+
+    # Loop on all combinations for order n
+    for indexes in itr.combinations_with_replacement(range(M), n):
+        kernel[indexes] = vec_kernel[current_ind]
+        current_ind += 1
+
+    if form in {'sym', 'symmetric'}:
+        return array_symmetrization(kernel)
+    elif form in {'tri', 'triangular'}:
+        return kernel
+
+
+def vector_to_all_kernels(f, M, N, form='sym'):
+    """
+    Rearrange a numpy vector containing the coefficients of all Volterra kernels
+    up to order ``order_max`` into a dictionnary regrouping numpy.ndarray
+    representing the Volterra kernels.
+
+    Parameters
+    ----------
+    f : numpy.ndarray
+        Vector regrouping all symmetric coefficients of the Volterra kernels.
+    M : int
+        Memory length of kernels.
+    N : int, optional
+        Highest kernel order.
+
+    Returns
+    -------
+    kernels : dict of numpy.ndarray
+        Dictionnary linking the Volterra kernel of order ``n`` to key ``n``.
+    """
+    #TODO update docstring
+
+    # Check dimension
+    length = binomial(M + N, N) - 1
+    assert f.shape[0] == length, \
+           'The vector of Volterra coefficients has wrong length ' + \
+           '(got {}, expected {}).'.format(f.shape[0], length)
+
+    # Initialization
+    kernels = dict()
+    current_ind = 0
+
+    # Loop on all orders of nonlinearity
+    for n in range(1, N+1):
+        nb_term = binomial(M + n - 1, n)
+        kernels[n] = vector_to_kernel(f[current_ind:current_ind+nb_term],
+                                      M, n, form=form)
+        current_ind += nb_term
+
+    return kernels
+
+
 def volterra_basis_by_order(signal, M, N):
     """
     """
