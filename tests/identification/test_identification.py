@@ -17,6 +17,7 @@ Developed for Python 3.6.1
 
 import numpy as np
 import pyvi.identification.identification as identif
+import pyvi.separation.separation as sep
 from pyvi.identification.tools import error_measure
 from pyvi.system.dict import create_nl_damping
 from pyvi.simulation.simu import SimulationObject
@@ -74,9 +75,25 @@ if __name__ == '__main__':
     #######################
 
     # Ground truth simulation
-    output_sig_by_order = system4simu.simulation(input_sig,
-                                                 out_opt='output_by_order')
-    output_sig = np.sum(output_sig_by_order, axis=0)
+    out_order_true = system4simu.simulation(input_sig,
+                                            out_opt='output_by_order')
+
+    # Data for AS separation method
+    AS_method = sep.AS(N=N)
+    input_coll = AS_method.gen_inputs(input_sig)
+    output_coll = np.zeros(input_coll.shape)
+    for ind in range(input_coll.shape[0]):
+        output_coll[ind] = system4simu.simulation(input_coll[ind])
+    out_order_AS = AS_method.process_outputs(output_coll)
+
+    # Data for AS separation method
+    PAS_method = sep.PAS(N=N)
+    input_coll = PAS_method.gen_inputs(input_sig_cplx)
+    output_coll = np.zeros(input_coll.shape)
+    for ind in range(input_coll.shape[0]):
+        output_coll[ind] = system4simu.simulation(input_coll[ind])
+    out_order_PAS = PAS_method.process_outputs(output_coll)
+    out_term_PAS = PAS_method.process_outputs(output_coll, raw_mode=True)
 
 
     ##############################
@@ -85,13 +102,15 @@ if __name__ == '__main__':
 
     # Initialization
     kernels = dict()
-    methods_list = ['true', 'direct', 'orders']
+    methods_list = ['true', 'direct', 'order_true', 'order_by_AS',
+                    'order_by_PAS']
 
     # Identification
     kernels['true'] = system4simu.compute_kernels(tau, which='time')
-    kernels['direct'] = identif.KLS(input_sig, output_sig_by_order.sum(axis=0),
-                                    M, N)
-    kernels['orders'] = identif.orderKLS(input_sig, output_sig_by_order, M, N)
+    kernels['direct'] = identif.KLS(input_sig, out_order_true.sum(axis=0), M, N)
+    kernels['order_true'] = identif.orderKLS(input_sig, out_order_true, M, N)
+    kernels['order_by_AS'] = identif.orderKLS(input_sig, out_order_AS, M, N)
+    kernels['order_by_PAS'] = identif.orderKLS(input_sig, out_order_PAS, M, N)
 
 
     ############################
@@ -115,8 +134,10 @@ if __name__ == '__main__':
     style2D = 'surface'
     str1 = ['Kernel of order 1 - ',  'Kernel of order 2 - ']
     title_str = {'true': 'Ground truth',
-                 'direct' : 'Identification directly on output signal',
-                 'order' : 'Identification directly on nonlinear orders'}
+                 'direct': 'Identification on output signal',
+                 'order_true': 'Identification on true orders',
+                 'order_by_AS': 'Identification on orders estimated via AS',
+                 'order_by_PAS': 'Identification on orders estimated via PAS'}
 
     for method in methods_list:
         name = 'Kernel of order {} - ' + title_str.get(method, 'unknown')
