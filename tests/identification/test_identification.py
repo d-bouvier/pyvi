@@ -50,10 +50,10 @@ if __name__ == '__main__':
     sigma = np.sqrt(2)
     tau = 0.005
 
-    time_vector = np.arange(0, T, 1/fs)
-    L = time_vector.shape[0]
-    tau_vector = np.arange(0, tau+1/fs, 1/fs)
-    M = tau_vector.shape[0]
+    time_vec = np.arange(0, T, 1/fs)
+    L = time_vec.shape[0]
+    tau_vec = np.arange(0, tau+1/fs, 1/fs)
+    M = tau_vec.shape[0]
 
     covariance = [[sigma, 0], [0, sigma]]
     random_sig = np.random.multivariate_normal([0, 0], covariance, size=L)
@@ -103,14 +103,24 @@ if __name__ == '__main__':
     # Initialization
     kernels = dict()
     methods_list = ['true', 'direct', 'order_true', 'order_by_AS',
-                    'order_by_PAS']
+                    'order_by_PAS', 'term_by_PAS']
+
+    # Pre-computation of phi
+    phi_orders = identif._orderKLS_construct_phi(input_sig, M, N)
+    phi_terms = identif._termKLS_construct_phi(input_sig_cplx, M, N)
 
     # Identification
     kernels['true'] = system4simu.compute_kernels(tau, which='time')
-    kernels['direct'] = identif.KLS(input_sig, out_order_true.sum(axis=0), M, N)
-    kernels['order_true'] = identif.orderKLS(input_sig, out_order_true, M, N)
-    kernels['order_by_AS'] = identif.orderKLS(input_sig, out_order_AS, M, N)
-    kernels['order_by_PAS'] = identif.orderKLS(input_sig, out_order_PAS, M, N)
+    kernels['direct'] = identif.KLS(input_sig, out_order_true.sum(axis=0),
+                                    M, N, phi=phi_orders)
+    kernels['order_true'] = identif.orderKLS(input_sig, out_order_true,
+                                    M, N, phi=phi_orders)
+    kernels['order_by_AS'] = identif.orderKLS(input_sig, out_order_AS,
+                                    M, N, phi=phi_orders)
+    kernels['order_by_PAS'] = identif.orderKLS(input_sig, out_order_PAS,
+                                    M, N, phi=phi_orders)
+    kernels['term_by_PAS'] = identif.termKLS(input_sig_cplx, out_term_PAS,
+                                    M, N, phi=phi_terms)
 
 
     ############################
@@ -121,8 +131,8 @@ if __name__ == '__main__':
     print('Identification error (without noise)')
     print('------------------------------------')
     errors = dict()
-    for method in methods_list:
-        errors[method] = error_measure(kernels['true'], kernels[method])
+    for method, val in kernels.items():
+        errors[method] = error_measure(kernels['true'], val)
         print('{:10} :'.format(method), errors[method])
 
 
@@ -137,10 +147,10 @@ if __name__ == '__main__':
                  'direct': 'Identification on output signal',
                  'order_true': 'Identification on true orders',
                  'order_by_AS': 'Identification on orders estimated via AS',
-                 'order_by_PAS': 'Identification on orders estimated via PAS'}
+                 'order_by_PAS': 'Identification on orders estimated via PAS',
+                 'term_by_PAS': 'Identification on terms estimated via PAS'}
 
-    for method in methods_list:
+    for method, val in kernels.items():
         name = 'Kernel of order {} - ' + title_str.get(method, 'unknown')
-        plot_kernel_time(tau_vector, kernels[method][1], title=name.format(1))
-        plot_kernel_time(tau_vector, kernels[method][2], style=style2D,
-                         title=name.format(2))
+        plot_kernel_time(tau_vec, val[1], title=name.format(1))
+        plot_kernel_time(tau_vec, val[2], style=style2D, title=name.format(2))

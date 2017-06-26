@@ -179,19 +179,19 @@ def volterra_basis_by_term(signal, M, N):
 
         # Terms 1 <= k < (n+1)//2
         for k in range(1, (n+1)//2):
-            temp = int(binomial(n-1, k-1)) * \
-                        ( phi[(n-1, k-1)][:, :, np.newaxis] * \
-                          phi[(1, 0)][:, np.newaxis, :].conj() ) + \
-                   int(binomial(n-1, k)) * \
-                        ( phi[(n-1, k)][:, :, np.newaxis] * \
-                          phi[(1, 0)][:, np.newaxis, :] )
-            temp /= int(binomial(n, k))
+            temp = (phi[(n-1, k-1)][:, :, np.newaxis] * \
+                    phi[(1, 0)][:, np.newaxis, :].conj() ) + \
+                   (phi[(n-1, k)][:, :, np.newaxis] * \
+                    phi[(1, 0)][:, np.newaxis, :] )
             phi[(n, k)] = _reshape_and_eliminate_redudancy(temp, M, n, size)
         # Terms k = n//2
         if not n%2:
-            temp = np.real(phi[(n-1, n//2-1)][:, :, np.newaxis] * \
-                           phi[(1, 0)][:, np.newaxis, :].conj())
+            temp = 2* np.real(phi[(n-1, n//2-1)][:, :, np.newaxis] * \
+                              phi[(1, 0)][:, np.newaxis, :].conj())
             phi[(n, n//2)] = _reshape_and_eliminate_redudancy(temp, M, n, size)
+
+    for (n, k) in phi.keys():
+        phi[(n, k)] /= binomial(n, k)
 
     return phi
 

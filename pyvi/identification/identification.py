@@ -166,3 +166,57 @@ def _orderKLS_construct_phi(signal, M, N):
 
     return volterra_basis_by_order(signal, M, N)
 
+
+def termKLS(input_sig, output_sigs_by_term, M, N, phi=None, form='sym'):
+    """
+    Identify the Volterra kernels of a system from input and output signals.
+
+    Parameters
+    ----------
+    input_sig : numpy.ndarray
+        Vector of input signal.
+    output_sig : numpy.ndarray
+        Vector of output signal.
+    M : int
+        Memory length of kernels
+    order_max : int, optional
+        Highest kernel order (default 1).
+    separated_orders : boolean, optional
+        If True, ``output_sig`` should contain the separated homogeneous order
+        of the output, and the identification will be made for each kernel
+        separately.
+
+    Returns
+    -------
+    kernels : dict of numpy.ndarray
+        Dictionnary linking the Volterra kernel of order ``n`` to key ``n``.
+    """
+    #TODO update docstring
+
+    # Input combinatoric
+    if phi is None:
+        phi = _termKLS_construct_phi(input_sig, M, N)
+
+    kernels = dict()
+    f = dict()
+    for n in range(1, N+1):
+        f[n] = np.zeros((binomial(M + n - 1, n),))
+
+    for (n, k), phi_nk in phi.items():
+        f[n] += _KLS_core_computation(2 * np.real(phi_nk),
+                                      2 * np.real(output_sigs_by_term[(n, k)]))
+
+    # Re-arranging vector f_n into volterra kernel of order n
+    for n in range(1, N+1):
+        kernels[n] = vector_to_kernel(f[n] / (1+n//2), M, n, form=form)
+
+    return kernels
+
+
+def _termKLS_construct_phi(signal, M, N):
+    """
+    """
+    #TODO docstring
+
+    return volterra_basis_by_term(signal, M, N)
+
