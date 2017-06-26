@@ -5,7 +5,7 @@ Tools for measuring identification error.
 @author: bouvier (bouvier@ircam.fr)
          Damien Bouvier, IRCAM, Paris
 
-Last modified on 22 June 2017
+Last modified on 23 June 2017
 Developed for Python 3.6.1
 """
 
@@ -13,7 +13,10 @@ Developed for Python 3.6.1
 # Importations
 #==============================================================================
 
-from ..utilities.mathbox import rms, safe_db
+import numpy as np
+import itertools as itr
+from scipy.linalg import toeplitz
+from ..utilities.mathbox import rms, safe_db, binomial, array_symmetrization
 
 
 #==============================================================================
@@ -58,3 +61,64 @@ def error_measure(kernels_ref, kernels_est, db=True):
             errors.append(rms_error / rms_ref)
 
     return errors
+
+
+def volterra_basis_by_order(signal, M, N):
+    """
+    """
+    #TODO docstring
+
+    phi = dict()
+    phi[1] = toeplitz(signal, np.zeros((1, M)))
+
+    for n in range(2, N+1):
+        size = phi[n-1].shape[1]
+        temp = phi[n-1][:, :, np.newaxis] * phi[1][:, np.newaxis, :]
+        phi[n] = _reshape_and_eliminate_redudancy(temp, M, n, size)
+
+    return phi
+
+
+def volterra_basis_by_term(signal, M, N):
+    """
+    """
+    #TODO docstring
+
+    phi = volterra_basis_by_order(signal, M, N)
+    for n in range(1, N+1):
+        phi[(n, 0)] = phi.pop(n)
+
+    for n in range(2, N+1):
+        size = phi[(n-1, 0)].shape[1]
+
+        # Terms 1 <= k < (n+1)//2
+        for k in range(1, (n+1)//2):
+            temp = int(binomial(n-1, k-1)) * \
+                        ( phi[(n-1, k-1)][:, :, np.newaxis] * \
+                          phi[(1, 0)][:, np.newaxis, :].conj() ) + \
+                   int(binomial(n-1, k)) * \
+                        ( phi[(n-1, k)][:, :, np.newaxis] * \
+                          phi[(1, 0)][:, np.newaxis, :] )
+            temp /= int(binomial(n, k))
+            phi[(n, k)] = _reshape_and_eliminate_redudancy(temp, M, n, size)
+        # Terms k = n//2
+        if not n%2:
+            temp = np.real(phi[(n-1, n//2-1)][:, :, np.newaxis] * \
+                           phi[(1, 0)][:, np.newaxis, :].conj())
+            phi[(n, n//2)] = _reshape_and_eliminate_redudancy(temp, M, n, size)
+
+    return phi
+
+
+def _reshape_and_eliminate_redudancy(matrix, M, n, size):
+    """
+    M: memory
+    n : order
+    """
+    #TODO docstring
+
+    temp_tuple = ()
+    for ind in range(M):
+        idx = int(binomial(n+M-ind-2, n-1))
+        temp_tuple += (matrix[:, size-idx:, ind],)
+    return np.concatenate(temp_tuple, axis=1)
