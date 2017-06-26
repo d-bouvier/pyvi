@@ -17,6 +17,7 @@ import string, time
 import numpy as np
 import itertools as itr
 from pyvi.identification.tools import (error_measure, vector_to_kernel,
+                                       vector_to_all_kernels,
                                        volterra_basis_by_order,
                                        volterra_basis_by_term)
 from pyvi.utilities.mathbox import binomial
@@ -55,6 +56,68 @@ if __name__ == '__main__':
         print('Relative error     :', error)
         print('Relative error (dB):', error_db)
         print()
+
+
+    print('#################################')
+    print('## Function vector_to_kernel() ##')
+    print('#################################')
+    print()
+
+    M = 4
+
+    print('Order 2\n-------')
+    n = 2
+
+    h2 = np.arange(1, binomial(M + n - 1, n)+1)
+    print('Vector form            :\n', h2)
+    print('Triangular kernel form :\n', vector_to_kernel(h2, M, n, form='tri'))
+    print('Symmetric kernel form  :\n', vector_to_kernel(h2, M, n))
+    print()
+
+    list_ind = list()
+    for idx in itr.combinations_with_replacement(string.digits[:M], n):
+        list_ind.append(''.join(idx))
+    h2s = np.array(list_ind)
+    print('Vector form            :\n', h2s)
+    print('Triangular kernel form :\n', vector_to_kernel(h2s, M, n, form='tri'))
+    print()
+
+    print('Order 3\n-------')
+    n = 3
+
+    h3 = np.arange(1, binomial(M + n - 1, n)+1)
+    print('Vector form            :\n', h3)
+    print('Triangular kernel form :\n', vector_to_kernel(h3, M, n, form='tri'))
+    print('Symmetric kernel form  :\n', vector_to_kernel(h3, M, n))
+    print()
+
+    list_ind = list()
+    for idx in itr.combinations_with_replacement(string.digits[:M], n):
+        list_ind.append(''.join(idx))
+    h3s = np.array(list_ind)
+    print('Vector form            :\n', h3s)
+    print('Triangular kernel form :\n', vector_to_kernel(h3s, M, n, form='tri'))
+    print()
+
+
+    print('######################################')
+    print('## Function vector_to_all_kernels() ##')
+    print('######################################')
+    print()
+
+    print('Order 1 to 3\n------------')
+    N = 3
+    h1s = np.array(list(string.digits[:M]))
+    f = np.concatenate((h1s, h2s, h3s), axis=0)
+    kernels = vector_to_all_kernels(f, M, N, form='tri')
+
+    print('Vector form            :\n', f)
+    print('Triangular kernel form :')
+    print(kernels[1])
+    print(kernels[2])
+    print(kernels[3])
+
+    print('\n')
 
 
     print('###################################')
