@@ -116,3 +116,53 @@ def _KLS_core_computation(combinatorial_matrix, output_sig):
 
     # Forward inverse
     return solve_triangular(r, y)
+
+
+def orderKLS(input_sig, output_sig_by_order, M, N, phi=None, form='sym'):
+    """
+    Identify the Volterra kernels of a system from input and output signals.
+
+    Parameters
+    ----------
+    input_sig : numpy.ndarray
+        Vector of input signal.
+    output_sig : numpy.ndarray
+        Vector of output signal.
+    M : int
+        Memory length of kernels.
+    order_max : int, optional
+        Highest kernel order (default 1).
+    separated_orders : boolean, optional
+        If True, ``output_sig`` should contain the separated homogeneous order
+        of the output, and the identification will be made for each kernel
+        separately.
+
+    Returns
+    -------
+    kernels : dict of numpy.ndarray
+        Dictionnary linking the Volterra kernel of order ``n`` to key ``n``.
+    """
+    #TODO update docstring
+
+    # Input combinatoric
+    if phi is None:
+        phi = _orderKLS_construct_phi(input_sig, M, N)
+
+    kernels = dict()
+
+    for n, phi_n in phi.items():
+        f_n = _KLS_core_computation(phi_n, output_sig_by_order[n-1])
+
+        # Re-arranging vector f_n into volterra kernel of order n
+        kernels[n] = vector_to_kernel(f_n, M, n, form=form)
+
+    return kernels
+
+
+def _orderKLS_construct_phi(signal, M, N):
+    """
+    """
+    #TODO docstring
+
+    return volterra_basis_by_order(signal, M, N)
+

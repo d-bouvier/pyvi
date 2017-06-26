@@ -85,12 +85,13 @@ if __name__ == '__main__':
 
     # Initialization
     kernels = dict()
-    methods_list = ['true', 'direct']
+    methods_list = ['true', 'direct', 'orders']
 
     # Identification
     kernels['true'] = system4simu.compute_kernels(tau, which='time')
     kernels['direct'] = identif.KLS(input_sig, output_sig_by_order.sum(axis=0),
                                     M, N)
+    kernels['orders'] = identif.orderKLS(input_sig, output_sig_by_order, M, N)
 
 
     ############################
@@ -114,10 +115,11 @@ if __name__ == '__main__':
     style2D = 'surface'
     str1 = ['Kernel of order 1 - ',  'Kernel of order 2 - ']
     title_str = {'true': 'Ground truth',
-                 'direct' : 'Identification directly on output signal'}
+                 'direct' : 'Identification directly on output signal',
+                 'order' : 'Identification directly on nonlinear orders'}
 
     for method in methods_list:
-        plot_kernel_time(tau_vector, kernels[method][1],
-                         title='Kernel of order 1 - ' + title_str[method])
+        name = 'Kernel of order {} - ' + title_str.get(method, 'unknown')
+        plot_kernel_time(tau_vector, kernels[method][1], title=name.format(1))
         plot_kernel_time(tau_vector, kernels[method][2], style=style2D,
-                         title='Kernel of order 2 - ' + title_str[method])
+                         title=name.format(2))
