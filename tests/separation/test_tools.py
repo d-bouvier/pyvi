@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Test script for and pyvi.order_separation.tools
+Test script for and pyvi.separation.tools
 
 Notes
 -----

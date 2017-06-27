@@ -40,11 +40,12 @@ if __name__ == '__main__':
     sig = np.ones((10000,))
     system = create_test(mode='numeric')
 
+    print('Testing correctness of output shape ...', end=' ')
+
     out1 = SimuObj(system, holder_order=0, resampling=False).simulation(sig)
     out2 = SimuObj(system, holder_order=1, resampling=False).simulation(sig)
     out3 = SimuObj(system, holder_order=0, resampling=True).simulation(sig)
     out4 = SimuObj(system, holder_order=1, resampling=True).simulation(sig)
-
     assert out1.shape == sig.shape, 'Shape error in simulation output' + \
             ' with holder of order 0 and without resampling.'
     assert out2.shape == sig.shape, 'Shape error in simulation output' + \
@@ -64,6 +65,8 @@ if __name__ == '__main__':
             'Shape error in simulation output when state is wanted.'
     assert out7.shape == (3, system.dim['state']) + sig.shape, \
             'Shape error in simulation output when state_by_order is wanted.'
+
+    print('Done.')
 
 
     ############################
@@ -87,6 +90,8 @@ if __name__ == '__main__':
               'resampling': False}
 
     # Simulation
+    print('Computing loudspeaker simulation ...', end=' ')
+
     simu1 = SimuObj(loudspeaker, **options)
     start1 = time.time()
     out1 = simu1.simulation(signal)
@@ -98,6 +103,8 @@ if __name__ == '__main__':
     out2 = simu2.simulation(signal)
     end2 = time.time()
 
+    print('Done.')
+
     # Results
     plot_sig_io(signal, out1, time_vector,
                 name='Input-output (holder of order 1)')
@@ -108,7 +115,7 @@ if __name__ == '__main__':
     print('Computation time (holder of order 0):  {}s'.format(end2-start2))
 
     diff = out1 - out2
-    diff.shape = diff.shape +(1,)
+    diff.shape = (1,) + diff.shape
     plot_sig_coll(diff, time_vector, name='Difference')
 
 
@@ -123,18 +130,22 @@ if __name__ == '__main__':
     T = 0.03
 
     # Test system
+    print('Testing kernel computation ...', end=' ')
     sys_simu = SimuObj(create_test(mode='numeric'), **options)
     t_kernels = sys_simu.compute_kernels(T, which='time')
     t_kernels, f_kernels = sys_simu.compute_kernels(T, which='both')
     f_kernels = sys_simu.compute_kernels(T, which='freq')
+    print('Done.')
 
     # Second-order system with nonlinear damping
+    print('Computing kernels ...', end=' ')
     damping_sys = create_nl_damping(gain=1, f0=100, damping=0.2,
                                     nl_coeff=[1e-1, 3e-5])
     damping_simu = SimuObj(damping_sys, **options)
     time_kernels, freq_kernels_from_time = \
                                 damping_simu.compute_kernels(T, which='both')
     freq_kernels = damping_simu.compute_kernels(T, which='freq')
+    print('Done.')
 
     N = len(time_kernels[1])
     time_vec = np.linspace(0, (N-1)/options['fs'], num=N)

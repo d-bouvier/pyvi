@@ -34,9 +34,9 @@ if __name__ == '__main__':
     Main script for testing.
     """
 
-    #################################
-    ### Parameters specifications ###
-    #################################
+    ###############################
+    ## Parameters specifications ##
+    ###############################
 
     # System specification
     f0_voulue = 200
@@ -70,10 +70,11 @@ if __name__ == '__main__':
             'require at least {}'.format(nb_samples_in_kernels)
 
 
-    #######################
-    ### Data simulation ###
-    #######################
+    #####################
+    ## Data simulation ##
+    #####################
 
+    print('Computing data for separation ...', end=' ')
     # Ground truth simulation
     out_order_true = system4simu.simulation(input_sig,
                                             out_opt='output_by_order')
@@ -95,10 +96,12 @@ if __name__ == '__main__':
     out_order_PAS = PAS_method.process_outputs(output_coll)
     out_term_PAS = PAS_method.process_outputs(output_coll, raw_mode=True)
 
+    print('Done.')
 
-    ##############################
-    ### Kernels identification ###
-    ##############################
+
+    ############################
+    ## Kernels identification ##
+    ############################
 
     # Initialization
     kernels = dict()
@@ -106,10 +109,13 @@ if __name__ == '__main__':
                     'order_by_PAS', 'term_by_PAS']
 
     # Pre-computation of phi
+    print('Computing Phi ...', end=' ')
     phi_orders = identif._orderKLS_construct_phi(input_sig, M, N)
     phi_terms = identif._termKLS_construct_phi(input_sig_cplx, M, N)
+    print('Done.')
 
     # Identification
+    print('Computing identification ...', end=' ')
     kernels['true'] = system4simu.compute_kernels(tau, which='time')
     kernels['direct'] = identif.KLS(input_sig, out_order_true.sum(axis=0),
                                     M, N, phi=phi_orders)
@@ -121,11 +127,12 @@ if __name__ == '__main__':
                                     M, N, phi=phi_orders)
     kernels['term_by_PAS'] = identif.termKLS(input_sig_cplx, out_term_PAS,
                                     M, N, phi=phi_terms)
+    print('Done.')
 
 
-    ############################
-    ### Identification error ###
-    ############################
+    ##########################
+    ## Identification error ##
+    ##########################
 
     # Estimation error
     print('Identification error (without noise)')
@@ -136,9 +143,12 @@ if __name__ == '__main__':
         print('{:10} :'.format(method), errors[method])
 
 
-    #####################
-    ### Kernels plots ###
-    #####################
+    ###################
+    ## Kernels plots ##
+    ###################
+
+
+    print('Printing plots ...', end=' ')
 
     # Plots
     style2D = 'surface'
@@ -154,3 +164,5 @@ if __name__ == '__main__':
         name = 'Kernel of order {} - ' + title_str.get(method, 'unknown')
         plot_kernel_time(tau_vec, val[1], title=name.format(1))
         plot_kernel_time(tau_vec, val[2], style=style2D, title=name.format(2))
+
+    print('Done.')
