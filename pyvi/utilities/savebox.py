@@ -4,8 +4,8 @@ Tooolbox for saving data and figures.
 
 Notes
 -----
-@author:    bouvier@ircam.fr
-            Damien Bouvier, IRCAM, Paris
+@author: bouvier (bouvier@ircam.fr)
+         Damien Bouvier, IRCAM, Paris
 
 Last modified on 25 Apr. 2017
 Developed for Python 3.6.1

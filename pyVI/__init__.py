@@ -2,13 +2,15 @@
 """
 Package for simulation and analysis of nonlinear system.
 
+Notes
+-----
 @author: bouvier (bouvier@ircam.fr)
          Damien Bouvier, IRCAM, Paris
 
-Last modified on 24 Apr. 2017
+Last modified on 27 June 2017
 Developed for Python 3.6.1
 
-Dependances:
+Dependencies:
  - numpy 1.12.1
  - scipy 0.19.0
  - sympy 1.0

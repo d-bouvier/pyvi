@@ -2,10 +2,12 @@
 """
 Test script for and pyvi.identification.tools
 
+Notes
+-----
 @author: bouvier (bouvier@ircam.fr)
          Damien Bouvier, IRCAM, Paris
 
-Last modified on 23 June 2017
+Last modified on 27 June 2017
 Developed for Python 3.6.1
 """
 

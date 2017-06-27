@@ -4,8 +4,8 @@ Tooolbox for useful small math functions.
 
 Notes
 -----
-@author:    bouvier@ircam.fr
-            Damien Bouvier, IRCAM, Paris
+@author: bouvier (bouvier@ircam.fr)
+         Damien Bouvier, IRCAM, Paris
 
 Last modified on 22 June 2017
 Developed for Python 3.6.1

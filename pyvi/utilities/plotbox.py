@@ -2,6 +2,8 @@
 """
 Toolbox for plots.
 
+Notes
+-----
 @author: bouvier (bouvier@ircam.fr)
          Damien Bouvier, IRCAM, Paris
 
