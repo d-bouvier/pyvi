@@ -2,6 +2,17 @@
 """
 Toolbox for plots.
 
+Functions
+---------
+plot_sig_io :
+    Plots input and output signals of a system.
+plot_sig_coll :
+    Plots a collection of signals.
+plot_kernel_time :
+    Plots a discrete time kernel of order 1 or 2.
+plot_kernel_freq :
+    Plots a discrete time kernel of order 1 or 2.
+
 Notes
 -----
 @author: bouvier (bouvier@ircam.fr)
@@ -26,6 +37,25 @@ from mpl_toolkits.mplot3d import Axes3D
 
 def plot_sig_io(vec, input_sig, output_sig, title=None, xlim=[None, None],
                 ylim=[None, None]):
+    """
+    Plots input and output signals of a system.
+
+    Parameters
+    ----------
+    vec : numpy.ndarray
+        Time vector.
+    input_sig : numpy.ndarray
+        Input signal.
+    input_sig : numpy.ndarray
+        Output signal.
+    title : str, optional (default=None)
+        Title of the Figure. If None, will be set to a default value.
+    xlim : list(float), optionall (default=[None, None])
+        Set the x limits of all subplots. By default autoscaling is used.
+    ylim : list(float), optionall (default=[None, None])
+        Set the y limits of all subplots. By default autoscaling is used.
+    """
+
     complex_bool = 'complex' in str(input_sig.dtype) or \
                    'complex' in str(output_sig.dtype)
     nb_col = 2 if complex_bool else 1
@@ -59,6 +89,25 @@ def plot_sig_io(vec, input_sig, output_sig, title=None, xlim=[None, None],
 
 def plot_sig_coll(vec, sig_coll, title=None, title_plots=None,
                   xlim=[None, None], ylim=[None, None]):
+    """
+    Plots a collection of signals.
+
+    Parameters
+    ----------
+    vec : numpy.ndarray
+        Time vector.
+    sig_coll : 2-D numpy.ndarray
+        Collection of signals to plot.
+    title : str, optional (default=None)
+        Title of the Figure. If None, will be set to a default value.
+    title_plots : list(str), optional (default=None)
+        Title of each subplots. If None, will be set to a default value.
+    xlim : list(float), optionall (default=[None, None])
+        Set the x limits of all subplots. By default autoscaling is used.
+    ylim : list(float), optionall (default=[None, None])
+        Set the y limits of all subplots. By default autoscaling is used.
+    """
+
     nb_sig = sig_coll.shape[0]
     complex_bool = 'complex' in str(sig_coll.dtype)
     if title_plots is None:
@@ -99,11 +148,11 @@ def plot_kernel_time(vec, kernel, style='wireframe', title=None, nb_levels=20):
         Time vector.
     kernel : 1-D or 2-D numpy.ndarray
         Kernel to plot.
-    style : {'surface', 'contour', 'wireframe'}, optional
+    style : {'surface', 'contour', 'wireframe'}, optional (default='wireframe')
         Plot mode if the kernel is of order 2.
-    title : string, optional
-        Title of the Figure.
-    N : int, optional
+    title : str, optional (default=None)
+        Title of the Figure. If None, will be set to a default value.
+    nb_levels : int, optional (default=20)
         Optional parameter when using 'countour'
     """
 
@@ -161,20 +210,20 @@ def plot_kernel_freq(vec, kernel, style='wireframe', title=None, db=True,
         Frequency vector.
     kernel : 1-D or 2-D numpy.ndarray
         Kernel to plot.
-    style : {'surface', 'contour', 'wireframe'}, optional
+    style : {'surface', 'contour', 'wireframe'}, optional (default='wireframe')
         Plot mode if the kernel is of order 2.
-    title : string, optional
-        Title of the Figure.
-    N : int, optional
-        Optional parameter when using 'countour'
-    db : boolean, optional
+    title : str, optional (default=None)
+        Title of the Figure. If None, will be set to a default value.
+    db : boolean, optional (default=True)
         Choose wether or not magnitude is expressed in deciBel.
-    unwrap_angle : boolen, optional
+    unwrap_angle : boolen, optional (default=True)
         Choose wether or not the phase is unwrapped.
-    logscale: boolen or int, optional
+    logscale: boolen or int, optional (default=False)
         If False, all frequency axis are on a linear scale. If True, should be
         an int, and all frequency axis will be plotted using a logscale of base
         ``logscale``.
+    nb_levels : int, optional (default=20)
+        Optional parameter when using 'countour'
     """
 
     order = kernel.ndim

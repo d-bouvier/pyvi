@@ -2,26 +2,24 @@
 """
 Tools for combinatorics.
 
-Multilinear combinatorics
--------------------------
+Functions
+---------
 make_list_pq :
-    Compute the list of multilinear pq-functions used in each order of
-    nonlinearity.
+    Returns the list of all pq-functions used in each order of nonlinearity.
 elimination :
-    Eliminates the multilinear pq-functions unused in the system.
+    Eliminates the pq-functions unused in the system.
 state_combinatorics :
-    Compute, for each pq-function at a given order n, the different sets of
+    Computes, for each pq-function at a given order n, the different sets of
     state-homogenous-order that are the inputs of the multilinear pq-function.
 make_pq_combinatorics :
-    Return the list of sets characterising multilinear pq-functions used in a
-    system.
+    Returns the list of sets characterising pq-functions used in a system.
 
 Notes
 -----
 @author: bouvier (bouvier@ircam.fr)
          Damien Bouvier, IRCAM, Paris
 
-Last modified on 04 May 2017
+Last modified on 27 June 2017
 Developed for Python 3.6.1
 """
 
@@ -41,13 +39,12 @@ from ..utilities.mathbox import binomial
 
 def make_list_pq(nl_order_max):
     """
-    Compute the list of multilinear pq-functions used in each order of
-    nonlinearity.
+    Returns the list of all pq-functions used in each order of nonlinearity.
 
     Parameters
     ----------
     nl_order_max : int
-        Maximum order of nonlinearity
+        Maximum order of nonlinearity.
 
     Returns
     -------
@@ -80,11 +77,11 @@ def make_list_pq(nl_order_max):
 
 def elimination(pq_dict, list_pq):
     """
-    Eliminates the multilinear pq-functions unused in the system.
+    Eliminates the pq-functions unused in the system.
 
     Parameters
     ----------
-    pq_dict : dict {(int, int): numpy.ndarray}
+    pq_dict : dict((int, int): numpy.ndarray)
         Dictionnary listing all the tensor representing the pq-functions of the
         system.
     list_pq : numpy.ndarray
@@ -111,16 +108,16 @@ def elimination(pq_dict, list_pq):
 
 def state_combinatorics(list_pq, nl_order_max, sym_bool=False):
     """
-    Compute, for each pq-function at a given order n, the different sets of
+    Retuns the list of sets characterising pq-functions used in a system.
+
+    Computes, for each pq-function at a given order n, the different sets of
     state-homogenous-order that are the inputs of the multilinear pq-function.
-    All sets are created, even those identical in respect to the order (so, if
-    the multilinear pq-function are symmetric, there is redudancy).
 
     Parameters
     ----------
     list_pq : numpy.ndarray
         Array of all combination [n, p, q].
-    sym_bool : boolean, optional
+    sym_bool : boolean, optional (default=False)
         If True, does not computes sets that are equals given a shuffle.
 
     Outputs
@@ -168,24 +165,23 @@ def state_combinatorics(list_pq, nl_order_max, sym_bool=False):
     return pq_sets
 
 
-def make_pq_combinatorics(pq_dict, nl_order_max, sym_bool):
+def make_pq_combinatorics(pq_dict, nl_order_max, sym_bool=False):
     """
-    Return the list of sets characterising multilinear pq-functions used in a
-    system.
+    Returns the list of sets characterising pq-functions used in a system.
 
     Parameters
     ----------
-    pq_dict : dict {(int, int): numpy.ndarray}
+    pq_dict : dict((int, int): numpy.ndarray)
         Dictionnary listing all the tensor representing the pq-functions of the
         system.
     nl_order_max : int
         Maximum order of nonlinearity.
-    print_opt : boolean, optional
-        Intermediate results printing option.
+    sym_bool : boolean (default=False)
+        True if the pq-functions are under a symmetric form.
 
     Returns
     -------
-    pq_comb : dict of lists
+    pq_comb : dict(int: list(tuple(int, int, int, int)))
         Dict of keys n, each associated to a list of tuple (p, q, k, nb) with:
         - n : int
             Order of nonlinearity where the multilinear pq-function is used.
@@ -197,7 +193,6 @@ def make_pq_combinatorics(pq_dict, nl_order_max, sym_bool):
             Homogenous orders for the state-entries.
         - nb : int
             Number of unordered sets equals to k, including k.
-
     """
 
     list_pq = make_list_pq(nl_order_max)

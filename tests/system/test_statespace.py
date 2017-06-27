@@ -81,27 +81,25 @@ if __name__ == '__main__':
     # Linear system
     f_print(NumericalStateSpace(A, B, C, D))
     # State equation linear-analytic & nonlinearities only on state
-    f_print(NumericalStateSpace(A, B, C, D, npq_dict={(2, 0): n20}))
-    f_print(NumericalStateSpace(A, B, C, D, mpq_dict={(2, 0): m20}))
+    f_print(NumericalStateSpace(A, B, C, D, npq={(2, 0): n20}))
+    f_print(NumericalStateSpace(A, B, C, D, mpq={(2, 0): m20}))
     # State equation linear-analytic
-    f_print(NumericalStateSpace(A, B, C, D, mpq_dict={(1, 1): m11}))
-    f_print(NumericalStateSpace(A, B, C, D,
-                                mpq_dict={(2, 0): m20, (1, 1): m11}))
+    f_print(NumericalStateSpace(A, B, C, D, mpq={(1, 1): m11}))
+    f_print(NumericalStateSpace(A, B, C, D, mpq={(2, 0): m20, (1, 1): m11}))
     # State equation not linear-analytic
-    f_print(NumericalStateSpace(A, B, C, D, mpq_dict={(0, 2): m02}))
-    f_print(NumericalStateSpace(A, B, C, D,
-                                mpq_dict={(2, 0): m20, (0, 2): m02}))
+    f_print(NumericalStateSpace(A, B, C, D, mpq={(0, 2): m02}))
+    f_print(NumericalStateSpace(A, B, C, D, mpq={(2, 0): m20, (0, 2): m02}))
     # "Colinear" system
     B[1] = 1
     m20[1, 1, 2] = 10
     m20[1, 2, 1] = 10
     m20[1, 1, 1] = 5
-    f_print(NumericalStateSpace(A, B, C, D, mpq_dict={(2, 0): m20}))
+    f_print(NumericalStateSpace(A, B, C, D, mpq={(2, 0): m20}))
     m20[1] = 2
-    f_print(NumericalStateSpace(A, B, C, D, mpq_dict={(2, 0): m20}))
+    f_print(NumericalStateSpace(A, B, C, D, mpq={(2, 0): m20}))
     # "Non-colinear" system
     m20[2, 1, 1] = 5
-    f_print(NumericalStateSpace(A, B, C, D, mpq_dict={(2, 0): m20}))
+    f_print(NumericalStateSpace(A, B, C, D, mpq={(2, 0): m20}))
     m20 = np.zeros((N, N, N))
     m20[0] = 2
-    f_print(NumericalStateSpace(A, B, C, D, mpq_dict={(2, 0): m20}))
+    f_print(NumericalStateSpace(A, B, C, D, mpq={(2, 0): m20}))

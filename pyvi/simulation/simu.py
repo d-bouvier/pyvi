@@ -1,18 +1,23 @@
 # -*- coding: utf-8 -*-
 """
-Module for numerical simulation of system given its state-space representation.
+Module for numerical simulation of system given a state-space representation.
 
 Function
 --------
 simulation :
     Compute the simulation of a nonlinear system for a given input.
 
+Class
+-----
+SimulationObject :
+    Class for simulation of a system given by a NumericalStateSpace object.
+
 Notes
 -----
 @author: bouvier (bouvier@ircam.fr)
          Damien Bouvier, IRCAM, Paris
 
-Last modified on 07 June 2017
+Last modified on 27 June 2017
 Developed for Python 3.6.1
 """
 
@@ -28,20 +33,66 @@ from .combinatorics import make_pq_combinatorics
 from ..system.statespace import NumericalStateSpace
 from ..utilities.mathbox import array_symmetrization
 
+
 #==============================================================================
 # Class
 #==============================================================================
 
 class SimulationObject:
     """
+    Class for simulation of a system given by a NumericalStateSpace object.
+
+    Parameters
+    ----------
+    system : NumericalStateSpace
+        System to simulate, represented by its NumericalStateSpace object.
+    fs : int, optional, (default=44100)
+        Sampling frequency of the simulation.
+    nl_order_max : int, optional (default=3)
+        Order truncation of the simulation.
+    holder_order : int, optional (default=1)
+        Order of sample holder applied to emulate continuous time dynamics.
+    resampling : boolean, optional (default=False)
+        If true, signals are upsampled before simulation, downsampled after.
+
+    Attributes
+    ----------
+    fs : int
+    nl_order_max : int
+    holder_order : int
+    resampling : boolean
+    mpq_combinatoric : dict(int: list(tuple(int, int, int, int)))
+        See make_pq_combinatorics().
+    npq_combinatoric : dict(int: list(tuple(int, int, int, int)))
+        See make_pq_combinatorics().
+    holder_bias_mat : dict(int: numpy.ndarray)
+        Matrices representing the bias due to the sample holder.
+    dim : dict(str: int)
+        See NumericalStateSpace.
+    A_m, B_m, C_m, D_m : array-like (numpy.ndarray)
+        See NumericalStateSpace.
+    mpq, npq : dict((int, int): tensor-like (numpy.ndarray))
+        See NumericalStateSpace.
+
+    Methods
+    -------
+    simulation(input_signal, out_opt='output')
+        Computes the numerical simulation for a given input signal.
+    compute_kernels(T, which='both')
+        Computes the kernels of the system for a given memory length.
+    _compute_time_kernels(T)
+        Computes the time kernels for a given memory length.
+    _compute_freq_kernels(T)
+        Computes the frequency kernels for a given memory length.
+
+    See also
+    --------
+    NumericalStateSpace : object for state-space representation a system.
+    make_pq_combinatorics : combinatorics of pq-functions used in a system.
     """
-    #TODO docstring
 
     def __init__(self, system: NumericalStateSpace, fs=44100, nl_order_max=3,
                  holder_order=1, resampling=False):
-        """
-        """
-        #TODO docstring
 
         # Initialize simulation options
         self.fs = fs
@@ -88,41 +139,34 @@ class SimulationObject:
 
     def simulation(self, input_signal, out_opt='output'):
         """
-        Compute the simulation of a nonlinear system for a given input.
+        Computes the numerical simulation for a given input signal.
 
         Parameters
         ----------
-        input_sig : numpy.ndarray
+        input_signal : numpy.ndarray
             Input signal.
-        system : StateSpace
-            Parameters of the system to simulate.
-        fs : int, optional
-            Sampling frequency.
-        nl_order_max : int, optional
-            Maximum order of nonlinearity to take into account.
-        hold_opt : {0, 1}, optional
-            Type of sample-holder of the ADC converter to emulate.
-        out : {'output', 'output_by_order', 'all'}, optional
-            Option to choose the output.
+        out_opt : {'output', 'output_by_order', 'state', 'state_by_order', \
+                   'all'}, optional (default='output')
+            Option to choose the output that the function returns.
 
         Returns
         -------
-        output_sig : numpy.ndarray
+        output_signal : numpy.ndarray
             Output of the system.
         output_by_order : numpy.ndarray
             Output of the system, separated in each order of nonlinearity.
+        state_signal : numpy.ndarray
+            States of the system.
         state_by_order : numpy.ndarray
             States of the system, separated in each order of nonlinearity.
 
         In function of the ``out`` option, this function returns:
-            - ``output_sig`` (if ``out`` == 'output')
+            - ``output_signal`` (if ``out`` == 'output')
             - ``output_by_order`` (if ``out`` == 'output_by_order')
-            - ``state`` (if ``out`` == 'state')
-            - ``output_sig``, ``state_by_order``, and ``output_by_order`` (if \
-            ``out`` == 'all')
-
+            - ``state_signal`` (if ``out`` == 'state')
+            - ``state_by_order`` (if ``out`` == 'state_by_order')
+            - ``output_by_order``, ``state_by_order`` (if ``out`` == 'all')
         """
-        #TODO update docstring
 
         ####################
         ## Initialization ##
@@ -240,8 +284,28 @@ class SimulationObject:
 
     def compute_kernels(self, T, which='both'):
         """
+        Computes the kernels of the system for a given memory length.
+
+        Parameters
+        ----------
+        T : float
+            Memory length in time.
+        which : {'time', 'freq', both'}, optional (default='both')
+            Option to choose the output that the function returns.
+
+        Returns
+        -------
+        volterra_kernels : dict(int: numpy.ndarray)
+            Time kernels.
+        transfer_kernels : dict(int: numpy.ndarray)
+            Frequency kernels.
+
+        In function of the ``which`` option, this function returns:
+            - ``volterra_kernels`` (if ``which`` == 'time')
+            - ``transfer_kernels`` (if ``which`` == 'freq')
+            - ``volterra_kernels``, ``transfer_kernels`` (if ``which`` == \
+            'both')
         """
-        #TODO docstring
 
         if which == 'time':
             return self._compute_time_kernels(T)
@@ -259,8 +323,18 @@ class SimulationObject:
 
     def _compute_time_kernels(self, T):
         """
+        Computes the time kernels for a given memory length.
+
+        Parameters
+        ----------
+        T : float
+            Memory length in time.
+
+        Returns
+        -------
+        kernels_in2out : dict(int: numpy.ndarray)
+            Time kernels.
         """
-        #TODO docstring
 
         ####################
         ## Initialization ##
@@ -382,8 +456,18 @@ class SimulationObject:
 
     def _compute_freq_kernels(self, T):
         """
+        Computes the frequency kernels for a given memory length.
+
+        Parameters
+        ----------
+        T : float
+            Memory length in time.
+
+        Returns
+        -------
+        kernels_in2out : dict(int: numpy.ndarray)
+            Frequency kernels.
         """
-        #TODO docstring
 
         ####################
         ## Initialization ##
