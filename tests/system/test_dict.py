@@ -27,6 +27,11 @@ if __name__ == '__main__':
     Main script for testing.
     """
 
+    print('')
+
+    ########################
+    ## Systems dictionary ##
+    ########################
 
     sys_num = systems.create_test(mode='numeric')
     print(sys_num)

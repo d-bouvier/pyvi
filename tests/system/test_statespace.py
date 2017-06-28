@@ -29,6 +29,12 @@ if __name__ == '__main__':
     Main script for testing.
     """
 
+    print('')
+
+    ######################
+    ## StateSpace class ##
+    ######################
+
     sys_num = systems.create_test(mode='numeric')
     sys_symb = systems.create_test(mode='symbolic')
     assert sys_num._type == sys_symb._type, \
@@ -44,6 +50,14 @@ if __name__ == '__main__':
         "Similar Numerical and Symbolic StateSpace objects have different " + \
         "attribute '_dim_ok'"
 
+
+    #############################
+    ## Dimensions and booleans ##
+    #############################
+
+    print('Testing dimensions and booleans')
+    print('===============================\n')
+
     N = 3
     for dim_in in [1, 2]:
         for dim_out in [1, 2]:
@@ -56,6 +70,14 @@ if __name__ == '__main__':
             print('    _single_input :', test_system._single_input)
             print('   _single_output :', test_system._single_output)
 
+
+
+    #############################
+    ## Dimensions and warnings ##
+    #############################
+
+    print('\nTesting dimensions and warnings')
+    print('===============================\n')
 
     d_in = 1
     d_out = 1
