@@ -106,17 +106,17 @@ if __name__ == '__main__':
     print('Done.')
 
     # Results
-    plot_sig_io(signal, out1, time_vector,
-                name='Input-output (holder of order 1)')
+    plot_sig_io(time_vector, signal, out1,
+                title='Input-output (holder of order 1)')
     print('Computation time (holder of order 1): {}s'.format(end1-start1))
 
-    plot_sig_io(signal, out2, time_vector,
-                name='Input-output (holder of order 0)')
+    plot_sig_io(time_vector, signal, out2,
+                title='Input-output (holder of order 0)')
     print('Computation time (holder of order 0):  {}s'.format(end2-start2))
 
     diff = out1 - out2
     diff.shape = (1,) + diff.shape
-    plot_sig_coll(diff, time_vector, name='Difference')
+    plot_sig_coll(time_vector, diff, title='Difference')
 
 
     ########################

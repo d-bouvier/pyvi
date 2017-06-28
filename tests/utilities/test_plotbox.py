@@ -44,16 +44,16 @@ if __name__ == '__main__':
     kernel_freq_2 = np.fft.fftshift(np.fft.fftn(kernel_time_2))
 
     print('Testing plot_sig_io() ...', end=' ')
-    plot_sig_io(sig_1, sig_2, vector, name='Test réel', ylim=[-1.1, 1.1])
-    plot_sig_io(sig_3, sig_4, vector, name='Test complexe', xlim=[0, 3])
+    plot_sig_io(vector, sig_1, sig_2, title='Test réel', ylim=[-1.1, 1.1])
+    plot_sig_io(vector, sig_3, sig_4, title='Test complexe', xlim=[0, 3])
     print('Done.')
 
     print('Testing plot_coll() ...', end=' ')
-    plot_sig_coll(np.stack((sig_1, sig_2, sig_1 - sig_2), axis=0),
-                  vector, name='Test réel (Collection)', ylim=[-1.1, 1.1],
+    plot_sig_coll(vector, np.stack((sig_1, sig_2, sig_1 - sig_2), axis=0),
+                  title='Test réel (Collection)', ylim=[-1.1, 1.1],
                   title_plots=['Sinus', 'Cosinus', 'Sinus saturé'])
-    plot_sig_coll(np.stack((sig_3, sig_4), axis=0), vector, xlim=[0, 3],
-                  name='Test complexe (Collection)')
+    plot_sig_coll(vector, np.stack((sig_3, sig_4), axis=0), xlim=[0, 3],
+                  title='Test complexe (Collection)')
     print('Done.')
 
     print('Testing plot_kernel_time() ...', end=' ')
