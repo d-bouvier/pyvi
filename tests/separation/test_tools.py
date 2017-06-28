@@ -28,6 +28,15 @@ if __name__ == '__main__':
     Main script for testing.
     """
 
+    print()
+
+    ##############################
+    ## Function error_measure() ##
+    ##############################
+
+    print('Testing error_measure()')
+    print('=======================')
+
     N = 3
     L = 1000
     size=(N, L)

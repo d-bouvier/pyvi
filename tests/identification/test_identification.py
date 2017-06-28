@@ -34,6 +34,8 @@ if __name__ == '__main__':
     Main script for testing.
     """
 
+    print()
+
     ###############################
     ## Parameters specifications ##
     ###############################
@@ -135,12 +137,13 @@ if __name__ == '__main__':
     ##########################
 
     # Estimation error
-    print('Identification error (without noise)')
+    print('\nIdentification error (without noise)')
     print('------------------------------------')
     errors = dict()
     for method, val in kernels.items():
         errors[method] = error_measure(kernels['true'], val)
         print('{:10} :'.format(method), errors[method])
+    print()
 
 
     ###################

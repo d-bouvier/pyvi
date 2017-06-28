@@ -33,6 +33,8 @@ if __name__ == '__main__':
     Main script for testing.
     """
 
+    print()
+
     ########################################
     ## Test if simulation works correctly ##
     ########################################
@@ -147,6 +149,7 @@ if __name__ == '__main__':
     freq_kernels = damping_simu.compute_kernels(T, which='freq')
     print('Done.')
 
+    print('Plotting kernels ...', end=' ')
     N = len(time_kernels[1])
     time_vec = np.linspace(0, (N-1)/options['fs'], num=N)
     freq_vec = np.fft.fftshift(np.fft.fftfreq(N, d=1/options['fs']))
@@ -163,3 +166,4 @@ if __name__ == '__main__':
                      title='Transfer kernel of order 1')
     plot_kernel_freq(freq_vec, freq_kernels[2], style='wireframe',
                      title='Transfer kernel of order 2')
+    print('Done.')

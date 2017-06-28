@@ -29,7 +29,12 @@ if __name__ == '__main__':
     Main script for testing.
     """
 
-    # Data creation
+    print()
+
+    ###################
+    ## Data creation ##
+    ###################
+
     vector = np.arange(5, step=1/100)
     sig_1 = np.sin(2 * np.pi * vector)
     sig_2 = np.minimum(sig_1, 0.8)
@@ -43,10 +48,20 @@ if __name__ == '__main__':
     kernel_freq_1 = np.fft.fftshift(np.fft.fft(kernel_time_1))
     kernel_freq_2 = np.fft.fftshift(np.fft.fftn(kernel_time_2))
 
+
+    ############################
+    ## Function plot_sig_io() ##
+    ############################
+
     print('Testing plot_sig_io() ...', end=' ')
     plot_sig_io(vector, sig_1, sig_2, title='Test réel', ylim=[-1.1, 1.1])
     plot_sig_io(vector, sig_3, sig_4, title='Test complexe', xlim=[0, 3])
     print('Done.')
+
+
+    ##########################
+    ## Function plot_coll() ##
+    ##########################
 
     print('Testing plot_coll() ...', end=' ')
     plot_sig_coll(vector, np.stack((sig_1, sig_2, sig_1 - sig_2), axis=0),
@@ -55,6 +70,11 @@ if __name__ == '__main__':
     plot_sig_coll(vector, np.stack((sig_3, sig_4), axis=0), xlim=[0, 3],
                   title='Test complexe (Collection)')
     print('Done.')
+
+
+    #################################
+    ## Function plot_kernel_time() ##
+    #################################
 
     print('Testing plot_kernel_time() ...', end=' ')
     plot_kernel_time(time_vec, kernel_time_1, title='Test noyau temp - ordre 1')
@@ -65,6 +85,11 @@ if __name__ == '__main__':
     plot_kernel_time(time_vec, kernel_time_2, style='wireframe',
                      title="Test noyau temp - ordre 2 - mode 'wireframe'")
     print('Done.')
+
+
+    #################################
+    ## Function plot_kernel_freq() ##
+    #################################
 
     print('Testing plot_kernel_freq() ...', end=' ')
     plot_kernel_freq(freq_vec, kernel_freq_1, title='Test noyau freq - ordre 1')

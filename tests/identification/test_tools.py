@@ -34,10 +34,14 @@ if __name__ == '__main__':
     Main script for testing.
     """
 
-    print('##############################')
-    print('## Function error_measure() ##')
-    print('##############################')
     print()
+
+    ##############################
+    ## Function error_measure() ##
+    ##############################
+
+    print('Testing error_measure()')
+    print('=======================')
 
     N = 3
     M = 20
@@ -60,11 +64,12 @@ if __name__ == '__main__':
         print()
 
 
-    print('#################################')
-    print('## Function vector_to_kernel() ##')
-    print('#################################')
-    print()
+    #################################
+    ## Function vector_to_kernel() ##
+    #################################
 
+    print('Testing vector_to_kernel()')
+    print('==========================')
     M = 4
 
     print('Order 2\n-------')
@@ -102,10 +107,12 @@ if __name__ == '__main__':
     print()
 
 
-    print('######################################')
-    print('## Function vector_to_all_kernels() ##')
-    print('######################################')
-    print()
+    ######################################
+    ## Function vector_to_all_kernels() ##
+    ######################################
+
+    print('Testing vector_to_all_kernels()')
+    print('===============================')
 
     print('Order 1 to 3\n------------')
     N = 3
@@ -122,10 +129,12 @@ if __name__ == '__main__':
     print('\n')
 
 
-    print('###################################')
-    print('## Functions volterra_basis***() ##')
-    print('###################################')
-    print()
+    #####################################
+    ## Functions volterra_basis_by_*() ##
+    #####################################
+
+    print('Testing volterra_basis_by_*()')
+    print('=============================')
 
     length = 100
     sig = np.arange(length)
