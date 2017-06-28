@@ -1,13 +1,26 @@
 # -*- coding: utf-8 -*-
 """
-Tooolbox for useful small math functions.
+Tooolbox for useful math functions.
+
+Functions
+---------
+rms :
+    Returns the root-mean-square along given axis.
+db :
+    Returns the dB value.
+safe_db :
+    Returns the dB value, with safeguards if numerator or denominator is null.
+binomial :
+    Binomial coefficient returning an integer.
+array_symmetrization :
+    Symmetrize a multidimensional square array.
 
 Notes
 -----
-@author:    bouvier@ircam.fr
-            Damien Bouvier, IRCAM, Paris
+@author: bouvier (bouvier@ircam.fr)
+         Damien Bouvier, IRCAM, Paris
 
-Last modified on 22 June 2017
+Last modified on 28 June 2017
 Developed for Python 3.6.1
 """
 
@@ -16,6 +29,9 @@ Developed for Python 3.6.1
 #==============================================================================
 
 import numpy as np
+import itertools as itr
+from math import factorial
+from scipy.special import binom as fct_binomial
 
 
 #==============================================================================
@@ -24,22 +40,60 @@ import numpy as np
 
 def rms(sig, axis=None):
     """
-    Computation of the root-mean-square of a vector.
+    Returns the root-mean-square along given axis.
+
+    Parameters
+    ----------
+    sig : numpy.ndarray
+        Array for which RMS is computed.
+    axis : {None, int}, optional (default=None)
+        Axis along which the RMS is computed. The default is to compute the
+        RMS value of the flattened array.
+
+    Returns
+    -------
+    rms_value : numpy.ndarray or numpy.float
+         Root-mean-square value alogn given ``axis``.
     """
+
     return np.sqrt( np.mean(np.abs(sig)**2, axis=axis) )
 
 
-def db(val, ref=1):
+def db(val, ref=1.):
     """
-    Conversion to dB.
+    Returns the dB value.
+
+    Parameters
+    ----------
+    val : numpy.ndarray or float
+        Value for which dB value is wanted.
+    ref : float, optiona (default=1.)
+        Reference used for the dB computation.
+
+    Returns
+    -------
+    db_value : numpy.ndarray or numpy.float
+         dB value.
     """
+
     return 20 * np.log10(val / ref)
 
 
 def safe_db(num, den):
     """
-    Conversion to dB with verification that neither the denominator nor
-    numerator are equal to zero.
+    Returns the dB value, with safeguards if numerator or denominator is null.
+
+    Parameters
+    ----------
+    num : array_like
+        Numerator.
+    ref : array_like
+        Denominator.
+
+    Returns
+    -------
+    result : numpy.ndarray
+         dB value. Is numpy.Inf if ``num`` == 0 and -numpy.Inf if ``den`` == 0.
     """
 
     # Initialization
@@ -85,30 +139,35 @@ def safe_db(num, den):
 def binomial(n, k):
     """
     Binomial coefficient returning an integer.
+
+    Parameters
+    ----------
+    n : int
+    k : int
+
+    Returns
+    -------
+    result : int
+         Binomial coefficient.
     """
 
-    from scipy.special import binom as fct_binomial
     return int(fct_binomial(n, k))
 
 
 def array_symmetrization(array):
     """
-    Symmetrize a multidimensional square array (each dimension must have the
-    same length).
+    Symmetrize a multidimensional square array.
 
     Parameters
     ----------
     array : numpy.ndarray
-        Array to symmetrize.
+        Array to symmetrize (each dimension must have the same length).
 
     Returns
     -------
     array_sym : numpy.ndarray
         Symmetrized array.
     """
-
-    from math import factorial
-    import itertools as itr
 
     shape = array.shape
     assert len(set(shape)) == 1, 'Multidimensional array is not square ' + \

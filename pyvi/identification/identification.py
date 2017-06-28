@@ -11,15 +11,23 @@ KLS :
     Kernel identification via Least-Squares method using a QR decomposition.
 orderKLS :
     Performs KLS method on each nonlinear homogeneous order.
-KLS :
+termKLS :
     Performs KLS method on each combinatorial term.
+_KLS_construct_phi :
+    Auxiliary function of KLS method for Volterra basis computation.
+_KLS_core_computation( :
+    Auxiliary function of KLS method for the core computation.
+_orderKLS_construct_phi :
+    Auxiliary function of orderKLS method for Volterra basis computation.
+_termKLS_construct_phi :
+    Auxiliary function of termKLS method for Volterra basis computation.
 
 Notes
 -----
 @author: bouvier (bouvier@ircam.fr)
          Damien Bouvier, IRCAM, Paris
 
-Last modified on 23 June 2017
+Last modified on 28 June 2017
 Developed for Python 3.5.1
 """
 
@@ -40,29 +48,28 @@ from ..utilities.mathbox import binomial
 
 def KLS(input_sig, output_sig, M, N, phi=None, form='sym'):
     """
-    Identify the Volterra kernels of a system from input and output signals.
+    Kernel identification via Least-Squares method using a QR decomposition.
 
     Parameters
     ----------
     input_sig : numpy.ndarray
-        Vector of input signal.
+        Input signal.
     output_sig : numpy.ndarray
-        Vector of output signal.
+        Output signal.
     M : int
-        Memory length of kernels
-    order_max : int, optional
-        Highest kernel order (default 1).
-    separated_orders : boolean, optional
-        If True, ``output_sig`` should contain the separated homogeneous order
-        of the output, and the identification will be made for each kernel
-        separately.
+        Memory length of kernels (in samples).
+    N : int
+        Highest kernel order.
+    phi : {dict(int: numpy.ndarray), numpy.ndarray}, optional (default=None)
+        If None, ``phi`` is computed from ``input_sig``; else, ``phi`` is used.
+    form : {'sym', 'tri', 'symmetric', 'triangular'}, optional (default='sym')
+        Form of the returned Volterra kernel (symmetric or triangular).
 
     Returns
     -------
-    kernels : dict of numpy.ndarray
+    kernels : dict(int: numpy.ndarray)
         Dictionnary linking the Volterra kernel of order ``n`` to key ``n``.
     """
-    #TODO update docstring
 
     # Input combinatoric
     phi = _KLS_construct_phi(input_sig, M, N, phi=phi)
@@ -77,22 +84,8 @@ def KLS(input_sig, output_sig, M, N, phi=None, form='sym'):
 
 def _KLS_construct_phi(signal, M, N, phi=None):
     """
-    Parameters
-    ----------
-    signal : numpy.ndarray
-        Vector of input signal.
-    M : int
-        Memory length of kernels.
-    order_max : int, optional
-        Highest kernel order (default 1).
-
-    Returns
-    -------
-    phi : numpy.ndarray
-        Matrix containing the expression of the Volterra basis functionals for
-        all orders (up to ``order_max``) and all samples of ``signal``.
+    Auxiliary function of KLS method for Volterra basis computation.
     """
-    #TODO update docstring
 
     if phi is None:
         phi_dict = volterra_basis_by_order(signal, M, N)
@@ -105,8 +98,8 @@ def _KLS_construct_phi(signal, M, N, phi=None):
 
 def _KLS_core_computation(combinatorial_matrix, output_sig):
     """
+    Auxiliary function of KLS method for the core computation.
     """
-    #TODO docstring
 
     # QR decomposition
     q, r = qr(combinatorial_matrix, mode='economic')
@@ -120,29 +113,28 @@ def _KLS_core_computation(combinatorial_matrix, output_sig):
 
 def orderKLS(input_sig, output_sig_by_order, M, N, phi=None, form='sym'):
     """
-    Identify the Volterra kernels of a system from input and output signals.
+    Performs KLS method on each nonlinear homogeneous order.
 
     Parameters
     ----------
     input_sig : numpy.ndarray
-        Vector of input signal.
-    output_sig : numpy.ndarray
-        Vector of output signal.
+        Input signal.
+    output_sig_by_order : numpy.ndarray
+        Output signal separated in ``N`` nonlinear homogeneous orders.
     M : int
-        Memory length of kernels.
-    order_max : int, optional
-        Highest kernel order (default 1).
-    separated_orders : boolean, optional
-        If True, ``output_sig`` should contain the separated homogeneous order
-        of the output, and the identification will be made for each kernel
-        separately.
+        Memory length of kernels (in samples).
+    N : int
+        Highest kernel order.
+    phi : {None, dict(int: numpy.ndarray)}, optional (default=None)
+        If None, ``phi`` is computed from ``input_sig``; else, ``phi`` is used.
+    form : {'sym', 'tri', 'symmetric', 'triangular'}, optional (default='sym')
+        Form of the returned Volterra kernel (symmetric or triangular).
 
     Returns
     -------
-    kernels : dict of numpy.ndarray
+    kernels : dict(int: numpy.ndarray)
         Dictionnary linking the Volterra kernel of order ``n`` to key ``n``.
     """
-    #TODO update docstring
 
     # Input combinatoric
     if phi is None:
@@ -161,37 +153,36 @@ def orderKLS(input_sig, output_sig_by_order, M, N, phi=None, form='sym'):
 
 def _orderKLS_construct_phi(signal, M, N):
     """
+    Auxiliary function of orderKLS method for Volterra basis computation.
     """
-    #TODO docstring
 
     return volterra_basis_by_order(signal, M, N)
 
 
 def termKLS(input_sig, output_sigs_by_term, M, N, phi=None, form='sym'):
     """
-    Identify the Volterra kernels of a system from input and output signals.
+    Performs KLS method on each combinatorial term.
 
     Parameters
     ----------
     input_sig : numpy.ndarray
-        Vector of input signal.
-    output_sig : numpy.ndarray
-        Vector of output signal.
+        Input signal.
+    output_sigs_by_term : dict((int, int): numpy.ndarray}
+        Output signal separated in nonlinear combinatorial terms.
     M : int
-        Memory length of kernels
-    order_max : int, optional
-        Highest kernel order (default 1).
-    separated_orders : boolean, optional
-        If True, ``output_sig`` should contain the separated homogeneous order
-        of the output, and the identification will be made for each kernel
-        separately.
+        Memory length of kernels (in samples).
+    N : int
+        Highest kernel order.
+    phi : {None, dict(int: numpy.ndarray)}, optional (default=None)
+        If None, ``phi`` is computed from ``input_sig``; else, ``phi`` is used.
+    form : {'sym', 'tri', 'symmetric', 'triangular'}, optional (default='sym')
+        Form of the returned Volterra kernel (symmetric or triangular).
 
     Returns
     -------
-    kernels : dict of numpy.ndarray
+    kernels : dict(int: numpy.ndarray)
         Dictionnary linking the Volterra kernel of order ``n`` to key ``n``.
     """
-    #TODO update docstring
 
     # Input combinatoric
     if phi is None:
@@ -215,8 +206,8 @@ def termKLS(input_sig, output_sigs_by_term, M, N, phi=None, form='sym'):
 
 def _termKLS_construct_phi(signal, M, N):
     """
+    Auxiliary function of termKLS method for Volterra basis computation.
     """
-    #TODO docstring
 
     return volterra_basis_by_term(signal, M, N)
 

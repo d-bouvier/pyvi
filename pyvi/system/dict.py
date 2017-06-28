@@ -2,8 +2,8 @@
 """
 Module that gives functions creating physical or theoretical systems.
 
-Functions for system parameters
--------------------------------
+Functions
+---------
 create_loudspeaker_sica :
     Returns NumericalStateSpace object corresponding to the SICA Z000900
     loudspeaker.
@@ -19,7 +19,7 @@ Notes
 @author: bouvier (bouvier@ircam.fr)
          Damien Bouvier, IRCAM, Paris
 
-Last modified on 25 Apr. 2017
+Last modified on 27 June 2017
 Developed for Python 3.6.1
 """
 
@@ -45,15 +45,14 @@ def create_loudspeaker_sica(version='tristan', output='pos'):
 
     Parameters
     ----------
-    version : {'tristan', 'CFA'}, optional
+    version : {'tristan', 'CFA'}, optional (default='tristan')
         Version to simulate.
-    output : {'pos', 'current'}, optional
-        Defines the output of the system
+    output : {'pos', 'current'}, optional (default='pos')
+        Defines the output of the system.
 
     Returns
     -------
     Object of class NumericalStateSpace.
-
     """
 
     ## Physical parameters ##
@@ -101,26 +100,25 @@ def create_loudspeaker_sica(version='tristan', output='pos'):
                                pq_symmetry=True)
 
 
-def create_nl_damping(gain=1, f0=100, damping=0.2, nl_coeff=[0, 1e-6]):
+def create_nl_damping(gain=1., f0=100., damping=0.2, nl_coeff=[0., 1e-6]):
     """
     Function that create and returns the StateSpace object corresponding to a
     second order system with nonlinear stiffness.
 
     Parameters
     ----------
-    gain : float, optional
-        Gain at null frequency
-    f0 : float, optional
-        Natural frequency of the system
-    damping : float, optional
-        Damping factor of the system
-    nl_coeff : [float, float, float], optional
-        Coefficient associated respectively with M20, M30 and M40 functions
+    gain : float, optional (default=1.)
+        Gain at null frequency.
+    f0 : float, optional (default=100.)
+        Natural frequency of the system.
+    damping : float, optional(default=0.2)
+        Damping factor of the system.
+    nl_coeff : list(float), optional (default=[[0., 1e-6]])
+        Coefficient of Mp0 functions (first calue corresponds to p=2).
 
     Returns
     -------
     Object of class NumericalStateSpace.
-
     """
 
     w0 = 2 * np.pi * f0 # Natural pulsation
@@ -144,19 +142,23 @@ def create_nl_damping(gain=1, f0=100, damping=0.2, nl_coeff=[0, 1e-6]):
         mpq_dict[(p_count, 0)] = temp_mpq.copy()
 
     return NumericalStateSpace(A_m, B_m, C_m, D_m, mpq_dict, npq_dict,
-                               pq_symmetry=True,)
+                               pq_symmetry=True)
 
 
 def create_test(mode='numeric'):
     """
     Function that create and returns the StateSpace object corresponding to a
-    simple system for testing and debugging the simulation.
+    simple system for testing and debugging.
+
+    Parameters
+    ----------
+    mode : {'num', 'symb', 'numeric', 'symbolic'}, optional (default='numeric')
+        Choose which type of object the function returns.
 
     Returns
     -------
-    Object of class NumericalStateSpace (if ``mode`` is 'numeric') or
-    SymbolicStateSpace (if ``mode`` is 'symbolic').
-
+    Object of class NumericalStateSpace (if ``mode`` is 'numeric' or 'num') or
+    SymbolicStateSpace (if ``mode`` is 'symbolic' or 'symb').
     """
 
     if mode in ['numeric', 'num']:

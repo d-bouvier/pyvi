@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Test script for and pyvi.order_separation.order_separation
+Test script for and pyvi.separation.order_separation
 
 Notes
 -----
@@ -32,6 +32,10 @@ if __name__ == '__main__':
     Main script for testing.
     """
 
+    ################
+    ## Parameters ##
+    ################
+
     fs = 4410
     T = 0.2
     time_vec = np.arange(0, T, 1/fs)
@@ -45,6 +49,12 @@ if __name__ == '__main__':
     system = SimulationObject(create_nl_damping(nl_coeff=[1e-1, 3e-5]), fs=fs,
                               nl_order_max=nl_order_max)
 
+
+    ################
+    ## Separation ##
+    ################
+
+    print('Computing PS method ...', end=' ')
     PS = sep.PS(N=nl_order_max)
     out_order_cplx = system.simulation(input_cplx, out_opt='output_by_order')
     input_coll = PS.gen_inputs(input_cplx)
@@ -52,27 +62,37 @@ if __name__ == '__main__':
     for ind in range(input_coll.shape[0]):
         output_coll[ind] = system.simulation(input_coll[ind])
     out_order_est_cplx = PS.process_outputs(output_coll)
+    print('Done.')
 
     out_order_amp = system.simulation(input_real, out_opt='output_by_order')
 
+    print('Computing AS method ...', end=' ')
     AS = sep.AS(N=nl_order_max)
     input_coll = AS.gen_inputs(input_real)
     output_coll = np.zeros(input_coll.shape)
     for ind in range(input_coll.shape[0]):
         output_coll[ind] = system.simulation(input_coll[ind])
     out_order_est_amp = AS.process_outputs(output_coll)
+    print('Done.')
 
     out_order_phase = system.simulation(2*input_real, out_opt='output_by_order')
 
+    print('Computing PAS method ...', end=' ')
     PAS = sep.PAS(N=nl_order_max)
     input_coll = PAS.gen_inputs(input_cplx)
     output_coll = np.zeros(input_coll.shape)
     for ind in range(input_coll.shape[0]):
         output_coll[ind] = system.simulation(input_coll[ind])
     out_order_est_phase = PAS.process_outputs(output_coll)
-    print()
     out_order_est_phase_raw = PAS.process_outputs(output_coll, raw_mode=True)
+    print('Done.')
 
+
+    ##################
+    ## Signal plots ##
+    ##################
+
+    print('Printing plots ...', end=' ')
 
     plt.figure('Method PS - True and estimated orders')
     plt.clf()
@@ -138,3 +158,5 @@ if __name__ == '__main__':
             ax = plt.subplot2grid(shape, pos, colspan=2)
             ax.plot(time_vec, np.real(out_order_est_phase_raw[(n, q)]), 'b')
             ax.plot(time_vec, np.imag(out_order_est_phase_raw[(n, q)]), 'r')
+
+    print('Done.')

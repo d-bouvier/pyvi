@@ -1,11 +1,13 @@
 # -*- coding: utf-8 -*-
 """
-Test script for and pyvi.order_separation.tools
+Test script for and pyvi.separation.tools
 
+Notes
+-----
 @author: bouvier (bouvier@ircam.fr)
          Damien Bouvier, IRCAM, Paris
 
-Last modified on 06 June 2017
+Last modified on 27 June 2017
 Developed for Python 3.6.1
 """
 

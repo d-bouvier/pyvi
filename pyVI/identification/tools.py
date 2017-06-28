@@ -1,11 +1,26 @@
 # -*- coding: utf-8 -*-
 """
-Tools for measuring identification error.
+Module for handling identification error, kernels and volterra basis.
 
+Functions
+---------
+error_measure :
+    Returns the relative error between kernels and their estimates.
+vector_to_kernel :
+    Rearranges vector of order n Volterra kernel coefficients into tensor.
+vector_to_all_kernels :
+    Rearranges vector of Volterra kernels coefficients into N tensors.
+volterra_basis_by_order :
+    Returns a dict gathering Volterra basis matrix for each order.
+volterra_basis_by_term :
+    Returns a dict gathering Volterra basis matrix for each combinatorial term.
+
+Notes
+-----
 @author: bouvier (bouvier@ircam.fr)
          Damien Bouvier, IRCAM, Paris
 
-Last modified on 23 June 2017
+Last modified on 28 June 2017
 Developed for Python 3.6.1
 """
 
@@ -28,7 +43,7 @@ def error_measure(kernels_ref, kernels_est, db=True):
     Returns the relative error between kernels and their estimates.
 
     This error is computed as the RMS value of the error estimation divided by
-    the RMS values of the trus kernels, for each order.
+    the RMS values of the true kernels, for each order.
 
     Parameters
     ----------
@@ -65,26 +80,24 @@ def error_measure(kernels_ref, kernels_est, db=True):
 
 def vector_to_kernel(vec_kernel, M, n, form='sym'):
     """
-    Rearrange a vector containing the coefficients of a Volterra kernel of order
-    ``n`` into a numpy.ndarray representing the Volterra kernel.
+    Rearranges vector of order n Volterra kernel coefficients into tensor.
 
     Parameters
     ----------
     vec_kernel : numpy.ndarray
         Vector regrouping all symmetric coefficients of a Volterra kernel.
     M : int
-        Memory length of the kernel.
+        Memory length of the kernel (in samples).
     n : int
         Kernel order.
     form : {'sym', 'tri', 'symmetric', 'triangular'}, optional (default='sym')
-        Form of the returned Volterra kernel (symmetric or triangular)
+        Form of the returned Volterra kernel (symmetric or triangular).
 
     Returns
     -------
     kernel : numpy.ndarray
         The corresponding Volterra kernel.
     """
-    #TODO update docstring
 
     # Check dimension
     length = binomial(M + n - 1, n)
@@ -109,25 +122,24 @@ def vector_to_kernel(vec_kernel, M, n, form='sym'):
 
 def vector_to_all_kernels(f, M, N, form='sym'):
     """
-    Rearrange a numpy vector containing the coefficients of all Volterra kernels
-    up to order ``order_max`` into a dictionnary regrouping numpy.ndarray
-    representing the Volterra kernels.
+    Rearranges vector of Volterra kernels coefficients into N tensors.
 
     Parameters
     ----------
     f : numpy.ndarray
         Vector regrouping all symmetric coefficients of the Volterra kernels.
     M : int
-        Memory length of kernels.
-    N : int, optional
+        Memory length of kernels (in samples).
+    N : int
         Highest kernel order.
+    form : {'sym', 'tri', 'symmetric', 'triangular'}, optional (default='sym')
+        Form of the returned Volterra kernel (symmetric or triangular).
 
     Returns
     -------
-    kernels : dict of numpy.ndarray
+    kernels : dict(int: numpy.ndarray)
         Dictionnary linking the Volterra kernel of order ``n`` to key ``n``.
     """
-    #TODO update docstring
 
     # Check dimension
     length = binomial(M + N, N) - 1
@@ -151,8 +163,22 @@ def vector_to_all_kernels(f, M, N, form='sym'):
 
 def volterra_basis_by_order(signal, M, N):
     """
+    Returns a dict gathering Volterra basis matrix for each order.
+
+    Parameters
+    ----------
+    signal : array_like
+        Input signal from which to construct the Volterras basis.
+    M : int
+        Memory length of kernels (in samples).
+    N : int
+        Highest kernel order.
+
+    Returns
+    -------
+    kernels : dict(int: numpy.ndarray)
+        Dictionnary of Volterra basis matrix for each order.
     """
-    #TODO docstring
 
     phi = dict()
     phi[1] = toeplitz(signal, np.zeros((1, M)))
@@ -167,8 +193,22 @@ def volterra_basis_by_order(signal, M, N):
 
 def volterra_basis_by_term(signal, M, N):
     """
+    Returns a dict gathering Volterra basis matrix for each combinatorial term.
+
+    Parameters
+    ----------
+    signal : array_like
+        Input signal from which to construct the Volterras basis.
+    M : int
+        Memory length of kernels (in samples).
+    N : int
+        Highest kernel order.
+
+    Returns
+    -------
+    kernels : dict((int, int): numpy.ndarray)
+        Dictionnary of Volterra basis matrix for each combinatorial term.
     """
-    #TODO docstring
 
     phi = volterra_basis_by_order(signal, M, N)
     for n in range(1, N+1):
@@ -196,15 +236,29 @@ def volterra_basis_by_term(signal, M, N):
     return phi
 
 
-def _reshape_and_eliminate_redudancy(matrix, M, n, size):
+def _reshape_and_eliminate_redudancy(array, M, n, size):
     """
-    M: memory
-    n : order
+    Returns only non-redundant terms of the Volterra basis in matrix form.
+
+    Parameters
+    ----------
+    array : numpy.ndarray
+        3D-array regrouping all terms of the Volterra basis.
+    M : int
+        Memory length of kernels (in samples).
+    n : int
+        Current order.
+    size : int
+        Length of the second dimension of ``array``.
+
+    Returns
+    -------
+    kernels : numpy.ndarray
+        Volterra basis matrix containing only non-dedundant terms.
     """
-    #TODO docstring
 
     temp_tuple = ()
     for ind in range(M):
         idx = int(binomial(n+M-ind-2, n-1))
-        temp_tuple += (matrix[:, size-idx:, ind],)
+        temp_tuple += (array[:, size-idx:, ind],)
     return np.concatenate(temp_tuple, axis=1)

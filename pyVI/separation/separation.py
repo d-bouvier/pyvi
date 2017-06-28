@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
 """
-Toolbox for nonlinear order separation.
+Module for nonlinear order separation.
 
 This package creates classes for nonlinear homogeneous order separation of
 Volterra series.
 
 Class
 -----
-SeparationMethod :
+_SeparationMethod :
     Base class for order separation methods.
 AS :
     Class for Amplitude-based Separation method.
@@ -21,7 +21,7 @@ Notes
 @author: bouvier (bouvier@ircam.fr)
          Damien Bouvier, IRCAM, Paris
 
-Last modified on 12 June 2017
+Last modified on 27 June 2017
 Developed for Python 3.6.1
 """
 
@@ -40,29 +40,31 @@ from ..utilities.mathbox import binomial
 
 #TODO add condition number
 
-class SeparationMethod:
+class _SeparationMethod:
     """
     Base class for order separation methods.
 
     Parameters
     ----------
     N : int
-        Number of orders to separate (truncation order of the Volterra series)
+        Number of orders to separate (truncation order of the Volterra series).
     K : int
-        Number of tests signals needed for the method
-    factors : (K, 1) array_like
-        Factors applied to the base signal in order to create the test signals
+        Number of tests signals needed for the method.
+    factors : array_like (with length K)
+        Factors applied to the base signal in order to create the test signals.
 
     Attributes
     ----------
-    N, K, factors
+    N : int
+    K : int
+    factors : array_like (of length K)
 
     Methods
     -------
     gen_inputs(signal)
-        Creates and returns the collection of input test signals
+        Returns the collection of input test signals.
     process_output(output_coll)
-        Process output signals and returns the separated order
+        Process outputs.
     """
 
     def __init__(self, N, K, factors):
@@ -72,7 +74,7 @@ class SeparationMethod:
 
     def gen_inputs(self, signal):
         """
-        Creates and returns the collection of input test signals.
+        Returns the collection of input test signals.
 
         Parameters
         ----------
@@ -81,25 +83,26 @@ class SeparationMethod:
 
         Returns
         -------
-        input_coll : (K, ...)
-            Collection of the K input test signals.
+        input_coll : numpy.ndarray
+            Collection of the K input test signals (each with the same shape as
+            ``signal``).
         """
 
         return np.tensordot(self.factors, signal, axes=0)
 
     def process_outputs(self, output_coll):
         """
-        Process outputs signals and returns the separated order.
+        Process outputs.
 
         Parameters
         ----------
-        output_coll : (K, ...) array_like
+        output_coll : array_like
             Collection of the K output signals.
         """
         pass
 
 
-class AS(SeparationMethod):
+class AS(_SeparationMethod):
     """
     Class for Amplitude-based Separation method.
 
@@ -112,27 +115,27 @@ class AS(SeparationMethod):
     negative_gain : boolean, optional (default=True)
         Defines if amplitudes with negative values can be used.
     K : int, optional (default=None)
-        Number of tests signals needed for the method; must be greater
-        than N; if None, will be set equal to N.
+        Number of tests signals needed for the method; must be greater than or
+        equal to N; if None, will be set equal to N.
 
     Attributes
     ----------
     N : int
     K : int
-    factors : (K, 1) array_like
+    factors : array_like (of length K)
     gain : float
     negative_gain : boolean
 
     Methods
     -------
     gen_inputs(signal)
-        Creates and returns the collection of input test signals
+        Returns the collection of input test signals.
     process_output(output_coll)
-        Process output signals and returns the separated order
+        Process outputs and returns estimated orders.
 
     See also
     --------
-    SeparationMethod: Parent class
+    _SeparationMethod : Parent class.
     """
 
     def __init__(self, N=3, gain=1.51, negative_gain=True, K=None):
@@ -140,7 +143,7 @@ class AS(SeparationMethod):
         nb_test = N if K is None else K
         self.gain = gain
         self.negative_gain = negative_gain
-        SeparationMethod.__init__(self, N, nb_test,
+        _SeparationMethod.__init__(self, N, nb_test,
                                   self._gen_amp_factors(nb_test))
 
     def _gen_amp_factors(self, nb_test):
@@ -154,16 +157,16 @@ class AS(SeparationMethod):
 
     def process_outputs(self, output_coll):
         """
-        Process outputs signals and returns the separated orders.
+        Process outputs and returns estimated orders.
 
         Parameters
         ----------
-        output_coll : (K, ...) array_like
+        output_coll : array_like
             Collection of the K output signals.
 
         Returns
         -------
-        output_by_order : (N, ...) array_like
+        output_by_order : array_like
             Estimation of the N first nonlinear homogeneous orders.
         """
 
@@ -183,7 +186,7 @@ class AS(SeparationMethod):
             return np.dot(np.linalg.pinv(mixing_mat), output_coll)
 
 
-class PS(SeparationMethod):
+class PS(_SeparationMethod):
     """
     Class for Phase-based Separation method.
 
@@ -198,7 +201,7 @@ class PS(SeparationMethod):
     ----------
     N : int
     K : int
-    factors : (K, 1) array_like
+    factors : array_like (of length K)
     rho : float
     w : float
         Complex unit-root used as dephasing factor.
@@ -206,18 +209,18 @@ class PS(SeparationMethod):
     Methods
     -------
     gen_inputs(signal)
-        Creates and returns the collection of input test signals
+        Returns the collection of input test signals.
     process_output(output_coll)
-        Process output signals and returns the separated order
+        Process outputs and returns estimated orders.
 
     See also
     --------
-    SeparationMethod: Parent class
+    _SeparationMethod: Parent class
     """
 
     def __init__(self, N=3, rho=1.):
         self.rho = rho
-        SeparationMethod.__init__(self, N, N, self._gen_phase_factors(N))
+        _SeparationMethod.__init__(self, N, N, self._gen_phase_factors(N))
 
     def _gen_phase_factors(self, nb_test):
         """
@@ -229,16 +232,16 @@ class PS(SeparationMethod):
 
     def process_outputs(self, output_coll):
         """
-        Process outputs signals and returns the separated orders.
+        Process outputs and returns estimated orders.
 
         Parameters
         ----------
-        output_coll : (K, ...) array_like
+        output_coll : array_like
             Collection of the K output signals.
 
         Returns
         -------
-        output_by_order : (N, ...) array_like
+        output_by_order : array_like
             Estimation of the N first nonlinear homogeneous orders.
         """
 
@@ -273,28 +276,31 @@ class PAS(PS, AS):
     ----------
     N : int
     K : int
-    factors : (K, 1) array_like
+    factors : array_like (of length K)
     gain : float
     negative_gain : boolean (class Attribute, always False)
     rho : float (class Attribute, always 1)
     w : float
     nb_amp : int
-    amp_vec : (nb_amp, 1) array_like
+        Number of different amplitudes used.
     nb_phase : int
+        Number of different phases used.
     nb_term : int
         Total number of combinatorial terms.
+    amp_vec : array_like (of length nb_amp)
+        Vector regrouping all amplitudes used.
 
     Methods
     -------
     gen_inputs(signal)
-        Creates and returns the collection of input test signals
-    process_output(output_coll, , raw_mode=False)
-        Process output signals and returns the separated order
+        Returns the collection of input test signals.
+    process_output(output_coll, raw_mode=False)
+        Process outputs and returns estimated orders or combinatorial terms.
 
     See also
     --------
     PS, AS: Parents class
-    SeparationMethod
+    _SeparationMethod
     """
 
     negative_gain = False
@@ -311,11 +317,11 @@ class PAS(PS, AS):
         nb_test = self.nb_phase * self.nb_amp
         self.nb_term = (N * (N + 3)) // 2
         factors = np.tensordot(self.amp_vec, phase_vec, axes=0).flatten()
-        SeparationMethod.__init__(self, N, nb_test, factors)
+        _SeparationMethod.__init__(self, N, nb_test, factors)
 
     def gen_inputs(self, signal):
         """
-        Creates and returns the collection of input test signals.
+        Returns the collection of input test signals.
 
         Parameters
         ----------
@@ -324,35 +330,38 @@ class PAS(PS, AS):
 
         Returns
         -------
-        input_coll : (K, ...)
-            Collection of the K input test signals.
+        input_coll : numpy.ndarray
+            Collection of the K input test signals (each with the same shape as
+            ``signal``).
 
         See also
         --------
-        SeparationMethod.gen_inputs
+        _SeparationMethod.gen_inputs
         """
 
-        return 2 * np.real(SeparationMethod.gen_inputs(self, signal))
+        return 2 * np.real(_SeparationMethod.gen_inputs(self, signal))
 
     def process_outputs(self, output_coll, raw_mode=False):
         """
-        Process outputs signals and returns the separated orders.
+        Process outputs and returns estimated orders or combinatorial terms.
 
         Parameters
         ----------
         output_coll : (K, ...) array_like
             Collection of the K output signals.
-        raw_mode : (boolean,  optional (default=False)
-            Collection of the K output signals.
+        raw_mode : boolean, optional (default=False)
+            Option that defines what the function returns.
 
         Returns
         -------
-        if ``raw_mode`` == False:
-            output_by_order : (N, ...) array_like
-                Estimation of the N first nonlinear homogeneous orders.
-        if ``raw_mode`` == True:
-            combinatorial_terms : dict((int, int): array_like)
-                Estimation of the N first nonlinear homogeneous orders.
+        output_by_order : numpy.ndarray
+            Estimation of the N first nonlinear homogeneous orders.
+        combinatorial_terms : dict((int, int): array_like)
+            Estimation of the N first nonlinear homogeneous orders.
+
+        In function of the ``raw_mode`` option, this function returns:
+            - ``output_by_order`` (if ``out`` == False)
+            - ``combinatorial_terms`` (if ``out`` == True)
         """
 
         sig_shape = output_coll.shape[1:]

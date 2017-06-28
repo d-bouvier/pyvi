@@ -20,7 +20,7 @@ Notes
 @author: bouvier (bouvier@ircam.fr)
          Damien Bouvier, IRCAM, Paris
 
-Last modified on 07 June 2017
+Last modified on 27 June 2017
 Developed for Python 3.6.1
 """
 
@@ -48,59 +48,52 @@ class StateSpace:
     representation, a mathematical formalism used in control engineering
     (see https://en.wikipedia.org/wiki/State-space_representation).
 
-    Attributes
+
+    Parameters
     ----------
     A_m : array-like (numpy.ndarray or sympy.Matrix)
-        State-to-state matrix
+        State-to-state matrix.
     B_m : array-like
-        Input-to-state matrix
+        Input-to-state matrix.
     C_m : array-like
-        State-to-output matrix
+        State-to-output matrix.
     D_m : array-like
-        Input-to-output matrix (feedtrhough matrix)
-    mpq : dict {(int, int): tensor-like (numpy.ndarray or sympy.tensor.array)}
-        Store multilinear Mpq functions (nonlinear terms of the state equation)
+        Input-to-output matrix (feedtrhough matrix).
+    mpq : dict((int, int): tensor-like (numpy.ndarray or sympy.tensor.array))
+        Multilinear Mpq functions (nonlinear terms of the state equation)
         in tensor forms.
-    npq : dict {(int, int): tensor-like}
-        Store multilinear Npq functions (nonlinear terms of the output equation)
+    npq : dict((int, int): tensor-like)
+        Multilinear Npq functions (nonlinear terms of the output equation)
         in tensor forms.
-    dim : dict
-        Dictionnaries with 3 entries giving respectively the dimension of:
-        - the input
-        - the state
-        - the output
+    pq_symmetry : boolean, optional (default=False)
+        Indicates if multilinear Mpq and Npq tensors functions are
+        symmetric.
+
+    Attributes
+    ----------
+    A_m, B_m, C_m, D_m : array_like
+    mpq, npq : dict((int, int): tensor-like)
     pq_symmetry : boolean
-        Indicates if multilinear Mpq and Npq tensors functions are symmetric.
+    dim : dict(str: int)
+        Dictionnaries with 3 entries giving the dimension of the input, the
+        state and the output.
     linear : boolean
         True if the system is linear.
+    state_eqn_linear_analytic : boolean
+        True if the system is linear-analytic (q<2 for every Mpq and Npq).
+    dynamical_nl_only_on_state : boolean
+        True if there is no nonlinearity on the input in the dynamical equation.
+    _dim_ok : boolean
+        True if dimensions all array and tensor dimensions corresponds.
+    _type : {'SISO', 'SIMO', 'MISO', 'MIMO'}
+        System's type (in terms of number of inputs and outputs).
+    _single_input : boolean
+        True if the system takes unidimensional signals as inputs.
+    _single_output : boolean
+        True if the system outputs unidimensional signals.
     """
 
-    def __init__(self, A_m, B_m, C_m, D_m, mpq_dict={}, npq_dict={},
-                 pq_symmetry=False):
-        """
-        Initialisation function for System object.
-
-        Parameters
-        ----------
-        A_m : array-like
-            State-to-state matrix
-        B_m : array-like
-            Input-to-state matrix
-        C_m : array-like
-            State-to-output matrix
-        D_m : array-like
-            Input-to-output matrix (feedtrhough matrix)
-        mpq_dict : dict {(int, int): tensor-like}
-            Multilinear Mpq functions (nonlinear terms of the state equation)
-            in tensor forms.
-        npq_dict : dict {(int, int): tensor-like}
-            Multilinear Npq functions (nonlinear terms of the output equation)
-            in tensor forms.
-        pq_symmetry : boolean, optional
-            Indicates if multilinear Mpq and Npq tensors functions are
-            symmetric.
-
-        """
+    def __init__(self, A_m, B_m, C_m, D_m, mpq={}, npq={}, pq_symmetry=False):
 
         # Initialize the linear part
         self.A_m = A_m
@@ -114,8 +107,8 @@ class StateSpace:
                     'output': C_m.shape[0]}
 
         # Initialize the nonlinear part
-        self.mpq = mpq_dict
-        self.npq = npq_dict
+        self.mpq = mpq
+        self.npq = npq
         self.pq_symmetry = pq_symmetry
 
         # Check dimensions and characteristics/categorization
@@ -291,8 +284,39 @@ class StateSpace:
 class NumericalStateSpace(StateSpace):
     """
     Numerical version of the StateSpace class.
+
+    Parameters
+    ----------
+    A_m : array-like (numpy.ndarray)
+    B_m : array-like
+    C_m : array-like
+    D_m : array-like
+    mpq : dict((int, int): tensor-like (numpy.ndarray))
+    npq : dict((int, int): tensor-like)
+    pq_symmetry : boolean, optional (default=False)
+
+    Attributes
+    ----------
+    A_m, B_m, C_m, D_m : array_like
+    mpq, npq : dict((int, int): tensor-like)
+    pq_symmetry : boolean
+    dim : dict(str: int)
+    linear : boolean
+    state_eqn_linear_analytic : boolean
+    dynamical_nl_only_on_state : boolean
+    nl_colinear : boolean
+        True if dynamical nonlinearities are colinear to the input-to-state
+        matrix.
+
+    Methods
+    -------
+    convert2symbolic(values_dict)
+        Returns a SymbolicStateSpace object of the system.
+
+    See also
+    --------
+    StateSpace : Parent class.
     """
-    #TODO docstring
 
     def _ckeck_categories(self):
         """Check in which categories the system belongs."""
@@ -314,13 +338,7 @@ class NumericalStateSpace(StateSpace):
 
     @abstractmethod
     def convert2symbolic(self, values_dict):
-        """Create a SymbolicStateSpace object of the system."""
-        raise NotImplementedError
-
-    @abstractmethod
-    def symmetrization(self):
-        #TODO docstring
-        #TODO utiliser fct dans simulation/kernels
+        """Returns a SymbolicStateSpace object of the system."""
         raise NotImplementedError
 
 
@@ -329,14 +347,45 @@ class SymbolicStateSpace(StateSpace):
     Symbolic version of the StateSpace class, using sympy package.
 
     In the future, this subclass will permit exportation to pdf via LaTex.
+
+    Parameters
+    ----------
+    A_m : array-like (sympy.Matrix)
+    B_m : array-like
+    C_m : array-like
+    D_m : array-like
+    mpq : dict((int, int): tensor-like (sympy.tensor.array))
+    npq : dict((int, int): tensor-like)
+    pq_symmetry : boolean, optional (default=False)
+
+    Attributes
+    ----------
+    A_m, B_m, C_m, D_m : array_like
+    mpq, npq : dict((int, int): tensor-like)
+    pq_symmetry : boolean
+    dim : dict(str: int)
+    linear : boolean
+    state_eqn_linear_analytic : boolean
+    dynamical_nl_only_on_state : boolean
+
+    Methods
+    -------
+    convert2numerical(values_dict)
+        Returns a NumericalStateSpace object of the system.
+    print2latex()
+        Creates a LaTex document with the state-space representation.
+
+    See also
+    --------
+    StateSpace : Parent class.
     """
 
     @abstractmethod
     def convert2numerical(self, values_dict):
-        """Create a NumericalStateSpace object of the system."""
+        """Returns a NumericalStateSpace object of the system."""
         raise NotImplementedError
 
     @abstractmethod
     def print2latex(self):
-        """Create a LaTex document with the state-space representation."""
+        """Creates a LaTex document with the state-space representation."""
         raise NotImplementedError
