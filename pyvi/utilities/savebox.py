@@ -2,6 +2,11 @@
 """
 Tooolbox for saving data and figures.
 
+Functions
+---------
+create_folder :
+    Creates folder for given list of subfolders.; also returns folder path.
+
 Notes
 -----
 @author: bouvier (bouvier@ircam.fr)
@@ -12,11 +17,12 @@ Developed for Python 3.6.1
 """
 
 #==============================================================================
-#Importations
+# Importations
 #==============================================================================
 
-import os, pickle
 from numpy import savez, load
+import os
+import pickle
 
 
 #==============================================================================
@@ -24,41 +30,57 @@ from numpy import savez, load
 #==============================================================================
 
 __pivy_directory__ = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
-__parent_directory__ = os.path.abspath(os.path.dirname(__pivy_directory__))
-__data_directory__ = os.path.abspath(os.path.join(__parent_directory__, 'data'))
 
 
 #==============================================================================
 # Functions
 #==============================================================================
 
-def folder_check(folder_abs_path):
+def _folder_check(folder_path):
     """
     Check if the given path indicates a folder, and creates it if not.
+
+    Parameters
+    ----------
+    folder_path : str
+        Path to check.
     """
 
-    if not os.path.isdir(folder_abs_path):
-        os.mkdir(folder_abs_path)
+    if not os.path.isdir(folder_path):
+        os.mkdir(folder_path)
 
 
-def folder_str(folder):
+def create_folder(folder_relative_path, abs_path=None):
     """
-    Check existence or create folder for a given string name or tuple of
-    string name.
+    Creates folder for given list of subfolders.; also returns folder path.
+
+    Parameters
+    ----------
+    folder_relative_path : str or list(str)
+        Absolute path or subfolder hierarchy where folder must be created.
+    abs_path : {None, str}, optional (default=None)
+        Absolute path where to begin relative path. If None, os.cwd() is used.
+
+    Returns
+    -------
+    folder_abs_path : str
+        Absolute path of the created folder.
     """
 
-    folder_path = __data_directory__
-    folder_check(folder_path)
-
-    if type(folder) != str:
-        for elt in folder:
-            folder_path += os.sep + elt
-            folder_check(folder_path)
+    if abs_path is None:
+        folder_abs_path = os.getcwd()
     else:
-        folder_path += os.sep + folder
-        folder_check(folder_path)
+        folder_abs_path = abs_path
 
-    return folder_path
+    if type(folder_relative_path) != str:
+        for elt in folder_relative_path:
+            folder_abs_path += os.sep + elt
+            _folder_check(folder_abs_path)
+    else:
+        folder_abs_path += os.sep + folder_relative_path
+        _folder_check(folder_abs_path)
+
+    return folder_abs_path
 
 
 def save_data_pickle(param_dict, name, folder):
