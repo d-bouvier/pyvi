@@ -147,7 +147,7 @@ class SimulationObject:
             Input signal.
         out_opt : {'output', 'output_by_order', 'state', 'state_by_order', \
                    'all'}, optional (default='output')
-            Option to choose the output that the function returns.
+            Option that defines what the function returns.
 
         Returns
         -------

@@ -315,7 +315,7 @@ class NumericalStateSpace(StateSpace):
 
     See also
     --------
-    StateSpace : Parent class
+    StateSpace : Parent class.
     """
 
     def _ckeck_categories(self):
@@ -338,7 +338,7 @@ class NumericalStateSpace(StateSpace):
 
     @abstractmethod
     def convert2symbolic(self, values_dict):
-        """Create a SymbolicStateSpace object of the system."""
+        """Returns a SymbolicStateSpace object of the system."""
         raise NotImplementedError
 
 
@@ -373,19 +373,19 @@ class SymbolicStateSpace(StateSpace):
     convert2numerical(values_dict)
         Returns a NumericalStateSpace object of the system.
     print2latex()
-        Create a LaTex document with the state-space representation.
+        Creates a LaTex document with the state-space representation.
 
     See also
     --------
-    StateSpace : Parent class
+    StateSpace : Parent class.
     """
 
     @abstractmethod
     def convert2numerical(self, values_dict):
-        """Create a NumericalStateSpace object of the system."""
+        """Returns a NumericalStateSpace object of the system."""
         raise NotImplementedError
 
     @abstractmethod
     def print2latex(self):
-        """Create a LaTex document with the state-space representation."""
+        """Creates a LaTex document with the state-space representation."""
         raise NotImplementedError

@@ -2,8 +2,8 @@
 """
 Module that gives functions creating physical or theoretical systems.
 
-Functions for system parameters
--------------------------------
+Functions
+---------
 create_loudspeaker_sica :
     Returns NumericalStateSpace object corresponding to the SICA Z000900
     loudspeaker.
@@ -53,7 +53,6 @@ def create_loudspeaker_sica(version='tristan', output='pos'):
     Returns
     -------
     Object of class NumericalStateSpace.
-
     """
 
     ## Physical parameters ##
