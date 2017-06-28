@@ -43,20 +43,41 @@ def safe_db(num, den):
     """
 
     # Initialization
-    assert num.shape == den.shape, 'Dimensions of num and den not equal.'
-    result = np.zeros(num.shape)
+    if type(num) != np.ndarray:
+        _num = np.array(num)
+    else:
+        _num = num
 
-    # Searching where denominator or numerator is null
-    idx_den_null = np.where(den == 0)
-    idx_num_null = np.where(num == 0)
-    idx_not_null = np.ones(num.shape, np.bool)
-    idx_not_null[idx_den_null] = 0
-    idx_not_null[idx_num_null] = 0
+    if type(den) != np.ndarray:
+        _den = np.array(den)
+    else:
+        _den = den
 
-    # Computation
-    result[idx_den_null] = np.Inf
-    result[idx_num_null] = - np.Inf
-    result[idx_not_null] = db(num[idx_not_null], den[idx_not_null])
+    # Assert same shape
+    assert _num.shape == _den.shape, 'Dimensions of num and den not equal ' + \
+            '(they are respectively {} and {}).'.format(_num.shape, _den.shape)
+
+    if _num.shape == ():
+        if _num == 0:
+            result = np.Inf
+        elif _den == 0:
+            result = - np.Inf
+        else:
+            result = db(_num, _den)
+    else:
+        result = np.zeros(_num.shape)
+
+        # Searching where denominator or numerator is null
+        idx_den_null = np.where(_den == 0)
+        idx_num_null = np.where(_num == 0)
+        idx_not_null = np.ones(_num.shape, np.bool)
+        idx_not_null[idx_den_null] = 0
+        idx_not_null[idx_num_null] = 0
+
+        # Computation
+        result[idx_den_null] = np.Inf
+        result[idx_num_null] = - np.Inf
+        result[idx_not_null] = db(_num[idx_not_null], _den[idx_not_null])
 
     return result
 
