@@ -1,15 +1,17 @@
 # -*- coding: utf-8 -*-
 """
-Module for state-space representation.
+Module for state-space representation of system.
 
-This package creates classes that allows use of state-space
-representation for linear and nonlinear systems (see
+This package creates classes that allows use of state-space representation for
+linear and nonlinear systems (see
 https://en.wikipedia.org/wiki/State-space_representation).
 
 Class
 -----
 StateSpace :
     Defines physical systems by their state-space representations parameters.
+NumericalStateSpace :
+    Numerical version of StateSpace class.
 SymbolicStateSpace :
     Characterize a system by its symbolic state-space representation.
 
@@ -18,21 +20,20 @@ Notes
 @author: bouvier (bouvier@ircam.fr)
          Damien Bouvier, IRCAM, Paris
 
-Last modified on 3 Nov. 2016
-Developed for Python 3.5.1
-Uses:
- - sympy 1.0
- - pyvi 0.1
+Last modified on 27 June 2017
+Developed for Python 3.6.1
 """
 
 #==============================================================================
 # Importations
 #==============================================================================
 
-from pyvi.tools.utilities import Style
+from sympy import pretty
+from numpy import tensordot, allclose
+from scipy.linalg import norm
 from abc import abstractmethod
-import sys as sys
-import sympy as sp
+import warnings as warnings
+from ..utilities.misc import Style
 
 
 #==============================================================================
@@ -40,69 +41,59 @@ import sympy as sp
 #==============================================================================
 
 class StateSpace:
-    """Defines physical systems by their state-space representations parameters.
+    """
+    Defines physical systems by their state-space representations parameters.
+
+    This class represents a system (linear or nonlinear) by its state-space
+    representation, a mathematical formalism used in control engineering
+    (see https://en.wikipedia.org/wiki/State-space_representation).
+
+
+    Parameters
+    ----------
+    A_m : array-like (numpy.ndarray or sympy.Matrix)
+        State-to-state matrix.
+    B_m : array-like
+        Input-to-state matrix.
+    C_m : array-like
+        State-to-output matrix.
+    D_m : array-like
+        Input-to-output matrix (feedtrhough matrix).
+    mpq : dict((int, int): tensor-like (numpy.ndarray or sympy.tensor.array))
+        Multilinear Mpq functions (nonlinear terms of the state equation)
+        in tensor forms.
+    npq : dict((int, int): tensor-like)
+        Multilinear Npq functions (nonlinear terms of the output equation)
+        in tensor forms.
+    pq_symmetry : boolean, optional (default=False)
+        Indicates if multilinear Mpq and Npq tensors functions are
+        symmetric.
 
     Attributes
     ----------
-    A_m : numpy.ndarray
-        State-to-state matrix
-    B_m : numpy.ndarray
-        Input-to-state matrix
-    C_m : numpy.ndarray
-        State-to-output matrix
-    D_m : numpy.ndarray
-        Input-to-output matrix (feedtrhough matrix)
-    dim : dict
-        Dictionnaries with 3 entries giving respectively the dimension of:
-        - the input
-        - the state
-        - the output
-    is_mpq_used, is_npq_used : function (int, int: boolean)
-        Indicates, for given p & q, if the Mpq and Npq function is used in the
-        system.
-    mpq, npq : dict
-        Store multilinear Mpq and Npq functions, in one of the two following
-        forms:
-        - numpy.ndarray in 'tensor' mode;
-        - function (int, numpy.ndarray, ..., numpy.ndarray: numpy.ndarray) in
-        'function' mode.
-    sym_bool : boolean
-        Indicates if multilinear Mpq and Npq functions are symmetric.
-    mode : {'tensor', 'function'}
-        Define in which mode multilinear Mpq and Npq functions are stored.
+    A_m, B_m, C_m, D_m : array_like
+    mpq, npq : dict((int, int): tensor-like)
+    pq_symmetry : boolean
+    dim : dict(str: int)
+        Dictionnaries with 3 entries giving the dimension of the input, the
+        state and the output.
+    linear : boolean
+        True if the system is linear.
+    state_eqn_linear_analytic : boolean
+        True if the system is linear-analytic (q<2 for every Mpq and Npq).
+    dynamical_nl_only_on_state : boolean
+        True if there is no nonlinearity on the input in the dynamical equation.
+    _dim_ok : boolean
+        True if dimensions all array and tensor dimensions corresponds.
+    _type : {'SISO', 'SIMO', 'MISO', 'MIMO'}
+        System's type (in terms of number of inputs and outputs).
+    _single_input : boolean
+        True if the system takes unidimensional signals as inputs.
+    _single_output : boolean
+        True if the system outputs unidimensional signals.
     """
 
-    def __init__(self, A_m, B_m, C_m, D_m,
-                 h_mpq_bool, h_npq_bool, mpq_dict, npq_dict,
-                 sym_bool=False, mode='tensor'):
-        """
-        Initialisation function for System object.
-
-        Parameters
-        ----------
-        A_m : numpy.ndarray
-            State-to-state matrix
-        B_m : numpy.ndarray
-            Input-to-state matrix
-        C_m : numpy.ndarray
-            State-to-output matrix
-        D_m : numpy.ndarray
-            Input-to-output matrix (feedtrhough matrix)
-        h_mpq_bool, npq : function (int, int: boolean)
-            Indicates, for given p & q, if the Mpq and Npq function is used in
-            the system.
-        mpq_dict, npq_dict : dict
-            Store multilinear Mpq and Npq functions, in one of the two following
-            forms:
-            - numpy.ndarray in 'tensor' mode;
-            - function (int, numpy.ndarray, ..., numpy.ndarray: numpy.ndarray)
-            in 'function' mode.
-        sym_bool : boolean, optional
-            Indicates if multilinear Mpq and Npq functions are symmetric.
-        mode : {'tensor', 'function'}, optional
-            Define in which mode multilinear Mpq and Npq functions are stored.
-
-        """
+    def __init__(self, A_m, B_m, C_m, D_m, mpq={}, npq={}, pq_symmetry=False):
 
         # Initialize the linear part
         self.A_m = A_m
@@ -116,103 +107,13 @@ class StateSpace:
                     'output': C_m.shape[0]}
 
         # Initialize the nonlinear part
-        self.is_mpq_used = h_mpq_bool
-        self.is_npq_used = h_npq_bool
-        self.mpq = mpq_dict
-        self.npq = npq_dict
+        self.mpq = mpq
+        self.npq = npq
+        self.pq_symmetry = pq_symmetry
 
-        self.sym_bool = sym_bool
-        self.mode = mode
-
-
-class SymbolicStateSpace:
-    """Characterize a system by its state-space representation.
-
-    This class represents a system (linear or nonlinear) by its state-space
-    representation, a mathematical representation used in control engineering
-    (see https://en.wikipedia.org/wiki/State-space_representation).
-
-    Relies on the Sympy module.
-
-    Attributes
-    ----------
-    dim_input: int
-        Dimension of the input vector
-    dim_state: int
-        Dimension of the state vector
-    dim_output: int
-        Dimension of the output vector
-    Am : sympy.Matrix
-        The 'state (or system) matrix' (i.e. state-to-state matrix)
-    Bm : sympy.Matrix
-        The 'input matrix' (i.e. input-to-state matrix)
-    Cm : sympy.Matrix
-        The 'output matrix' (i.e. state-to-output matrix)
-    Dm : sympy.Matrix
-        The 'feedtrough matrix' (i.e. input-to-output matrix)
-    mpq_dict : dict of {(int, int): lambda}
-        Dictionnary of lambda functions describing the nonlinear part of the
-        multivariate Taylor series expansion of the state equation.
-    npq_dict : dict of {(int, int): lambda}
-        Dictionnary of lambda functions describing the nonlinear part of the
-        multivariate Taylor series expansion of the output equation.
-    linear : boolean
-        Tells if the system is linear.
-    """
-
-
-    def __init__(self, Am, Bm, Cm, Dm, mpq_dict={}, npq_dict={}, **kwargs):
-        """Initialize the representation of the system.
-
-        Mandatory parameters
-        --------------------
-        Am : sympy.Matrix
-            The 'state (or system) matrix' (i.e. state-to-state matrix)
-        Bm : sympy.Matrix
-            The 'input matrix' (i.e. input-to-state matrix)
-        Cm : sympy.Matrix
-            The 'output matrix' (i.e. state-to-output matrix)
-        Dm : sympy.Matrix
-            The 'feedtrough matrix' (i.e. input-to-output matrix)
-
-        Optional parameters
-        -------------------
-        mpq_dict : dict of {(int, int): lambda}
-            Each lambda function represents a multilinear M_pq function,
-            characterized by its key (p, q), that represents a nonlinear part
-            of the state equation. It should take p + q input
-            arguments (sympy.Matrix of shape (self.dim_state, 1) for the first
-            p and (self.dim_input, 1) for the last q), and should output a
-            sympy.Matrix of shape (self.sim_state, 1).
-        npq_dict : dict of {(int, int): lambda}
-            Each lambda function represents a multilinear N_pq function,
-            characterized by its key (p, q), that represents a nonlinear part
-            of the output equation. It should take p + q input
-            arguments (sympy.Matrix of shape (self.dim_state, 1) for the first
-            p and (self.dim_input, 1) for the last q), and should output a
-            sympy.Matrix of shape (self.dim_output, 1).
-
-        """
-
-        # Initialize the linear part
-        self.Am = Am
-        self.Bm = Bm
-        self.Cm = Cm
-        self.Dm = Dm
-
-        # Extrapolate system dimensions
-        self.dim_state = Am.shape[0]
-        self.dim_input = Bm.shape[1]
-        self.dim_output = Cm.shape[0]
-
-        # Initialize the nonlinear part
-        self.mpq = mpq_dict
-        self.npq = npq_dict
-
-        # CHeck dimension and linearity
-        self._dim_ok = self._check_dim()
-        self.linear = self._is_linear()
-
+        # Check dimensions and characteristics/categorization
+        self._check_dim()
+        self._ckeck_categories()
 
     def __repr__(self):
         """Lists all attributes and their values."""
@@ -222,11 +123,11 @@ class SymbolicStateSpace:
             repr_str += name + ' : ' + getattr(self, name).__str__() + '\n'
         return repr_str
 
-
     def __str__(self):
         """Prints the system's equation."""
+
         def list_nl_fct(dict_fct, name):
-            temp_str = Style.PURPLE + \
+            temp_str = Style.RED + \
                        'List of non-zero {}pq functions'.format(name) + \
                        Style.RESET + '\n'
             for key in dict_fct.keys():
@@ -234,17 +135,16 @@ class SymbolicStateSpace:
             temp_str = temp_str[0:-2] + '\n'
             return temp_str
 
-        # Not yet implemented as wanted
-        print_str = Style.UNDERLINE + Style.BLUE + Style.BRIGHT + \
+        print_str = Style.UNDERLINE + Style.CYAN + Style.BRIGHT + \
                     'State-space representation :' + Style.RESET + '\n'
         for name, desc, mat in [ \
-                    ('State {} A', 'state-to-state', self.Am),
-                    ('Input {} B', 'input-to-state', self.Bm),
-                    ('Output {} C', 'state-to-output', self.Cm),
-                    ('Feedthrough {} D', 'input-to-output', self.Dm)]:
-            print_str += Style.BLUE + Style.BRIGHT + name.format('matrice') + \
+                    ('State {} A', 'state-to-state', self.A_m),
+                    ('Input {} B', 'input-to-state', self.B_m),
+                    ('Output {} C', 'state-to-output', self.C_m),
+                    ('Feedthrough {} D', 'input-to-output', self.D_m)]:
+            print_str += Style.GREEN + Style.BRIGHT + name.format('matrice') + \
                         ' (' + desc + ')' + Style.RESET + '\n' + \
-                         sp.pretty(mat) + '\n'
+                         pretty(mat) + '\n'
         if not self.linear:
             if len(self.mpq):
                 print_str += list_nl_fct(self.mpq, 'M')
@@ -254,108 +154,238 @@ class SymbolicStateSpace:
 
     #=============================================#
 
+    @abstractmethod
+    def __add__(self, values_dict):
+        raise NotImplementedError
+
+    @abstractmethod
+    def __radd__(self, values_dict):
+        raise NotImplementedError
+
+    #=============================================#
+
     def _check_dim(self):
         """Verify that input, state and output dimensions are respected."""
         # Check matrices shape
         self._check_dim_matrices()
 
         # Check that all nonlinear lambda functions works correctly
-        for (p, q), fct in self.mpq.items():
-            self._check_dim_nl_fct(p, q, fct, 'M', self.dim_state)
-        for (p, q), fct in self.npq.items():
-            self._check_dim_nl_fct(p, q, fct, 'N', self.dim_output)
-        # If no error is raised, return True
-        return True
+        for (p, q), mpq in self.mpq.items():
+            self._check_dim_nl_tensor(p, q, mpq, 'M', self.dim['state'])
+        for (p, q), npq in self.npq.items():
+            self._check_dim_nl_tensor(p, q, npq, 'N', self.dim['output'])
 
+        # If no error is raised
+        self._is_single_input()
+        self._is_single_output()
+        self._dim_ok = True
+
+        # Checking system type
+        if self._single_input and self._single_output:
+            self._type = 'SISO'
+        elif self._single_input:
+            self._type = 'SIMO'
+        elif self._single_output:
+            self._type = 'MISO'
+        else:
+            self._type = 'MIMO'
 
     def _check_dim_matrices(self):
         """Verify shape of the matrices used in the linear part."""
         def check_equal(iterator, value):
             return len(set(iterator)) == 1 and iterator[0] == value
 
-        list_dim_state = [self.Am.shape[0], self.Am.shape[1],
-                          self.Bm.shape[0], self.Cm.shape[1]]
-        list_dim_input = [self.Bm.shape[1], self.Dm.shape[1]]
-        list_dim_output = [self.Cm.shape[0], self.Dm.shape[0]]
-        assert check_equal(list_dim_state, self.dim_state), \
+        list_dim_state = [self.A_m.shape[0], self.A_m.shape[1],
+                          self.B_m.shape[0], self.C_m.shape[1]]
+        list_dim_input = [self.B_m.shape[1], self.D_m.shape[1]]
+        list_dim_output = [self.C_m.shape[0], self.D_m.shape[0]]
+        assert check_equal(list_dim_state, self.dim['state']), \
                'State dimension not consistent'
-        assert check_equal(list_dim_input, self.dim_input), \
+        assert check_equal(list_dim_input, self.dim['input']), \
                'Input dimension not consistent'
-        assert check_equal(list_dim_output, self.dim_output), \
+        assert check_equal(list_dim_output, self.dim['output']), \
                'Output dimension not consistent'
 
+    def _check_dim_nl_tensor(self, p, q, tensor, name, dim_result):
+        """Verify shape of the multilinear tensors."""
+        str_tensor = '{}_{}{} tensor: '.format(name, p, q)
+        shape = tensor.shape
+        assert len(shape) == p + q + 1, \
+               str_tensor + 'wrong number of dimension ' + \
+               '(got {}, expected {}).'.format(len(shape), p + q + 1)
+        assert shape[0] == dim_result, \
+               str_tensor + 'wrong size for dimension 1 ' + \
+               '(got {}, expected {}).'.format(dim_result, shape[0])
+        for ind in range(p):
+            assert shape[1+ind] == self.dim['state'], \
+                   str_tensor + 'wrong size for dimension ' + \
+                   '{} (got {}, expected {}).'.format(1+ind, shape[1+ind],
+                                                      self.dim['state'])
+        for ind in range(q):
+            assert shape[1+p+ind] == self.dim['input'], \
+                   str_tensor + 'wrong size for dimension ' + \
+                   '{} (got {}, expected {}).'.format(1+p+ind, shape[1+p+ind],
+                                                      self.dim['input'])
 
-    def _check_dim_nl_fct(self, p, q, fct, name, dim_result):
-        """Verify shape and functionnality of the multilinear functions."""
-        str_fct = '{}_{}{} function: '.format(name, p, q)
-        # Check that each nonlinear lambda functions:
-        # - accepts the good number of input arguments
-        assert fct.__code__.co_argcount == p + q, \
-               str_fct + 'wrong number of input arguments ' + \
-               '(got {}, expected {}).'.format(fct.__code__.co_argcount, p + q)
-        try:
-            state_vectors = (sp.ones(self.dim_state),)*p
-            input_vectors = (sp.ones(self.dim_input),)*q
-            result_vector = fct(*state_vectors, *input_vectors)
-        # - accepts vectors of appropriate shapes
-        except IndexError:
-            raise IndexError(str_fct + 'some index exceeds dimension of ' + \
-                             'input and/or state vectors.')
-        # - does not cause error
-        except:
-            raise NameError(str_fct + 'creates a ' + \
-                            '{}.'.format(sys.exc_info()[0]))
-        # - returns a vector of appropriate shape
-        assert result_vector.shape == (dim_result, 1), \
-               str_fct + 'wrong shape for the output (got ' + \
-               '{}, expected {}).'.format(result_vector.shape, (dim_result,1))
+    def _is_single_input(self):
+        """Check if the input dimension is one."""
+        self._single_input = self.dim['input'] == 1
+        # Warn that problems may occur if input dimension is not 1
+        if not self._single_input:
+            message = '\nInput dimension is not equal to 1' + \
+                      ' (it is {}).\n'.format(self.dim['input']) + \
+                      'Simulation, kernel computation, order separation and' + \
+                      ' system  identification may not work as intended.\n'
+            warnings.showwarning(message, UserWarning, __file__, 248, line='')
 
-
-    def _is_linear(self):
-        """Check if the system is linear."""
-        return len(self.mpq) == 0 and len(self.npq) == 0
-
-
-    @abstractmethod
-    def _is_passive(self):
-        """Check if the system is passive."""
-        raise NotImplementedError
+    def _is_single_output(self):
+        """Check if the output dimension is one."""
+        self._single_output = self.dim['output'] == 1
+        # Warn that problems may occur if output dimension is not 1
+        if not self._single_output:
+            message = '\nOutput dimension is not equal to 1' + \
+                      ' (it is {}).\n'.format(self.dim['output']) + \
+                      'Simulation, kernel computation, order separation and' + \
+                      ' system  identification may not work as intended.\n'
+            warnings.showwarning(message, UserWarning, __file__, 258, line='')
 
     #=============================================#
 
+    def _ckeck_categories(self):
+        """Check in which categories the system belongs."""
+        self._is_linear()
+        self._is_state_eqn_linear_analytic()
+        self._are_dynamical_nl_only_on_state()
+
+    def _is_linear(self):
+        """Check if the system is linear."""
+        self._state_eqn_linear = len(self.mpq) == 0
+        self._output_eqn_linear = len(self.npq) == 0
+        self.linear = self._state_eqn_linear and self._output_eqn_linear
+
+    def _is_state_eqn_linear_analytic(self):
+        """Check if the system input-to-state equation is linear-analytic."""
+        self.state_eqn_linear_analytic = True
+        for p, q in self.mpq.keys():
+            if q > 1:
+                self.state_eqn_linear_analytic = False
+                break
+
+    def _are_dynamical_nl_only_on_state(self):
+        """Check if the dynamical nonlinearities are only on the state."""
+        self.dynamical_nl_only_on_state = self.state_eqn_linear_analytic
+        if self.dynamical_nl_only_on_state:
+            for p, q in self.mpq.keys():
+                if q > 0:
+                    self.dynamical_nl_only_on_state = False
+                    break
+
+
+class NumericalStateSpace(StateSpace):
+    """
+    Numerical version of the StateSpace class.
+
+    Parameters
+    ----------
+    A_m : array-like (numpy.ndarray)
+    B_m : array-like
+    C_m : array-like
+    D_m : array-like
+    mpq : dict((int, int): tensor-like (numpy.ndarray))
+    npq : dict((int, int): tensor-like)
+    pq_symmetry : boolean, optional (default=False)
+
+    Attributes
+    ----------
+    A_m, B_m, C_m, D_m : array_like
+    mpq, npq : dict((int, int): tensor-like)
+    pq_symmetry : boolean
+    dim : dict(str: int)
+    linear : boolean
+    state_eqn_linear_analytic : boolean
+    dynamical_nl_only_on_state : boolean
+    nl_colinear : boolean
+        True if dynamical nonlinearities are colinear to the input-to-state
+        matrix.
+
+    Methods
+    -------
+    convert2symbolic(values_dict)
+        Returns a SymbolicStateSpace object of the system.
+
+    See also
+    --------
+    StateSpace : Parent class.
+    """
+
+    def _ckeck_categories(self):
+        """Check in which categories the system belongs."""
+        self._is_linear()
+        self._is_state_eqn_linear_analytic()
+        self._are_dynamical_nl_only_on_state()
+        self._are_nl_colinear()
+
+    def _are_nl_colinear(self):
+        """Check colinearity of dynamical nonlinearities and input-to-state."""
+        self.nl_colinear = True
+        norm_B = norm(self.B_m, ord=2)
+        for (p, q), mpq in self.mpq.items():
+            temp = tensordot(self.B_m.transpose(), mpq, 1).squeeze()
+            norm_mpq = norm(mpq, ord=2, axis=0).squeeze()
+            if not allclose(temp, norm_B*norm_mpq):
+                self.nl_colinear = False
+                break
+
+    @abstractmethod
+    def convert2symbolic(self, values_dict):
+        """Returns a SymbolicStateSpace object of the system."""
+        raise NotImplementedError
+
+
+class SymbolicStateSpace(StateSpace):
+    """
+    Symbolic version of the StateSpace class, using sympy package.
+
+    In the future, this subclass will permit exportation to pdf via LaTex.
+
+    Parameters
+    ----------
+    A_m : array-like (sympy.Matrix)
+    B_m : array-like
+    C_m : array-like
+    D_m : array-like
+    mpq : dict((int, int): tensor-like (sympy.tensor.array))
+    npq : dict((int, int): tensor-like)
+    pq_symmetry : boolean, optional (default=False)
+
+    Attributes
+    ----------
+    A_m, B_m, C_m, D_m : array_like
+    mpq, npq : dict((int, int): tensor-like)
+    pq_symmetry : boolean
+    dim : dict(str: int)
+    linear : boolean
+    state_eqn_linear_analytic : boolean
+    dynamical_nl_only_on_state : boolean
+
+    Methods
+    -------
+    convert2numerical(values_dict)
+        Returns a NumericalStateSpace object of the system.
+    print2latex()
+        Creates a LaTex document with the state-space representation.
+
+    See also
+    --------
+    StateSpace : Parent class.
+    """
+
+    @abstractmethod
+    def convert2numerical(self, values_dict):
+        """Returns a NumericalStateSpace object of the system."""
+        raise NotImplementedError
+
     @abstractmethod
     def print2latex(self):
-        """Create a LaTex document with the state-space representation."""
+        """Creates a LaTex document with the state-space representation."""
         raise NotImplementedError
-
-
-    def compute_linear_filter(self):
-        """Compute the multi-dimensional filter of the system."""
-        self.W_filter = Filter(self.Am, self.dim_state)
-
-
-    @abstractmethod
-    def simulation(self):
-        """Compute the output of the system for a given input."""
-        raise NotImplementedError
-
-
-
-class Filter:
-    """Multidimensional filter of a system in its state-space representation."""
-
-    def __init__(self, Am, state_size):
-        from symbols.symbols import Symbols
-        self.symb_var = Symbols(1).s[0]
-        temp_mat = self.symb_var * sp.eye(state_size) - Am
-        self.expr = temp_mat.inv()
-        self.common_den = temp_mat.det()
-        self.mat = sp.simplify(self.expr * self.common_den)
-
-
-    def __str__(self):
-        expr = sp.Mul(self.mat, sp.Pow(self.common_den, sp.Integer(-1)),
-                      evaluate=False)
-        print_str = '\n' + sp.pretty( expr )
-        return print_str
-

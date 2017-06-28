@@ -1,26 +1,23 @@
 # -*- coding: utf-8 -*-
 """
-Paths for the pyVI package.
+Tooolbox for saving data and figures.
 
 Notes
 -----
-@author:    bouvier@ircam.fr
-            Damien Bouvier, IRCAM, Paris
+@author: bouvier (bouvier@ircam.fr)
+         Damien Bouvier, IRCAM, Paris
 
-Last modified on 3 Nov. 2016
-Developed for Python 3.5.1
-Uses:
- - numpy 1.11.1
- - os, pickle
+Last modified on 28 June 2017
+Developed for Python 3.6.1
 """
 
 #==============================================================================
 #Importations
 #==============================================================================
 
-import os
-import pickle
-from numpy import savez
+import os, pickle
+from numpy import savez, load
+
 
 #==============================================================================
 # Global variables
@@ -63,6 +60,7 @@ def folder_str(folder):
 
     return folder_path
 
+
 def save_data_pickle(param_dict, name, folder):
     """
     Save data using pickle.
@@ -72,6 +70,7 @@ def save_data_pickle(param_dict, name, folder):
     full_path = folder_path + os.sep + name
     pickle.dump(param_dict, open(full_path, 'wb'))
 
+
 def save_data_numpy(array_dict, name, folder):
     """
     Save data using numpy savez function.
@@ -80,3 +79,33 @@ def save_data_numpy(array_dict, name, folder):
     folder_path = folder_str(folder)
     full_path = folder_path + os.sep + name + '.npz'
     savez(full_path, **array_dict)
+
+
+def save_figure(handle_fig, name, folder):
+    """
+    Save figure using matplotlib.
+    """
+
+    folder_path = folder_str(folder)
+    full_path = folder_path + os.sep + name
+    handle_fig.savefig(full_path, bbox_inches='tight')
+
+
+def load_data_pickle(name, folder):
+    """
+    Load data using pickle.
+    """
+
+    folder_path = folder_str(folder)
+    full_path = folder_path + os.sep + name
+    return pickle.load(open(full_path, 'rb'))
+
+
+def load_data_numpy(name, folder):
+    """
+    Load data using numpy savez function.
+    """
+
+    folder_path = folder_str(folder)
+    full_path = folder_path + os.sep + name + '.npz'
+    return load(full_path)
