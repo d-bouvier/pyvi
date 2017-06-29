@@ -146,7 +146,6 @@ if __name__ == '__main__':
                                'Holder of order 0, w/ and w/o resampling',
                                'Holder of order 0 and 1, w/o resampling',
                                'Holder of order 0 and 1, w/ resampling'])
-    print()
 
 
     ########################
@@ -160,7 +159,7 @@ if __name__ == '__main__':
     T = 0.03
 
     # Test system
-    print('Testing kernel computation ...', end=' ')
+    print('Testing kernel computation...', end=' ')
     sys_simu = SimuObj(create_test(mode='numeric'), **options)
     t_kernels = sys_simu.compute_kernels(T, which='time')
     t_kernels, f_kernels = sys_simu.compute_kernels(T, which='both')
@@ -168,16 +167,36 @@ if __name__ == '__main__':
     print('Done.')
 
     # Second-order system with nonlinear damping
-    print('Computing kernels ...', end=' ')
+    print('Computing kernels...', end=' ')
     damping_sys = create_nl_damping(gain=1, f0=100, damping=0.2,
                                     nl_coeff=[1e-1, 3e-5])
     damping_simu = SimuObj(damping_sys, **options)
     time_kernels, freq_kernels_from_time = \
                                 damping_simu.compute_kernels(T, which='both')
     freq_kernels = damping_simu.compute_kernels(T, which='freq')
+    options['resampling'] = True
+    damping_simu_2 = SimuObj(damping_sys, **options)
+    time_kernels_2, freq_kernels_from_time_2 = \
+                                damping_simu_2.compute_kernels(T, which='both')
+    freq_kernels_2 = damping_simu_2.compute_kernels(T, which='freq')
     print('Done.')
 
-    print('Plotting kernels ...', end=' ')
+    print("Checking equality with 'resample' mode on or off...", end=' ')
+    assert np.all(time_kernels[1] == time_kernels_2[1]), "Error in kernels" + \
+            " computation with 'resample' mode on."
+    assert np.all(time_kernels[2] == time_kernels_2[2]), "Error in kernels" + \
+            " computation with 'resample' mode on."
+    assert np.all(freq_kernels[1] == freq_kernels_2[1]), "Error in kernels" + \
+            " computation with 'resample' mode on."
+    assert np.all(freq_kernels[2] == freq_kernels_2[2]), "Error in kernels" + \
+            " computation with 'resample' mode on."
+    assert np.all(freq_kernels_from_time[1] == freq_kernels_from_time_2[1]), \
+            "Error in kernels omputation with 'resample' mode on."
+    assert np.all(freq_kernels_from_time[2] == freq_kernels_from_time_2[2]), \
+            "Error in kernels computation with 'resample' mode on."
+    print('Done.')
+
+    print('Plotting kernels...', end=' ')
     N = len(time_kernels[1])
     time_vec = np.linspace(0, (N-1)/options['fs'], num=N)
     freq_vec = np.fft.fftshift(np.fft.fftfreq(N, d=1/options['fs']))
