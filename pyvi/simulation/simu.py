@@ -127,12 +127,12 @@ class SimulationObject:
                                                          system.dim['state'])
         if self.resampling:
             self.filter_mat = self._compute_filter(self.fs, system.A_m)
-            self.holder_bias_mat = self.holder_bias_mat_orig
-        else:
-            self.filter_mat = self.filter_mat_orig
             self.holder_bias_mat = self._compute_holder(self.fs,
                                                         self.filter_mat,
-                                                         system.dim['state'])
+                                                        system.dim['state'])
+        else:
+            self.filter_mat = self.filter_mat_orig
+            self.holder_bias_mat = self.holder_bias_mat_orig
 
         # Copy system dimensions, matrices and pq-functions
         self.dim = system.dim.copy()

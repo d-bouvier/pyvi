@@ -21,7 +21,8 @@ from pyvi.system.dict import (create_test, create_loudspeaker_sica,
                               create_nl_damping)
 from pyvi.simulation.simu import SimulationObject as SimuObj
 from pyvi.utilities.plotbox import (plot_sig_io, plot_sig_coll,
-                                    plot_kernel_time, plot_kernel_freq)
+                                    plot_kernel_time, plot_kernel_freq,
+                                    plot_spectrogram)
 
 
 #==============================================================================
@@ -76,14 +77,15 @@ if __name__ == '__main__':
     ############################
 
     # Input signal
-    fs = 20000
+    fs = 2000
     T = 1
     f1 = 50
     f2 = 500
     amp = 10
     time_vector = np.arange(0, T, step=1/fs)
-    f0_vector = np.linspace(f1, f2, num=len(time_vector))
-    signal = amp * np.sin(2 * np.pi * f0_vector * time_vector)
+    k = (f2 -f1)/T
+    phi = 2*np.pi * (f1*time_vector + (k/2)*time_vector**2)
+    signal = amp * np.sin(phi)
 
     loudspeaker = create_loudspeaker_sica(output='current')
     options ={'fs': fs,
@@ -146,6 +148,12 @@ if __name__ == '__main__':
                                'Holder of order 0, w/ and w/o resampling',
                                'Holder of order 0 and 1, w/o resampling',
                                'Holder of order 0 and 1, w/ resampling'])
+    opt = {'fs': fs, 'nperseg': 128, 'noverlap': 96, 'nfft': 1024}
+    plot_spectrogram(signal, title='Input spectrogram', **opt)
+    plot_spectrogram(out_1_f, title='Output spectrogram with holder of ' + \
+                     'order 1 and no resampling', **opt)
+    plot_spectrogram(out_1_t, title='Output spectrogram with holder of ' + \
+                     'order 1 and resampling', **opt)
 
 
     ########################
@@ -191,7 +199,7 @@ if __name__ == '__main__':
     assert np.all(freq_kernels[2] == freq_kernels_2[2]), "Error in kernels" + \
             " computation with 'resample' mode on."
     assert np.all(freq_kernels_from_time[1] == freq_kernels_from_time_2[1]), \
-            "Error in kernels omputation with 'resample' mode on."
+            "Error in kernels computation with 'resample' mode on."
     assert np.all(freq_kernels_from_time[2] == freq_kernels_from_time_2[2]), \
             "Error in kernels computation with 'resample' mode on."
     print('Done.')

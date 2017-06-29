@@ -114,8 +114,9 @@ if __name__ == '__main__':
     f1 = 20
     f2 = 10000
     time_vector = np.arange(0, T, step=1/fs)
-    f0_vector = np.linspace(f1, f2, num=len(time_vector))
-    signal = np.cos(np.pi * f0_vector * time_vector)
+    k = (f2 -f1)/T
+    phi = 2*np.pi * (f1*time_vector + (k/2)*time_vector**2)
+    signal = np.sin(phi)
 
     print('Testing plot_spectrogram() ...', end=' ')
     opt = {'fs': fs, 'nperseg': 512, 'noverlap': 448, 'nfft': 4096}
