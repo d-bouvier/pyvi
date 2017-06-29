@@ -17,7 +17,8 @@ Developed for Python 3.6.1
 
 import numpy as np
 from pyvi.utilities.plotbox import (plot_sig_io, plot_sig_coll,
-                                    plot_kernel_time, plot_kernel_freq)
+                                    plot_spectrogram, plot_kernel_time,
+                                    plot_kernel_freq)
 
 
 #==============================================================================
@@ -101,4 +102,26 @@ if __name__ == '__main__':
                      title="Test noyau freq - ordre 2 - mode 'surface'")
     plot_kernel_freq(freq_vec, kernel_freq_2, style='wireframe',
                      title="Test noyau freq - ordre 2 - mode 'wireframe'")
+    print('Done.')
+
+
+    #################################
+    ## Function plot_spectrogram() ##
+    #################################
+
+    fs = 20000
+    T = 1
+    f1 = 20
+    f2 = 10000
+    time_vector = np.arange(0, T, step=1/fs)
+    f0_vector = np.linspace(f1, f2, num=len(time_vector))
+    signal = np.cos(np.pi * f0_vector * time_vector)
+
+    print('Testing plot_spectrogram() ...', end=' ')
+    opt = {'fs': fs, 'nperseg': 512, 'noverlap': 448, 'nfft': 4096}
+    plot_spectrogram(signal, **opt)
+    plot_spectrogram(signal, title='Sweep', plot_phase=True,
+                     unwrap_angle=True, **opt)
+    plot_spectrogram(signal, title='Sweep 2', db=False, logscale=True,
+                     plot_phase=True, unwrap_angle=False, **opt)
     print('Done.')
