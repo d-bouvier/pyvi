@@ -8,10 +8,12 @@ plot_sig_io :
     Plots input and output signals of a system.
 plot_sig_coll :
     Plots a collection of signals.
+plot_spectrogram :
+    Plots the Short-Time Fourier Transform of a signal.
 plot_kernel_time :
     Plots a discrete time kernel of order 1 or 2.
 plot_kernel_freq :
-    Plots a discrete time kernel of order 1 or 2.
+    Plots a discrete transfer kernel of order 1 or 2.
 
 Notes
 -----
@@ -28,7 +30,8 @@ Developed for Python 3.6.1
 
 import matplotlib.pyplot as plt
 import numpy as np
-from mpl_toolkits.mplot3d import Axes3D
+from scipy.signal import stft
+from .mathbox import safe_db
 
 
 #==============================================================================
@@ -59,6 +62,8 @@ def plot_sig_io(vec, input_sig, output_sig, title=None, xlim=[None, None],
     complex_bool = 'complex' in str(input_sig.dtype) or \
                    'complex' in str(output_sig.dtype)
     nb_col = 2 if complex_bool else 1
+    if title is None:
+        title = 'Input and output signal of a system'
 
     plt.figure(title)
     plt.clf()
@@ -108,8 +113,10 @@ def plot_sig_coll(vec, sig_coll, title=None, title_plots=None,
         Set the y limits of all subplots. By default autoscaling is used.
     """
 
-    nb_sig = sig_coll.shape[0]
     complex_bool = 'complex' in str(sig_coll.dtype)
+    nb_sig = sig_coll.shape[0]
+    if title is None:
+        title = 'Collection of signals'
     if title_plots is None:
         title_plots = ['Signal {}'.format(n+1) for n in range(nb_sig)]
 
@@ -138,6 +145,63 @@ def plot_sig_coll(vec, sig_coll, title=None, title_plots=None,
     plt.show()
 
 
+def plot_spectrogram(signal, title=None, db=True, logscale=False,
+                     plot_phase=False, unwrap_angle=True, **args):
+    """
+    Plots the Short-Time Fourier Transform of a signal.
+
+    Parameters
+    ----------
+    signal : numpy.ndarray
+        Signal data.
+    title : str, optional (default=None)
+        Title of the Figure. If None, will be set to a default value.
+    db : boolean, optional (default=True)
+        Choose wether or not magnitude is expressed in deciBel.
+    logscale: boolen or int, optional (default=False)
+        Choose wether or not frequency axis are on a logarithmic scale.
+    plot_phase : boolean, optional (default=False)
+        Choose wether or not the phase is plotted.
+    unwrap_angle : boolean, optional (default=True)
+        Choose wether or not the phase is unwrapped.
+    args : dict(str : value)
+        Arguments that are passed to scipy.signal.stft.
+    """
+
+    freq_vec, time_vec, spectrogram = stft(signal, **args)
+    if title is None:
+        title = 'Short-Time Fourier Transform'
+
+    spectrogram_amp = np.abs(spectrogram)
+    spectrogram_phase = np.angle(spectrogram)
+    amplabel = 'STFT Magnitude'
+    if db:
+        spectrogram_amp = safe_db(spectrogram_amp,
+                                  np.ones(spectrogram_amp.shape))
+        amplabel += ' (dB)'
+    if unwrap_angle:
+        spectrogram_phase = np.unwrap(spectrogram_phase, 0)
+
+    plt.figure(title + ' (amplitude)')
+    plt.clf()
+    plt.pcolormesh(time_vec, freq_vec, spectrogram_amp)
+    plt.title(amplabel)
+    plt.xlabel('Time (s)')
+    plt.ylabel('Frequency (Hz)')
+    if logscale:
+        plt.yscale('symlog')
+
+    if plot_phase:
+        plt.figure(title + ' (phase)')
+        plt.clf()
+        plt.pcolormesh(time_vec, freq_vec, spectrogram_phase)
+        plt.title('Phase (radians)')
+        plt.xlabel('Time (s)')
+        plt.ylabel('Frequency (Hz)')
+        if logscale:
+            plt.yscale('symlog')
+
+
 def plot_kernel_time(vec, kernel, style='wireframe', title=None, nb_levels=20):
     """
     Plots a discrete time kernel of order 1 or 2.
@@ -159,7 +223,7 @@ def plot_kernel_time(vec, kernel, style='wireframe', title=None, nb_levels=20):
     order = kernel.ndim
 
     if order ==1:
-        if not title:
+        if title is None:
             title = 'Volterra kernel of order 1 (linear filter)'
         plt.figure(title)
         plt.clf()
@@ -168,7 +232,7 @@ def plot_kernel_time(vec, kernel, style='wireframe', title=None, nb_levels=20):
         plt.ylabel('Amplitude')
 
     elif order ==2:
-        if not title:
+        if title is None:
             title = 'Volterra kernel of order 2'
         time_x, time_y = np.meshgrid(vec, vec)
         plt.figure(title)
@@ -200,9 +264,9 @@ def plot_kernel_time(vec, kernel, style='wireframe', title=None, nb_levels=20):
 
 
 def plot_kernel_freq(vec, kernel, style='wireframe', title=None, db=True,
-                     unwrap_angle=True, logscale=False, nb_levels=20):
+                     logscale=False, unwrap_angle=True, nb_levels=20):
     """
-    Plots a discrete time kernel of order 1 or 2.
+    Plots a discrete transfer kernel of order 1 or 2.
 
     Parameters
     ----------
@@ -216,12 +280,10 @@ def plot_kernel_freq(vec, kernel, style='wireframe', title=None, db=True,
         Title of the Figure. If None, will be set to a default value.
     db : boolean, optional (default=True)
         Choose wether or not magnitude is expressed in deciBel.
-    unwrap_angle : boolen, optional (default=True)
+    logscale: boolean or int, optional (default=False)
+        Choose wether or not frequency axis are on a logarithmic scale.
+    unwrap_angle : boolean, optional (default=True)
         Choose wether or not the phase is unwrapped.
-    logscale: boolen or int, optional (default=False)
-        If False, all frequency axis are on a linear scale. If True, should be
-        an int, and all frequency axis will be plotted using a logscale of base
-        ``logscale``.
     nb_levels : int, optional (default=20)
         Optional parameter when using 'countour'
     """
@@ -231,7 +293,7 @@ def plot_kernel_freq(vec, kernel, style='wireframe', title=None, db=True,
     kernel_phase = np.angle(kernel)
     amplabel = 'Magnitude'
     if db:
-        kernel_amp = 20 * np.log10(kernel_amp)
+        kernel_amp = safe_db(kernel_amp, np.ones(kernel_amp.shape))
         amplabel += ' (dB)'
     if unwrap_angle:
         for n in range(order):
@@ -239,7 +301,7 @@ def plot_kernel_freq(vec, kernel, style='wireframe', title=None, db=True,
     idx = slice(len(vec)//2,len(vec))
 
     if order ==1:
-        if not title:
+        if title is None:
             title = 'Transfer kernel of order 1 (linear filter)'
         plt.figure(title)
         plt.clf()
@@ -257,7 +319,7 @@ def plot_kernel_freq(vec, kernel, style='wireframe', title=None, db=True,
         ax2.set_xlim([0, vec[-1]])
 
     elif order ==2:
-        if not title:
+        if title is None:
             title = 'Transfer kernel of order 2'
         freq_x, freq_y = np.meshgrid(vec[idx], vec, indexing='ij')
         plt.figure(title)

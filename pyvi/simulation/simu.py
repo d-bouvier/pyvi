@@ -28,6 +28,7 @@ Developed for Python 3.6.1
 import numpy as np
 from scipy import linalg
 from scipy.fftpack import fftn
+from scipy.signal import resample_poly
 from itertools import filterfalse, product
 from .combinatorics import make_pq_combinatorics
 from ..system.statespace import NumericalStateSpace
@@ -47,7 +48,7 @@ class SimulationObject:
     system : NumericalStateSpace
         System to simulate, represented by its NumericalStateSpace object.
     fs : int, optional, (default=44100)
-        Sampling frequency of the simulation.
+        Sampling frequency of input and output signals .
     nl_order_max : int, optional (default=3)
         Order truncation of the simulation.
     holder_order : int, optional (default=1)
@@ -57,10 +58,13 @@ class SimulationObject:
 
     Attributes
     ----------
-    fs : int
+    fs_orig : int
+        Sampling frequency of input and output signals.
     nl_order_max : int
     holder_order : int
     resampling : boolean
+    fs : int
+        Sampling frequency used in the simulation.
     mpq_combinatoric : dict(int: list(tuple(int, int, int, int)))
         See make_pq_combinatorics().
     npq_combinatoric : dict(int: list(tuple(int, int, int, int)))
@@ -95,15 +99,14 @@ class SimulationObject:
                  holder_order=1, resampling=False):
 
         # Initialize simulation options
-        self.fs = fs
+        self.fs_orig = fs
         self.nl_order_max = nl_order_max
         self.holder_order = holder_order
         self.resampling = resampling
-
-        # Filter matrix
-        sampling_time = 1/self.fs
-        self.A_inv = linalg.inv(system.A_m)
-        self.filter_mat = linalg.expm(system.A_m * sampling_time)
+        if self.resampling:
+            self.fs = self.nl_order_max * self.fs_orig
+        else:
+            self.fs = self.fs_orig
 
         # List of Mpq combinations
         self.mpq_combinatoric = make_pq_combinatorics(system.mpq,
@@ -115,14 +118,21 @@ class SimulationObject:
                                                       self.nl_order_max,
                                                       system.pq_symmetry)
 
-        # Holder bias matrices
-        temp_mat_1 = self.filter_mat - np.identity(system.dim['state'])
-        temp_mat_2 = np.dot(self.A_inv, temp_mat_1)
-        self.holder_bias_mat = dict()
-        self.holder_bias_mat[0] = temp_mat_2.copy()
-        if self.holder_order == 1:
-            self.holder_bias_mat[1] = np.dot(self.A_inv, self.filter_mat) - \
-                            (1/sampling_time) * np.dot(self.A_inv, temp_mat_2)
+        # Filter matrix and holder bias matrices
+        self.A_inv = linalg.inv(system.A_m)
+
+        self.filter_mat_orig = self._compute_filter(self.fs_orig, system.A_m)
+        self.holder_bias_mat_orig = self._compute_holder(self.fs_orig,
+                                                         self.filter_mat_orig,
+                                                         system.dim['state'])
+        if self.resampling:
+            self.filter_mat = self._compute_filter(self.fs, system.A_m)
+            self.holder_bias_mat = self.holder_bias_mat_orig
+        else:
+            self.filter_mat = self.filter_mat_orig
+            self.holder_bias_mat = self._compute_holder(self.fs,
+                                                        self.filter_mat,
+                                                         system.dim['state'])
 
         # Copy system dimensions, matrices and pq-functions
         self.dim = system.dim.copy()
@@ -134,6 +144,30 @@ class SimulationObject:
 
         self.mpq = system.mpq.copy()
         self.npq = system.npq.copy()
+
+
+    def _compute_filter(self, fs, A_m):
+        """
+        Compute the discrete filter matrix for a given sampling frequency.
+        """
+
+        return linalg.expm(A_m / fs)
+
+
+    def _compute_holder(self, fs, filter_mat, dim_state):
+        """
+        Compute the holder bias matrices for a given sampling frequency.
+        """
+
+        temp_mat_1 = filter_mat - np.identity(dim_state)
+        temp_mat_2 = np.dot(self.A_inv, temp_mat_1)
+        holder_bias_mat = dict()
+        holder_bias_mat[0] = temp_mat_2.copy()
+        if self.holder_order == 1:
+            holder_bias_mat[1] = np.dot(self.A_inv, filter_mat) - \
+                                 fs * np.dot(self.A_inv, temp_mat_2)
+        return holder_bias_mat
+
 
     #=============================================#
 
@@ -177,12 +211,14 @@ class SimulationObject:
 
         # Enforce good shape when input dimension is 1
         if self.dim['input'] == 1:
-            sig_len = input_sig.shape[0]
             self.B_m.shape = (self.dim['state'], self.dim['input'])
             self.D_m.shape = (self.dim['output'], self.dim['input'])
-            input_sig.shape = (self.dim['input'], sig_len)
-        else:
-            sig_len = input_sig.shape[0]
+            input_sig.shape = (self.dim['input'], input_sig.shape[0])
+
+        # Upsampling (if wanted)
+        if self.resampling:
+            input_sig = resample_poly(input_sig, self.nl_order_max, 1, axis=1)
+        sig_len = input_sig.shape[1]
 
         # By-order state and output initialization
         state_by_order = np.zeros((self.nl_order_max, self.dim['state'],
@@ -205,7 +241,7 @@ class SimulationObject:
             temp_arg += (list(range(p+q+1)),)
             return np.tensordot(pq_tensor, np.einsum(*temp_arg), p+q)
 
-        # Correction of the bias due to ADC converter (with holder of order 0 or 1)
+        # Correction of bias due to ADC converter (with holder of order 0 or 1)
         if self.holder_order == 0:
             bias_1sample_lag = self.holder_bias_mat[0]
             def holder_bias(mpq_output, n):
@@ -256,6 +292,13 @@ class SimulationObject:
         ######################
         ## Function outputs ##
         ######################
+
+        # Downsampling(if necessary)
+        if self.resampling:
+            state_by_order = resample_poly(state_by_order, 1,
+                                           self.nl_order_max, axis=2)
+            output_by_order = resample_poly(output_by_order, 1,
+                                            self.nl_order_max, axis=2)
 
         # Reshaping state (if necessary)
         if self.dim['state'] == 1:
@@ -341,7 +384,7 @@ class SimulationObject:
         ####################
 
         # Input-to-state and input-to-output kernels initialization
-        len_kernels = 1 + int(self.fs * T)
+        len_kernels = 1 + int(self.fs_orig * T)
         kernels_in2state = dict()
         kernels_in2out = dict()
         shape = (self.dim['state'],)
@@ -379,23 +422,27 @@ class SimulationObject:
             temp_arg += (list(range(p + q + n)),)
             return np.tensordot(pq_tensor, np.einsum(*temp_arg), p+q)
 
-        # Correction of the bias due to ADC converter (with holder of order 0 or 1)
+        # Correction of bias due to ADC converter (with holder of order 0 or 1)
         if self.holder_order == 0:
-            bias_1sample_lag = self.holder_bias_mat[0]
+            bias_1sample_lag = self.holder_bias_mat_orig[0]
             def holder_bias(mpq_output, n):
                 idx_in = [slice(None)] + [slice(len_kernels-1)] * n
                 idx_out = [slice(None)] + [slice(1, len_kernels)] * n
                 kernels_in2state[n][idx_out] += np.tensordot(bias_1sample_lag,
-                                                             mpq_output[idx_in], 1)
+                                                             mpq_output[idx_in],
+                                                             1)
         elif self.holder_order == 1:
-            bias_0sample_lag = self.holder_bias_mat[0] - self.holder_bias_mat[1]
-            bias_1sample_lag = self.holder_bias_mat[1]
+            bias_0sample_lag = self.holder_bias_mat_orig[0] - \
+                               self.holder_bias_mat_orig[1]
+            bias_1sample_lag = self.holder_bias_mat_orig[1]
             def holder_bias(mpq_output, n):
-                kernels_in2state[n] += np.tensordot(bias_0sample_lag, mpq_output, 1)
+                kernels_in2state[n] += np.tensordot(bias_0sample_lag,
+                                                    mpq_output, 1)
                 idx_in = [slice(None)] + [slice(len_kernels-1)] * n
                 idx_out = [slice(None)] + [slice(1, len_kernels)] * n
                 kernels_in2state[n][idx_out] += np.tensordot(bias_1sample_lag,
-                                                             mpq_output[idx_in], 1)
+                                                             mpq_output[idx_in],
+                                                             1)
 
         # Filter function
         def filtering(n):
@@ -406,7 +453,7 @@ class SimulationObject:
                     idx_in = [slice(None)] + [(m-1) for m in indexes]
                     idx_out = [slice(None)] + list(indexes)
                     kernels_in2state[n][idx_out] += \
-                            np.tensordot(self.filter_mat,
+                            np.tensordot(self.filter_mat_orig,
                                          kernels_in2state[n][idx_in], 1)
 
         ########################
@@ -474,8 +521,9 @@ class SimulationObject:
         ####################
 
         # Frequency vector
-        len_kernels = 1 + int(self.fs * T)
-        freq_vec = np.fft.fftshift(np.fft.fftfreq(len_kernels, d=1/self.fs))
+        len_kernels = 1 + int(self.fs_orig * T)
+        freq_vec = np.fft.fftshift(np.fft.fftfreq(len_kernels,
+                                                  d=1/self.fs_orig))
 
         # Input-to-state and input-to-output kernels initialization
         kernels_in2state = dict()
@@ -495,9 +543,10 @@ class SimulationObject:
 
         # Dirac-delta in frequency domain, with bias due to the sampler holder
         if self.holder_order == 0:
-            input_freq = np.exp(- 1j*np.pi/self.fs) * np.sinc(freq_vec/self.fs)
+            input_freq = np.exp(- 1j*np.pi/self.fs_orig) * \
+                         np.sinc(freq_vec/self.fs_orig)
         elif self.holder_order == 1:
-            input_freq = np.sinc(freq_vec/self.fs)**2
+            input_freq = np.sinc(freq_vec/self.fs_orig)**2
         input_freq = np.reshape(input_freq, (self.dim['input'], len_kernels))
 
        ##################################################
