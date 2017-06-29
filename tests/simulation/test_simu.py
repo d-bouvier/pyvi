@@ -76,10 +76,10 @@ if __name__ == '__main__':
     ############################
 
     # Input signal
-    fs = 44100
+    fs = 20000
     T = 1
     f1 = 50
-    f2 = 100
+    f2 = 500
     amp = 10
     time_vector = np.arange(0, T, step=1/fs)
     f0_vector = np.linspace(f1, f2, num=len(time_vector))
@@ -88,37 +88,65 @@ if __name__ == '__main__':
     loudspeaker = create_loudspeaker_sica(output='current')
     options ={'fs': fs,
               'nl_order_max': 3,
-              'holder_order': 1,
+              'holder_order': 0,
               'resampling': False}
 
     # Simulation
     print('Computing loudspeaker simulation ...', end=' ')
 
-    simu1 = SimuObj(loudspeaker, **options)
-    start1 = time.time()
-    out1 = simu1.simulation(signal)
-    end1 = time.time()
+    simu_0_f = SimuObj(loudspeaker, **options)
+    start_0_f = time.time()
+    out_0_f = simu_0_f.simulation(signal)
+    end_0_f = time.time()
 
-    options['holder_order'] = 0
-    simu2 = SimuObj(loudspeaker, **options)
-    start2 = time.time()
-    out2 = simu2.simulation(signal)
-    end2 = time.time()
+    options['resampling'] = True
+    simu_0_t = SimuObj(loudspeaker, **options)
+    start_0_t = time.time()
+    out_0_t = simu_0_t.simulation(signal)
+    end_0_t = time.time()
 
+    options['holder_order'] = 1
+    simu_1_t = SimuObj(loudspeaker, **options)
+    start_1_t = time.time()
+    out_1_t = simu_1_t.simulation(signal)
+    end_1_t = time.time()
+
+    options['resampling'] = False
+    simu_1_f = SimuObj(loudspeaker, **options)
+    start_1_f = time.time()
+    out_1_f = simu_1_f.simulation(signal)
+    end_1_f = time.time()
     print('Done.')
 
     # Results
-    plot_sig_io(time_vector, signal, out1,
-                title='Input-output (holder of order 1)')
-    print('Computation time (holder of order 1): {}s'.format(end1-start1))
+    plot_sig_io(time_vector, signal, out_0_f,
+                title='Input-output (holder of order 0 without resampling)')
+    print('Computation time (holder of order 0 without resampling):',
+          '{}s'.format(end_0_f-start_0_f))
+    plot_sig_io(time_vector, signal, out_0_t,
+                title='Input-output (holder of order 0 with resampling)')
+    print('Computation time (holder of order 0 with resampling)   :',
+          '{}s'.format(end_0_t-start_0_t))
+    plot_sig_io(time_vector, signal, out_1_f,
+                title='Input-output (holder of order 1 without resampling)')
+    print('Computation time (holder of order 1 without resampling):',
+          '{}s'.format(end_1_f-start_1_f))
+    plot_sig_io(time_vector, signal, out_1_t,
+                title='Input-output (holder of order 1 with resampling)')
+    print('Computation time (holder of order 1 with resampling)   :',
+          '{}s'.format(end_1_t-start_1_t))
 
-    plot_sig_io(time_vector, signal, out2,
-                title='Input-output (holder of order 0)')
-    print('Computation time (holder of order 0):  {}s'.format(end2-start2))
-
-    diff = out1 - out2
-    diff.shape = (1,) + diff.shape
-    plot_sig_coll(time_vector, diff, title='Difference')
+    diff = np.zeros((4, len(time_vector)))
+    diff[0] = out_0_f - out_0_t
+    diff[1] = out_1_f - out_1_t
+    diff[2] = out_0_f - out_1_f
+    diff[3] = out_0_t - out_1_t
+    plot_sig_coll(time_vector, diff, title='Differences between simulation',
+                  title_plots=['Holder of order 1, w/ and w/o resampling',
+                               'Holder of order 0, w/ and w/o resampling',
+                               'Holder of order 0 and 1, w/o resampling',
+                               'Holder of order 0 and 1, w/ resampling'])
+    print()
 
 
     ########################
