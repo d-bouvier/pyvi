@@ -8,6 +8,8 @@ plot_sig_io :
     Plots input and output signals of a system.
 plot_sig_coll :
     Plots a collection of signals.
+plot_spectrogram :
+    Plots the Short-Time Fourier Transform of a signal.
 plot_kernel_time :
     Plots a discrete time kernel of order 1 or 2.
 plot_kernel_freq :
@@ -28,6 +30,7 @@ Developed for Python 3.6.1
 
 import matplotlib.pyplot as plt
 import numpy as np
+from scipy.signal import stft
 from mpl_toolkits.mplot3d import Axes3D
 
 
@@ -136,6 +139,62 @@ def plot_sig_coll(vec, sig_coll, title=None, title_plots=None,
             plt.xlim(xlim)
             plt.ylim(ylim)
     plt.show()
+
+
+def plot_spectrogram(signal, title=None, db=True, logscale=False,
+                     plot_phase=False, unwrap_angle=True, **args):
+    """
+    Plots the Short-Time Fourier Transform of a signal.
+
+    Parameters
+    ----------
+    signal : numpy.ndarray
+        Signal data.
+    title : str, optional (default=None)
+        Title of the Figure. If None, will be set to a default value.
+    db : boolean, optional (default=True)
+        Choose wether or not magnitude is expressed in deciBel.
+    logscale: boolen or int, optional (default=False)
+        Choose wether or not frequency axis are on a logarithmic scale.
+    plot_phase : boolean, optional (default=False)
+        Choose wether or not the phase is plotted.
+    unwrap_angle : boolean, optional (default=True)
+        Choose wether or not the phase is unwrapped.
+    args : dict(str : value)
+        Arguments that are passed to scipy.signal.stft.
+    """
+
+    freq_vec, time_vec, spectrogram = stft(signal, **args)
+    if title is None:
+        title = 'Short-Time Fourier Transform'
+
+    spectrogram_amp = np.abs(spectrogram)
+    spectrogram_phase = np.angle(spectrogram)
+    amplabel = 'STFT Magnitude'
+    if db:
+        spectrogram_amp = 20 * np.log10(spectrogram_amp)
+        amplabel += ' (dB)'
+    if unwrap_angle:
+        spectrogram_phase = np.unwrap(spectrogram_phase, 0)
+
+    plt.figure(title + ' (amplitude)')
+    plt.clf()
+    plt.pcolormesh(time_vec, freq_vec, spectrogram_amp)
+    plt.title(amplabel)
+    plt.xlabel('Time (s)')
+    plt.ylabel('Frequency (Hz)')
+    if logscale:
+        plt.yscale('symlog')
+
+    if plot_phase:
+        plt.figure(title + ' (phase)')
+        plt.clf()
+        plt.pcolormesh(time_vec, freq_vec, spectrogram_phase)
+        plt.title('Phase (radians)')
+        plt.xlabel('Time (s)')
+        plt.ylabel('Frequency (Hz)')
+        if logscale:
+            plt.yscale('symlog')
 
 
 def plot_kernel_time(vec, kernel, style='wireframe', title=None, nb_levels=20):
