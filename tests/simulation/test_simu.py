@@ -83,8 +83,9 @@ if __name__ == '__main__':
     f2 = 500
     amp = 10
     time_vector = np.arange(0, T, step=1/fs)
-    f0_vector = np.linspace(f1, f2, num=len(time_vector))
-    signal = amp * np.sin(2 * np.pi * f0_vector * time_vector)
+    k = (f2 -f1)/T
+    phi = 2*np.pi * (f1*time_vector + (k/2)*time_vector**2)
+    signal = amp * np.sin(phi)
 
     loudspeaker = create_loudspeaker_sica(output='current')
     options ={'fs': fs,
