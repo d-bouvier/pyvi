@@ -28,6 +28,7 @@ Developed for Python 3.6.1
 import numpy as np
 from scipy import linalg
 from scipy.fftpack import fftn
+from scipy.signal import resample_poly
 from itertools import filterfalse, product
 from .combinatorics import make_pq_combinatorics
 from ..system.statespace import NumericalStateSpace
@@ -47,7 +48,7 @@ class SimulationObject:
     system : NumericalStateSpace
         System to simulate, represented by its NumericalStateSpace object.
     fs : int, optional, (default=44100)
-        Sampling frequency of the simulation.
+        Sampling frequency of input and output signals .
     nl_order_max : int, optional (default=3)
         Order truncation of the simulation.
     holder_order : int, optional (default=1)
@@ -57,10 +58,13 @@ class SimulationObject:
 
     Attributes
     ----------
-    fs : int
+    fs_orig : int
+        Sampling frequency of input and output signals.
     nl_order_max : int
     holder_order : int
     resampling : boolean
+    fs : int
+        Sampling frequency used in the simulation.
     mpq_combinatoric : dict(int: list(tuple(int, int, int, int)))
         See make_pq_combinatorics().
     npq_combinatoric : dict(int: list(tuple(int, int, int, int)))
@@ -95,10 +99,14 @@ class SimulationObject:
                  holder_order=1, resampling=False):
 
         # Initialize simulation options
-        self.fs = fs
+        self.fs_orig = fs
         self.nl_order_max = nl_order_max
         self.holder_order = holder_order
         self.resampling = resampling
+        if self.resampling:
+            self.fs = self.nl_order_max * self.fs_orig
+        else:
+            self.fs = self.fs_orig
 
         # Filter matrix
         sampling_time = 1/self.fs
@@ -177,12 +185,14 @@ class SimulationObject:
 
         # Enforce good shape when input dimension is 1
         if self.dim['input'] == 1:
-            sig_len = input_sig.shape[0]
             self.B_m.shape = (self.dim['state'], self.dim['input'])
             self.D_m.shape = (self.dim['output'], self.dim['input'])
-            input_sig.shape = (self.dim['input'], sig_len)
-        else:
-            sig_len = input_sig.shape[0]
+            input_sig.shape = (self.dim['input'], input_sig.shape[0])
+
+        # Upsampling (if wanted)
+        if self.resampling:
+            input_sig = resample_poly(input_sig, self.nl_order_max, 1, axis=1)
+        sig_len = input_sig.shape[1]
 
         # By-order state and output initialization
         state_by_order = np.zeros((self.nl_order_max, self.dim['state'],
@@ -256,6 +266,13 @@ class SimulationObject:
         ######################
         ## Function outputs ##
         ######################
+
+        # Downsampling(if necessary)
+        if self.resampling:
+            state_by_order = resample_poly(state_by_order, 1,
+                                           self.nl_order_max, axis=2)
+            output_by_order = resample_poly(output_by_order, 1,
+                                            self.nl_order_max, axis=2)
 
         # Reshaping state (if necessary)
         if self.dim['state'] == 1:
