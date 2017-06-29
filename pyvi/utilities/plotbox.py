@@ -31,7 +31,7 @@ Developed for Python 3.6.1
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.signal import stft
-from mpl_toolkits.mplot3d import Axes3D
+from .mathbox import safe_db
 
 
 #==============================================================================
@@ -176,7 +176,8 @@ def plot_spectrogram(signal, title=None, db=True, logscale=False,
     spectrogram_phase = np.angle(spectrogram)
     amplabel = 'STFT Magnitude'
     if db:
-        spectrogram_amp = 20 * np.log10(spectrogram_amp)
+        spectrogram_amp = safe_db(spectrogram_amp,
+                                  np.ones(spectrogram_amp.shape))
         amplabel += ' (dB)'
     if unwrap_angle:
         spectrogram_phase = np.unwrap(spectrogram_phase, 0)
@@ -292,7 +293,7 @@ def plot_kernel_freq(vec, kernel, style='wireframe', title=None, db=True,
     kernel_phase = np.angle(kernel)
     amplabel = 'Magnitude'
     if db:
-        kernel_amp = 20 * np.log10(kernel_amp)
+        kernel_amp = safe_db(kernel_amp, np.ones(kernel_amp.shape))
         amplabel += ' (dB)'
     if unwrap_angle:
         for n in range(order):
