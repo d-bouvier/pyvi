@@ -16,10 +16,11 @@ Developed for Python 3.6.1
 #==============================================================================
 
 import numpy as np
-from pyvi.system.dict import create_nl_damping
-from pyvi.simulation.simu import SimulationObject
 import pyvi.separation.separation as sep
 import matplotlib.pyplot as plt
+from pyvi.system.dict import create_nl_damping
+from pyvi.simulation.simu import SimulationObject
+from pyvi.utilities.plotbox import plot_sig_coll
 
 
 #==============================================================================
@@ -87,6 +88,15 @@ if __name__ == '__main__':
         output_coll[ind] = system.simulation(input_coll[ind])
     out_order_est_phase = PAS.process_outputs(output_coll)
     out_order_est_phase_raw = PAS.process_outputs(output_coll, raw_mode=True)
+    print('Done.')
+
+    print('Computing realPS method ...', end=' ')
+    realPS = sep.realPS(N=nl_order_max)
+    input_coll = realPS.gen_inputs(input_cplx)
+    output_coll = np.zeros(input_coll.shape)
+    for ind in range(input_coll.shape[0]):
+        output_coll[ind] = system.simulation(input_coll[ind])
+    out_phase_est = realPS.process_outputs(output_coll)
     print('Done.')
 
 
@@ -161,4 +171,14 @@ if __name__ == '__main__':
             ax.plot(time_vec, np.real(out_order_est_phase_raw[(n, q)]), 'b')
             ax.plot(time_vec, np.imag(out_order_est_phase_raw[(n, q)]), 'r')
 
+    print('Done.')
+
+    plt.figure('Method realPS - Estimated terms')
+    plt.clf()
+    title_plots = []
+    for n in range(nl_order_max+1):
+        title_plots.append('Phase {}'.format(n))
+    plot_sig_coll(time_vec, out_phase_est[:nl_order_max+1],
+                  title='Method realPS - Estimated terms',
+                  title_plots=title_plots)
     print('Done.')
