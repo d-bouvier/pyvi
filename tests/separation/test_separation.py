@@ -89,6 +89,17 @@ if __name__ == '__main__':
     out_order_est_phase_raw = PAS.process_outputs(output_coll, raw_mode=True)
     print('Done.')
 
+    print('Computing PAS_v2 method ...', end=' ')
+    PAS_v2 = sep.PAS_v2(N=nl_order_max)
+    input_coll = PAS_v2.gen_inputs(input_cplx)
+    output_coll = np.zeros(input_coll.shape)
+    for ind in range(input_coll.shape[0]):
+        output_coll[ind] = system.simulation(input_coll[ind])
+    out_order_est_phasev2 = PAS_v2.process_outputs(output_coll)
+    out_order_est_phasev2_raw = PAS_v2.process_outputs(output_coll,
+                                                       raw_mode=True)
+    print('Done.')
+
 
     ##################
     ## Signal plots ##
@@ -150,7 +161,7 @@ if __name__ == '__main__':
         plt.plot(time_vec, (out_order_phase - out_order_est_phase)[n], 'r')
     plt.show()
 
-    plt.figure('Method rPAS - Estimated terms')
+    plt.figure('Method raw-PAS - Estimated terms')
     plt.clf()
     nb_col = 2*(nl_order_max+1)
     shape = (nl_order_max, nb_col)
@@ -160,5 +171,34 @@ if __name__ == '__main__':
             ax = plt.subplot2grid(shape, pos, colspan=2)
             ax.plot(time_vec, np.real(out_order_est_phase_raw[(n, q)]), 'b')
             ax.plot(time_vec, np.imag(out_order_est_phase_raw[(n, q)]), 'r')
+
+    plt.figure('Method PAS_v2 - True and estimated orders')
+    plt.clf()
+    for n in range(nl_order_max):
+        plt.subplot(nl_order_max, 2, 2*n+1)
+        plt.plot(time_vec, out_order_phase[n], 'b')
+        plt.subplot(nl_order_max, 2, 2*n+2)
+        plt.plot(time_vec, out_order_est_phasev2[n], 'r')
+    plt.show()
+
+    plt.figure('Method PAS_v2 - True orders and error')
+    plt.clf()
+    for n in range(nl_order_max):
+        plt.subplot(nl_order_max, 2, 2*n+1)
+        plt.plot(time_vec, out_order_phase[n], 'b')
+        plt.subplot(nl_order_max, 2, 2*n+2)
+        plt.plot(time_vec, (out_order_phase - out_order_est_phasev2)[n], 'r')
+    plt.show()
+
+    plt.figure('Method raw-PAS_v2 - Estimated terms')
+    plt.clf()
+    nb_col = 2*(nl_order_max+1)
+    shape = (nl_order_max, nb_col)
+    for n in range(1, nl_order_max+1):
+        for q in range(0, n+1):
+            pos = (n-1, nl_order_max - n + 2*q)
+            ax = plt.subplot2grid(shape, pos, colspan=2)
+            ax.plot(time_vec, np.real(out_order_est_phasev2_raw[(n, q)]), 'b')
+            ax.plot(time_vec, np.imag(out_order_est_phasev2_raw[(n, q)]), 'r')
 
     print('Done.')
