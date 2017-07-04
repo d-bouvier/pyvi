@@ -407,3 +407,50 @@ class PAS(PS, AS):
             return combinatorial_terms
         else:
             return np.real_if_close(output_by_order)
+
+
+class realPS(PAS):
+    """
+    Class for Phase-based Separation method into homo-phase signals.
+
+    Parameters
+    ----------
+    N : int, optional (default=3)
+        Number of nonlinear orders (truncation order of the Volterra series).
+
+    Attributes
+    ----------
+    N : int
+    K : int
+    factors : array_like (of length K)
+    negative_gain : boolean (class Attribute, always False)
+    rho : float (class Attribute, always 1)
+    w : float
+    nb_phase : int
+        Number of different phases used.
+
+    Methods
+    -------
+    gen_inputs(signal)
+        Returns the collection of input test signals.
+    process_output(output_coll)
+        Process outputs and returns estimated homo-phase signals.
+
+    See also
+    --------
+    PAS: Parents class
+    _SeparationMethod, PS
+    """
+    #TODO update docstring
+
+    def __init__(self, N=3):
+        self.nb_phase = 2*N + 1
+        phase_vec = self._gen_phase_factors(self.nb_phase)
+
+        _SeparationMethod.__init__(self, N, self.nb_phase, phase_vec)
+
+    def gen_inputs(self, signal):
+        return PAS.gen_inputs(self, signal)
+
+    def process_outputs(self, output_coll):
+        return PS._inverse_fft(output_coll, self.nb_phase)
