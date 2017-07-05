@@ -49,7 +49,7 @@ if __name__ == '__main__':
     # Input signal specification
     fs = 3000
     T = 2
-    sigma = np.sqrt(2)
+    sigma = 1/10
     tau = 0.005
 
     time_vec = np.arange(0, T, 1/fs)
@@ -65,6 +65,7 @@ if __name__ == '__main__':
     # Simulation specification
     N = 3
     system4simu = SimulationObject(system, fs=fs, nl_order_max=N)
+    snr = -50
 
     # Assert signal length is great enough
     nb_samples_in_kernels = binomial(M+N, N) - 1
@@ -82,22 +83,33 @@ if __name__ == '__main__':
                                             out_opt='output_by_order')
 
     # Data for AS separation method
-    AS_method = sep.AS(N=N)
-    input_coll = AS_method.gen_inputs(input_sig)
-    output_coll = np.zeros(input_coll.shape)
-    for ind in range(input_coll.shape[0]):
-        output_coll[ind] = system4simu.simulation(input_coll[ind])
-    out_order_AS = AS_method.process_outputs(output_coll)
+    AS = sep.AS(N=N, gain=0.65)
+    inputs_AS = AS.gen_inputs(input_sig)
+    outputs_AS = np.zeros(inputs_AS.shape)
+    for ind in range(inputs_AS.shape[0]):
+        outputs_AS[ind] = system4simu.simulation(inputs_AS[ind])
+    order_AS = AS.process_outputs(outputs_AS)
 
-    # Data for AS separation method
-    PAS_method = sep.PAS(N=N)
-    input_coll = PAS_method.gen_inputs(input_sig_cplx)
-    output_coll = np.zeros(input_coll.shape)
-    for ind in range(input_coll.shape[0]):
-        output_coll[ind] = system4simu.simulation(input_coll[ind])
-    out_order_PAS, out_term_PAS = PAS_method.process_outputs(output_coll,
-                                                             raw_mode=True)
+    # Data for PAS separation method
+    PAS = sep.PAS(N=N, gain=0.65)
+    inputs_PAS = PAS.gen_inputs(input_sig_cplx)
+    outputs_PAS = np.zeros(inputs_PAS.shape)
+    for ind in range(inputs_PAS.shape[0]):
+        outputs_PAS[ind] = system4simu.simulation(inputs_PAS[ind])
+    order_PAS, term_PAS = PAS.process_outputs(outputs_PAS, raw_mode=True)
 
+    # Noisy data
+    amp_max = max(np.max(np.abs(order_AS)), np.max(np.abs(order_PAS)))
+    amp_noise = amp_max * 10**(snr/20)
+    shape_max = max(outputs_AS.shape, outputs_PAS.shape)
+    noise = np.random.normal(scale=amp_noise, size=shape_max)
+
+    nb_AS = outputs_AS.shape[0]
+    nb_PAS = outputs_PAS.shape[0]
+    out_order_n = out_order_true + noise[:N]
+    order_AS_n = AS.process_outputs(outputs_AS + noise[:nb_AS])
+    order_PAS_n, term_PAS_n = PAS.process_outputs(outputs_PAS + noise[:nb_PAS],
+                                                  raw_mode=True)
     print('Done.')
 
 
@@ -107,28 +119,45 @@ if __name__ == '__main__':
 
     # Initialization
     kernels = dict()
+    kernels_n = dict()
     methods_list = ['true', 'direct', 'order_true', 'order_by_AS',
                     'order_by_PAS', 'term_by_PAS']
+    methods_list_n = ['direct_n', 'order_n', 'order_by_AS_n',
+                      'order_by_PAS_n', 'term_by_PAS_n']
 
     # Pre-computation of phi
-    print('Computing Phi ...', end=' ')
+    print('Computing phi ...', end=' ')
     phi_orders = identif._orderKLS_construct_phi(input_sig, M, N)
     phi_terms = identif._termKLS_construct_phi(input_sig_cplx, M, N)
     print('Done.')
 
-    # Identification
-    print('Computing identification ...', end=' ')
+    # Identification (on clean data)
+    print('Computing identification (on clean data)...', end=' ')
     kernels['true'] = system4simu.compute_kernels(tau, which='time')
     kernels['direct'] = identif.KLS(input_sig, out_order_true.sum(axis=0),
                                     M, N, phi=phi_orders)
     kernels['order_true'] = identif.orderKLS(input_sig, out_order_true,
-                                    M, N, phi=phi_orders)
-    kernels['order_by_AS'] = identif.orderKLS(input_sig, out_order_AS,
-                                    M, N, phi=phi_orders)
-    kernels['order_by_PAS'] = identif.orderKLS(input_sig, out_order_PAS,
-                                    M, N, phi=phi_orders)
-    kernels['term_by_PAS'] = identif.termKLS(input_sig_cplx, out_term_PAS,
-                                    M, N, phi=phi_terms)
+                                             M, N, phi=phi_orders)
+    kernels['order_by_AS'] = identif.orderKLS(input_sig, order_AS,
+                                              M, N, phi=phi_orders)
+    kernels['order_by_PAS'] = identif.orderKLS(input_sig, order_PAS,
+                                               M, N, phi=phi_orders)
+    kernels['term_by_PAS'] = identif.termKLS(input_sig_cplx, term_PAS,
+                                             M, N, phi=phi_terms)
+    print('Done.')
+
+    # Identification (on noisy data)
+    print('Computing identification (on noisy data)...', end=' ')
+    kernels_n['direct_n'] = identif.KLS(input_sig, out_order_n.sum(axis=0),
+                                        M, N, phi=phi_orders)
+    kernels_n['order_n'] = identif.orderKLS(input_sig, out_order_n,
+                                            M, N, phi=phi_orders)
+    kernels_n['order_by_AS_n'] = identif.orderKLS(input_sig, order_AS_n,
+                                                  M, N, phi=phi_orders)
+    kernels_n['order_by_PAS_n'] = identif.orderKLS(input_sig, order_PAS_n,
+                                                   M, N, phi=phi_orders)
+    kernels_n['term_by_PAS_n'] = identif.termKLS(input_sig_cplx, term_PAS_n,
+                                                 M, N, phi=phi_terms)
     print('Done.')
 
 
