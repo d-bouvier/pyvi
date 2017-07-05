@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Test script for and pyvi.identification.identification
+Test script for pyvi.identification.identification
 
 Notes
 -----

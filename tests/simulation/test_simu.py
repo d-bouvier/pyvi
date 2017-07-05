@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Test script for and pyvi.simulation.simu
+Test script for pyvi.simulation.simu
 
 Notes
 -----

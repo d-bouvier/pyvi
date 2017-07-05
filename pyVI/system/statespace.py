@@ -32,7 +32,7 @@ from sympy import pretty
 from numpy import tensordot, allclose
 from scipy.linalg import norm
 from abc import abstractmethod
-import warnings as warnings
+import warnings as warn
 from ..utilities.misc import Style
 
 
@@ -236,7 +236,7 @@ class StateSpace:
                       ' (it is {}).\n'.format(self.dim['input']) + \
                       'Simulation, kernel computation, order separation and' + \
                       ' system  identification may not work as intended.\n'
-            warnings.showwarning(message, UserWarning, __file__, 248, line='')
+            warn.showwarning(message, UserWarning, __file__, 239, line='')
 
     def _is_single_output(self):
         """Check if the output dimension is one."""
@@ -247,7 +247,7 @@ class StateSpace:
                       ' (it is {}).\n'.format(self.dim['output']) + \
                       'Simulation, kernel computation, order separation and' + \
                       ' system  identification may not work as intended.\n'
-            warnings.showwarning(message, UserWarning, __file__, 258, line='')
+            warn.showwarning(message, UserWarning, __file__, 250, line='')
 
     #=============================================#
 

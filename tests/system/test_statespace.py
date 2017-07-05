@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Test script for and pyvi.system.statespace
+Test script for pyvi.system.statespace
 
 Notes
 -----
