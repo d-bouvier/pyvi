@@ -121,12 +121,12 @@ if __name__ == '__main__':
     kernels = dict()
     kernels_n = dict()
     methods_list = ['true', 'direct', 'order_true', 'order_by_AS',
-                    'order_by_PAS', 'term_by_PAS']
+                    'order_by_PAS', 'term_by_PAS', 'term_by_PAS2']
     methods_list_n = ['direct_n', 'order_n', 'order_by_AS_n',
-                      'order_by_PAS_n', 'term_by_PAS_n']
+                      'order_by_PAS_n', 'term_by_PAS_n', 'term_by_PAS2_n']
 
     # Pre-computation of phi
-    print('Computing phi ...', end=' ')
+    print('Computing phi...', end=' ')
     phi_orders = identif._orderKLS_construct_phi(input_sig, M, N)
     phi_terms = identif._termKLS_construct_phi(input_sig_cplx, M, N)
     print('Done.')
@@ -143,7 +143,10 @@ if __name__ == '__main__':
     kernels['order_by_PAS'] = identif.orderKLS(input_sig, order_PAS,
                                                M, N, phi=phi_orders)
     kernels['term_by_PAS'] = identif.termKLS(input_sig_cplx, term_PAS,
-                                             M, N, phi=phi_terms)
+                                             M, N, phi=phi_terms,
+                                                  only_real_part=True)
+    kernels['term_by_PAS2'] = identif.termKLS(input_sig_cplx, term_PAS,
+                                              M, N, phi=phi_terms)
     print('Done.')
 
     # Identification (on noisy data)
@@ -157,7 +160,10 @@ if __name__ == '__main__':
     kernels_n['order_by_PAS_n'] = identif.orderKLS(input_sig, order_PAS_n,
                                                    M, N, phi=phi_orders)
     kernels_n['term_by_PAS_n'] = identif.termKLS(input_sig_cplx, term_PAS_n,
-                                                 M, N, phi=phi_terms)
+                                                 M, N, phi=phi_terms,
+                                                  only_real_part=True)
+    kernels_n['term_by_PAS2_n'] = identif.termKLS(input_sig_cplx, term_PAS_n,
+                                                  M, N, phi=phi_terms)
     print('Done.')
 
 

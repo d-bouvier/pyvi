@@ -159,7 +159,8 @@ def _orderKLS_construct_phi(signal, M, N):
     return volterra_basis_by_order(signal, M, N)
 
 
-def termKLS(input_sig, output_sigs_by_term, M, N, phi=None, form='sym'):
+def termKLS(input_sig, output_sigs_by_term, M, N, phi=None, form='sym',
+            only_real_part=False):
     """
     Performs KLS method on each combinatorial term.
 
@@ -177,6 +178,8 @@ def termKLS(input_sig, output_sigs_by_term, M, N, phi=None, form='sym'):
         If None, ``phi`` is computed from ``input_sig``; else, ``phi`` is used.
     form : {'sym', 'tri', 'symmetric', 'triangular'}, optional (default='sym')
         Form of the returned Volterra kernel (symmetric or triangular).
+    only_real_part : boolean, optional (default=False)
+        Choose whether real and imaginary parts or only real parts are used.
 
     Returns
     -------
@@ -194,8 +197,15 @@ def termKLS(input_sig, output_sigs_by_term, M, N, phi=None, form='sym'):
         f[n] = np.zeros((binomial(M + n - 1, n),))
 
     for (n, k), phi_nk in phi.items():
-        f[n] += _KLS_core_computation(2 * np.real(phi_nk),
-                                      2 * np.real(output_sigs_by_term[(n, k)]))
+        if only_real_part:
+            phi = 2 * np.real(phi_nk)
+            output_sig = 2 * np.real(output_sigs_by_term[(n, k)])
+        else:
+            phi = np.concatenate((np.real(phi_nk), np.imag(phi_nk)), axis=0)
+            output_sig = np.concatenate((np.real(output_sigs_by_term[(n, k)]),
+                                         np.imag(output_sigs_by_term[(n, k)])),
+                                        axis=0)
+        f[n] += _KLS_core_computation(phi, output_sig)
 
     # Re-arranging vector f_n into volterra kernel of order n
     for n in range(1, N+1):
