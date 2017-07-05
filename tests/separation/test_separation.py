@@ -17,10 +17,10 @@ Developed for Python 3.6.1
 
 import numpy as np
 import pyvi.separation.separation as sep
-import matplotlib.pyplot as plt
 from pyvi.system.dict import create_nl_damping
 from pyvi.simulation.simu import SimulationObject
-from pyvi.utilities.plotbox import plot_sig_coll
+from pyvi.utilities.plotbox import plot_sig, plot_coll
+import matplotlib.pyplot as plt
 
 
 #==============================================================================
@@ -46,7 +46,7 @@ if __name__ == '__main__':
     f2 = 133
     input_cplx = np.exp(2j * np.pi * f1 * time_vec) + \
                  np.exp(2j * np.pi * f2 * time_vec)
-    input_real = np.real(input_cplx)
+    input_real = 2 * np.real(input_cplx)
 
     nl_order_max = 3
     system = SimulationObject(create_nl_damping(nl_coeff=[1e-1, 3e-5]), fs=fs,
@@ -78,7 +78,7 @@ if __name__ == '__main__':
     out_order_est_amp = AS.process_outputs(output_coll)
     print('Done.')
 
-    out_order_phase = system.simulation(2*input_real, out_opt='output_by_order')
+    out_order_phase = system.simulation(input_real, out_opt='output_by_order')
 
     print('Computing PAS method ...', end=' ')
     PAS = sep.PAS(N=nl_order_max)
@@ -115,61 +115,29 @@ if __name__ == '__main__':
     ## Signal plots ##
     ##################
 
+    title = 'Method {} - True orders, estimated orders and errors.'
+    title_order = ['Order {}'.format(n) for n in range(1, nl_order_max+1)]
+    title_type = ['True orders', 'Estimated orders', 'Error']
+    title_phase = ['Phase {}'.format(n) for n in range(nl_order_max+1)]
+
     print('Printing plots ...', end=' ')
 
-    plt.figure('Method PS - True and estimated orders')
-    plt.clf()
-    for n in range(nl_order_max):
-        plt.subplot(nl_order_max, 2, 2*n+1)
-        plt.plot(time_vec, np.real(out_order_cplx[n]), 'b')
-        plt.subplot(nl_order_max, 2, 2*n+2)
-        plt.plot(time_vec, np.real(out_order_est_cplx[n]), 'r')
-    plt.show()
+    plot_coll(time_vec, (np.real(out_order_cplx), np.real(out_order_est_cplx),
+                         np.real(out_order_cplx - out_order_est_cplx)),
+              title=title.format('PS'), xtitle=title_type, ytitle=title_order)
 
-    plt.figure('Method PS - True orders and error')
-    plt.clf()
-    for n in range(nl_order_max):
-        plt.subplot(nl_order_max, 2, 2*n+1)
-        plt.plot(time_vec, np.real(out_order_cplx[n]), 'b')
-        plt.subplot(nl_order_max, 2, 2*n+2)
-        plt.plot(time_vec, np.real(out_order_cplx - out_order_est_cplx)[n], 'r')
-    plt.show()
+    plot_coll(time_vec, (out_order_amp, out_order_est_amp,
+                         out_order_amp - out_order_est_amp),
+              title=title.format('AS'), xtitle=title_type, ytitle=title_order)
 
-    plt.figure('Method AS - True and estimated orders')
-    plt.clf()
-    for n in range(nl_order_max):
-        plt.subplot(nl_order_max, 2, 2*n+1)
-        plt.plot(time_vec, out_order_amp[n], 'b')
-        plt.subplot(nl_order_max, 2, 2*n+2)
-        plt.plot(time_vec, out_order_est_amp[n], 'r')
-    plt.show()
+    plot_coll(time_vec, (out_order_phase, out_order_est_phase,
+                         out_order_phase - out_order_est_phase),
+              title=title.format('PAS'), xtitle=title_type, ytitle=title_order)
 
-    plt.figure('Method AS - True orders and error')
-    plt.clf()
-    for n in range(nl_order_max):
-        plt.subplot(nl_order_max, 2, 2*n+1)
-        plt.plot(time_vec, out_order_amp[n], 'b')
-        plt.subplot(nl_order_max, 2, 2*n+2)
-        plt.plot(time_vec, (out_order_amp - out_order_est_amp)[n], 'r')
-    plt.show()
-
-    plt.figure('Method PAS - True and estimated orders')
-    plt.clf()
-    for n in range(nl_order_max):
-        plt.subplot(nl_order_max, 2, 2*n+1)
-        plt.plot(time_vec, out_order_phase[n], 'b')
-        plt.subplot(nl_order_max, 2, 2*n+2)
-        plt.plot(time_vec, out_order_est_phase[n], 'r')
-    plt.show()
-
-    plt.figure('Method PAS - True orders and error')
-    plt.clf()
-    for n in range(nl_order_max):
-        plt.subplot(nl_order_max, 2, 2*n+1)
-        plt.plot(time_vec, out_order_phase[n], 'b')
-        plt.subplot(nl_order_max, 2, 2*n+2)
-        plt.plot(time_vec, (out_order_phase - out_order_est_phase)[n], 'r')
-    plt.show()
+    plot_coll(time_vec, (out_order_phase, out_order_est_phasev2,
+                         out_order_phase - out_order_est_phasev2),
+              title=title.format('PAS_v2'), xtitle=title_type,
+              ytitle=title_order)
 
     plt.figure('Method raw-PAS - Estimated terms')
     plt.clf()
@@ -182,24 +150,6 @@ if __name__ == '__main__':
             ax.plot(time_vec, np.real(out_order_est_phase_raw[(n, q)]), 'b')
             ax.plot(time_vec, np.imag(out_order_est_phase_raw[(n, q)]), 'r')
 
-    plt.figure('Method PAS_v2 - True and estimated orders')
-    plt.clf()
-    for n in range(nl_order_max):
-        plt.subplot(nl_order_max, 2, 2*n+1)
-        plt.plot(time_vec, out_order_phase[n], 'b')
-        plt.subplot(nl_order_max, 2, 2*n+2)
-        plt.plot(time_vec, out_order_est_phasev2[n], 'r')
-    plt.show()
-
-    plt.figure('Method PAS_v2 - True orders and error')
-    plt.clf()
-    for n in range(nl_order_max):
-        plt.subplot(nl_order_max, 2, 2*n+1)
-        plt.plot(time_vec, out_order_phase[n], 'b')
-        plt.subplot(nl_order_max, 2, 2*n+2)
-        plt.plot(time_vec, (out_order_phase - out_order_est_phasev2)[n], 'r')
-    plt.show()
-
     plt.figure('Method raw-PAS_v2 - Estimated terms')
     plt.clf()
     nb_col = 2*(nl_order_max+1)
@@ -211,12 +161,8 @@ if __name__ == '__main__':
             ax.plot(time_vec, np.real(out_order_est_phasev2_raw[(n, q)]), 'b')
             ax.plot(time_vec, np.imag(out_order_est_phasev2_raw[(n, q)]), 'r')
 
-    plt.figure('Method realPS - Estimated terms')
-    plt.clf()
-    title_plots = []
-    for n in range(nl_order_max+1):
-        title_plots.append('Phase {}'.format(n))
-    plot_sig_coll(time_vec, out_phase_est[:nl_order_max+1],
-                  title='Method realPS - Estimated terms',
-                  title_plots=title_plots)
+    plot_sig(time_vec, out_phase_est[:nl_order_max+1],
+             title='Method realPS - Estimated terms',
+             title_plots=title_phase)
+
     print('Done.')
