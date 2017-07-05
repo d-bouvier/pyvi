@@ -39,19 +39,26 @@ if __name__ == '__main__':
     ## Parameters ##
     ################
 
+    # System specification
+    f0_voulue = 200
+    damping = 0.7
+    system = create_nl_damping(gain=1, f0=f0_voulue/(np.sqrt(1 - damping**2)),
+                               damping=damping, nl_coeff=[3, 7e-4])
+
+    # Input signal specification
     fs = 4410
     T = 0.2
     time_vec = np.arange(0, T, 1/fs)
     f1 = 100
     f2 = 133
-    input_cplx = np.exp(2j * np.pi * f1 * time_vec) + \
-                 np.exp(2j * np.pi * f2 * time_vec)
+    input_cplx = (1/4) * (np.exp(2j * np.pi * f1 * time_vec) + \
+                          np.exp(2j * np.pi * f2 * time_vec))
     input_real = 2 * np.real(input_cplx)
 
+    # Simulation specification
     nl_order_max = 3
-    system = SimulationObject(create_nl_damping(nl_coeff=[1e-1, 3e-5]), fs=fs,
+    system = SimulationObject(system, fs=fs,
                               nl_order_max=nl_order_max)
-
 
     ################
     ## Separation ##
