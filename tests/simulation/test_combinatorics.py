@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Test script for and pyvi.simulation.combinatorics
+Test script for pyvi.simulation.combinatorics
 
 Notes
 -----

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Test script for and pyvi.simulation.simu
+Test script for pyvi.simulation.simu
 
 Notes
 -----
@@ -20,9 +20,8 @@ import time
 from pyvi.system.dict import (create_test, create_loudspeaker_sica,
                               create_nl_damping)
 from pyvi.simulation.simu import SimulationObject as SimuObj
-from pyvi.utilities.plotbox import (plot_sig_io, plot_sig_coll,
-                                    plot_kernel_time, plot_kernel_freq,
-                                    plot_spectrogram)
+from pyvi.utilities.plotbox import (plot_sig_io, plot_sig, plot_kernel_time,
+                                    plot_kernel_freq, plot_spectrogram)
 
 
 #==============================================================================
@@ -143,11 +142,11 @@ if __name__ == '__main__':
     diff[1] = out_1_f - out_1_t
     diff[2] = out_0_f - out_1_f
     diff[3] = out_0_t - out_1_t
-    plot_sig_coll(time_vector, diff, title='Differences between simulation',
-                  title_plots=['Holder of order 1, w/ and w/o resampling',
-                               'Holder of order 0, w/ and w/o resampling',
-                               'Holder of order 0 and 1, w/o resampling',
-                               'Holder of order 0 and 1, w/ resampling'])
+    plot_sig(time_vector, diff, title='Differences between simulation',
+             title_plots=['Holder of order 1, w/ and w/o resampling',
+                          'Holder of order 0, w/ and w/o resampling',
+                          'Holder of order 0 and 1, w/o resampling',
+                          'Holder of order 0 and 1, w/ resampling'])
     opt = {'fs': fs, 'nperseg': 128, 'noverlap': 96, 'nfft': 1024}
     plot_spectrogram(signal, title='Input spectrogram', **opt)
     plot_spectrogram(out_1_f, title='Output spectrogram with holder of ' + \

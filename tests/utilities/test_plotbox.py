@@ -16,7 +16,7 @@ Developed for Python 3.6.1
 #==============================================================================
 
 import numpy as np
-from pyvi.utilities.plotbox import (plot_sig_io, plot_sig_coll,
+from pyvi.utilities.plotbox import (plot_sig_io, plot_sig, plot_coll,
                                     plot_spectrogram, plot_kernel_time,
                                     plot_kernel_freq)
 
@@ -55,8 +55,23 @@ if __name__ == '__main__':
     ############################
 
     print('Testing plot_sig_io() ...', end=' ')
-    plot_sig_io(vector, sig_1, sig_2, title='Test réel', ylim=[-1.1, 1.1])
-    plot_sig_io(vector, sig_3, sig_4, title='Test complexe', xlim=[0, 3])
+    plot_sig_io(vector, sig_1, sig_2, title='Test plot_sig_io() [réel]',
+                ylim=[-1.1, 1.1])
+    plot_sig_io(vector, sig_3, sig_4, title='Test plot_sig_io() [complexe]',
+                xlim=[0, 3])
+    print('Done.')
+
+
+    #########################
+    ## Function plot_sig() ##
+    #########################
+
+    print('Testing plot_sig() ...', end=' ')
+    plot_sig(vector, np.stack((sig_1, sig_2, sig_1 - sig_2), axis=0),
+             title='Test plot_sig() [réel]', ylim=[-1.1, 1.1],
+             title_plots=['Sinus', 'Sinus saturé', 'Différence'])
+    plot_sig(vector, np.stack((sig_3, sig_4), axis=0), xlim=[0, 3],
+             title='Test plot_sig() [complexe]')
     print('Done.')
 
 
@@ -64,12 +79,14 @@ if __name__ == '__main__':
     ## Function plot_coll() ##
     ##########################
 
+    col_1 = np.stack((sig_1, sig_2, sig_1 - sig_2), axis=0)
+    col_2 = np.stack((np.imag(sig_3), np.imag(sig_4),
+                      np.imag(sig_3 - sig_4)), axis=0)
+
     print('Testing plot_coll() ...', end=' ')
-    plot_sig_coll(vector, np.stack((sig_1, sig_2, sig_1 - sig_2), axis=0),
-                  title='Test réel (Collection)', ylim=[-1.1, 1.1],
-                  title_plots=['Sinus', 'Cosinus', 'Sinus saturé'])
-    plot_sig_coll(vector, np.stack((sig_3, sig_4), axis=0), xlim=[0, 3],
-                  title='Test complexe (Collection)')
+    plot_coll(vector, (col_1, col_2), title='Test sig_coll()',
+              xtitle=['Colonne 1', 'Colonne 2', 'Colonne 3'],
+              ytitle=['Ligne 1', 'Ligne 2', 'Ligne3'])
     print('Done.')
 
 
@@ -78,13 +95,14 @@ if __name__ == '__main__':
     #################################
 
     print('Testing plot_kernel_time() ...', end=' ')
-    plot_kernel_time(time_vec, kernel_time_1, title='Test noyau temp - ordre 1')
+    plot_kernel_time(time_vec, kernel_time_1,
+                     title='Test plot_kernel_time() [Ordre 1]')
     plot_kernel_time(time_vec, kernel_time_2, style='contour',
-                     title="Test noyau temp - ordre 2 - mode 'contour'")
+                     title="Test plot_kernel_time() [Ordre 2 - 'contour']")
     plot_kernel_time(time_vec, kernel_time_2, style='surface',
-                     title="Test noyau temp - ordre 2 - mode 'surface'")
+                     title="Test plot_kernel_time() [Ordre 2 - 'surface']")
     plot_kernel_time(time_vec, kernel_time_2, style='wireframe',
-                     title="Test noyau temp - ordre 2 - mode 'wireframe'")
+                     title="Test plot_kernel_time() [Ordre 2 - 'wireframe']")
     print('Done.')
 
 
@@ -93,15 +111,16 @@ if __name__ == '__main__':
     #################################
 
     print('Testing plot_kernel_freq() ...', end=' ')
-    plot_kernel_freq(freq_vec, kernel_freq_1, title='Test noyau freq - ordre 1')
+    plot_kernel_freq(freq_vec, kernel_freq_1,
+                     title='Test plot_kernel_time() [Ordre 1]')
     plot_kernel_freq(freq_vec, kernel_freq_1, logscale=True,
-                     title='Test noyau freq - ordre 1 - logscale')
+                     title='Test plot_kernel_freq() [Ordre 2 - logscale]')
     plot_kernel_freq(freq_vec, kernel_freq_2, style='contour',
-                     title="Test noyau freq - ordre 2 - mode 'contour'")
+                     title="Test plot_kernel_freq() [Ordre 2 - 'contour']")
     plot_kernel_freq(freq_vec, kernel_freq_2, style='surface',
-                     title="Test noyau freq - ordre 2 - mode 'surface'")
+                     title="Test plot_kernel_freq() [Ordre 2 - 'surface']")
     plot_kernel_freq(freq_vec, kernel_freq_2, style='wireframe',
-                     title="Test noyau freq - ordre 2 - mode 'wireframe'")
+                     title="Test plot_kernel_freq() [Ordre 2 - 'wireframe']")
     print('Done.')
 
 
@@ -120,9 +139,9 @@ if __name__ == '__main__':
 
     print('Testing plot_spectrogram() ...', end=' ')
     opt = {'fs': fs, 'nperseg': 512, 'noverlap': 448, 'nfft': 4096}
-    plot_spectrogram(signal, **opt)
-    plot_spectrogram(signal, title='Sweep', plot_phase=True,
-                     unwrap_angle=True, **opt)
-    plot_spectrogram(signal, title='Sweep 2', db=False, logscale=True,
-                     plot_phase=True, unwrap_angle=False, **opt)
+    plot_spectrogram(signal, plot_phase=True, unwrap_angle=True,
+                     title='Test plot_spectrogram() [unwrapped phase]', **opt)
+    plot_spectrogram(signal, db=False, logscale=True, plot_phase=True,
+                     unwrap_angle=False, title='Test plot_spectrogram() ' + \
+                     '[unwrapped phase, no dB, logscale]', **opt)
     print('Done.')

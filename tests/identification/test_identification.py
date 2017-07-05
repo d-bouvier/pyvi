@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Test script for and pyvi.identification.identification
+Test script for pyvi.identification.identification
 
 Notes
 -----
@@ -17,7 +17,7 @@ Developed for Python 3.6.1
 
 import numpy as np
 import pyvi.identification.identification as identif
-import pyvi.separation.separation as sep
+import pyvi.separation.methods as sep
 from pyvi.identification.tools import error_measure
 from pyvi.system.dict import create_nl_damping
 from pyvi.simulation.simu import SimulationObject
