@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
 """
-Test script for pyvi.identification.identification
+Test script for pyvi.identification.methods
 
 Notes
 -----
 @author: bouvier (bouvier@ircam.fr)
          Damien Bouvier, IRCAM, Paris
 
-Last modified on 23 June 2017
+Last modified on 05 July 2017
 Developed for Python 3.6.1
 """
 
@@ -77,7 +77,7 @@ if __name__ == '__main__':
     ## Data simulation ##
     #####################
 
-    print('Computing data for separation ...', end=' ')
+    print('Computing data for separation...', end=' ')
     # Ground truth simulation
     out_order_true = system4simu.simulation(input_sig,
                                             out_opt='output_by_order')
@@ -171,7 +171,7 @@ if __name__ == '__main__':
     ## Kernels plots ##
     ###################
 
-    print('Printing plots ...', end=' ')
+    print('Printing plots...', end=' ')
 
     # Plots
     style2D = 'surface'
@@ -201,7 +201,7 @@ if __name__ == '__main__':
     errors = dict()
     for method, val in kernels.items():
         errors[method] = error_measure(kernels['true'], val)
-        print('{:12} :'.format(method), errors[method])
+        print('{:13} :'.format(method), errors[method])
 
     # Estimation error (without noise)
     print('\nIdentification error (with noise)')
@@ -209,5 +209,5 @@ if __name__ == '__main__':
     errors_n = dict()
     for method, val in kernels_n.items():
         errors_n[method] = error_measure(kernels['true'], val)
-        print('{:13} :'.format(method), errors_n[method])
+        print('{:14} :'.format(method), errors_n[method])
     print()
