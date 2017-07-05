@@ -161,24 +161,9 @@ if __name__ == '__main__':
     print('Done.')
 
 
-    ##########################
-    ## Identification error ##
-    ##########################
-
-    # Estimation error
-    print('\nIdentification error (without noise)')
-    print('------------------------------------')
-    errors = dict()
-    for method, val in kernels.items():
-        errors[method] = error_measure(kernels['true'], val)
-        print('{:10} :'.format(method), errors[method])
-    print()
-
-
     ###################
     ## Kernels plots ##
     ###################
-
 
     print('Printing plots ...', end=' ')
 
@@ -198,3 +183,25 @@ if __name__ == '__main__':
         plot_kernel_time(tau_vec, val[2], style=style2D, title=name.format(2))
 
     print('Done.')
+
+
+    ##########################
+    ## Identification error ##
+    ##########################
+
+    # Estimation error (without noise)
+    print('\nIdentification error (without noise)')
+    print('------------------------------------')
+    errors = dict()
+    for method, val in kernels.items():
+        errors[method] = error_measure(kernels['true'], val)
+        print('{:12} :'.format(method), errors[method])
+
+    # Estimation error (without noise)
+    print('\nIdentification error (with noise)')
+    print('---------------------------------')
+    errors_n = dict()
+    for method, val in kernels_n.items():
+        errors_n[method] = error_measure(kernels['true'], val)
+        print('{:13} :'.format(method), errors_n[method])
+    print()
