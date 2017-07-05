@@ -16,7 +16,7 @@ Developed for Python 3.6.1
 #==============================================================================
 
 import numpy as np
-import pyvi.identification.identification as identif
+import pyvi.identification.methods as identif
 import pyvi.separation.methods as sep
 from pyvi.identification.tools import error_measure
 from pyvi.system.dict import create_nl_damping
@@ -95,8 +95,8 @@ if __name__ == '__main__':
     output_coll = np.zeros(input_coll.shape)
     for ind in range(input_coll.shape[0]):
         output_coll[ind] = system4simu.simulation(input_coll[ind])
-    out_order_PAS = PAS_method.process_outputs(output_coll)
-    out_term_PAS = PAS_method.process_outputs(output_coll, raw_mode=True)
+    out_order_PAS, out_term_PAS = PAS_method.process_outputs(output_coll,
+                                                             raw_mode=True)
 
     print('Done.')
 
