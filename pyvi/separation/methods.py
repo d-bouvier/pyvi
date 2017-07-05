@@ -34,6 +34,7 @@ Developed for Python 3.6.1
 #==============================================================================
 
 import numpy as np
+import warnings as warn
 from scipy.fftpack import ifft
 from ..utilities.mathbox import binomial
 
@@ -407,20 +408,17 @@ class PAS(PS, AS):
         combinatorial_terms : dict((int, int): array_like)
             Estimation of the N first nonlinear homogeneous orders.
 
-        In function of the ``raw_mode`` option, this function returns:
-            - ``output_by_order`` (if ``out`` == False)
-            - ``combinatorial_terms`` (if ``out`` == True)
+        This function always return ``output_by_order``; it also returns
+        ``combinatorial_terms`` if `raw_mode`` optionis set to True.
         """
 
         sig_shape = output_coll.shape[1:]
 
         out_per_phase = np.zeros((self.nb_amp, self.nb_phase) + sig_shape,
                                  dtype='complex128')
+        output_by_order = np.zeros((self.N,) + sig_shape, dtype='complex128')
         if raw_mode:
             combinatorial_terms = dict()
-        else:
-            output_by_order = np.zeros((self.N,) + sig_shape,
-                                       dtype='complex128')
 
         mixing_mat = np.vander(self.amp_vec, N=self.N+1, increasing=True)[:,1::]
 
@@ -440,21 +438,28 @@ class PAS(PS, AS):
             col_idx = np.arange(first_nl_order[phase_idx], self.N+1, 2) - 1
             tmp = AS._inverse_mixing_mat(out_per_phase[:, phase_idx],
                                          mixing_mat[:, col_idx])
-            if raw_mode:
-                for ind in range(tmp.shape[0]):
-                    n = first_nl_order[phase_idx] + 2*ind
+
+            for ind in range(tmp.shape[0]):
+                n = first_nl_order[phase_idx] + 2*ind
+                output_by_order[n-1] += tmp[ind]
+                if raw_mode:
                     q = ((n - phase_idx) % self.nb_phase) // 2
                     combinatorial_terms[(n, q)] = tmp[ind] / binomial(n, q)
-            else:
-                for ind in range(tmp.shape[0]):
-                    n = first_nl_order[phase_idx] + 2*ind
-                    output_by_order[n-1] += tmp[ind]
+
+        # Checking that estimated orders are real signals
+        output_by_order = np.real_if_close(output_by_order)
+        if np.iscomplexobj(output_by_order):
+            output_by_order = np.real(output_by_order)
+            message = '\nEstimated orders have non-negligible imaginary ' + \
+                      'parts. Only real parts have been retruned, but this ' + \
+                      'indicates a probable malfunction in PAS method.\n'
+            warn.showwarning(message, UserWarning, __file__, 456, line='')
 
         # Function output
         if raw_mode:
-            return combinatorial_terms
+            return output_by_order, combinatorial_terms
         else:
-            return np.real_if_close(output_by_order)
+            return output_by_order
 
 
 class PAS_v2(PAS):
@@ -566,18 +571,15 @@ class PAS_v2(PAS):
         combinatorial_terms : dict((int, int): array_like)
             Estimation of the N first nonlinear homogeneous orders.
 
-        In function of the ``raw_mode`` option, this function returns:
-            - ``output_by_order`` (if ``out`` == False)
-            - ``combinatorial_terms`` (if ``out`` == True)
+        This function always return ``output_by_order``; it also returns
+        ``combinatorial_terms`` if `raw_mode`` optionis set to True.
         """
 
         sig_shape = output_coll.shape[1:]
         out_per_phase = np.zeros((self.K,)+sig_shape, dtype='complex128')
+        output_by_order = np.zeros((self.N,) + sig_shape, dtype='complex128')
         if raw_mode:
             combinatorial_terms = dict()
-        else:
-            output_by_order = np.zeros((self.N,) + sig_shape,
-                                       dtype='complex128')
 
         # Inverse DFT for each set with same amplitude
         start = 0
@@ -595,17 +597,24 @@ class PAS_v2(PAS):
                 idx2.remove(self.K - 3)
             tmp = AS._inverse_mixing_mat(out_per_phase[idx],
                                          self.mat[idx, :][:, idx2])
-            if raw_mode:
-                for (n, q) in self.list_nq[ind_test]:
-                    ind = np.where(idx == self.ind[(n, q)])[0][0]
+
+            for (n, q) in self.list_nq[ind_test]:
+                ind = np.where(idx == self.ind[(n, q)])[0][0]
+                output_by_order[n-1] += tmp[ind]
+                if raw_mode:
                     combinatorial_terms[(n, q)] = tmp[ind] / binomial(n, q)
-            else:
-                for (n, q) in self.list_nq[ind_test]:
-                    ind = np.where(idx == self.ind[(n, q)])[0][0]
-                    output_by_order[n-1] += tmp[ind]
+
+        # Checking that estimated orders are real signals
+        output_by_order = np.real_if_close(output_by_order)
+        if np.iscomplexobj(output_by_order):
+            output_by_order = np.real(output_by_order)
+            message = '\nEstimated orders have non-negligible imaginary ' + \
+                      'parts. Only real parts have been returned, but this ' + \
+                      'indicates a probable malfunction in PAS_v2 method.\n'
+            warn.showwarning(message, UserWarning, __file__, 614, line='')
 
         # Function output
         if raw_mode:
-            return combinatorial_terms
+            return output_by_order, combinatorial_terms
         else:
-            return np.real_if_close(output_by_order)
+            return output_by_order

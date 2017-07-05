@@ -99,8 +99,8 @@ if __name__ == '__main__':
     output_coll = np.zeros(input_coll.shape)
     for ind in range(input_coll.shape[0]):
         output_coll[ind] = system.simulation(input_coll[ind])
-    order_est_PAS = PAS.process_outputs(output_coll)
-    term_est_PAS = PAS.process_outputs(output_coll, raw_mode=True)
+    order_est_PAS, term_est_PAS = PAS.process_outputs(output_coll,
+                                                      raw_mode=True)
     assert np.allclose(order, order_est_PAS), 'Separation error in PAS method.'
     print('Done.')
 
@@ -110,8 +110,8 @@ if __name__ == '__main__':
     output_coll = np.zeros(input_coll.shape)
     for ind in range(input_coll.shape[0]):
         output_coll[ind] = system.simulation(input_coll[ind])
-    order_est_PASv2 = PAS_v2.process_outputs(output_coll)
-    term_est_PASv2 = PAS_v2.process_outputs(output_coll, raw_mode=True)
+    order_est_PASv2, term_est_PASv2 = PAS_v2.process_outputs(output_coll,
+                                                             raw_mode=True)
     assert np.allclose(order, order_est_PASv2), \
                 'Separation error in PASv2 method.'
     print('Done.')
