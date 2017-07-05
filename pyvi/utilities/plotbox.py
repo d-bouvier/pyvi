@@ -6,7 +6,9 @@ Functions
 ---------
 plot_sig_io :
     Plots input and output signals of a system.
-plot_sig_coll :
+plot_sig :
+    Plots a signal (mono or multi-dimensional).
+plot_coll :
     Plots a collection of signals.
 plot_spectrogram :
     Plots the Short-Time Fourier Transform of a signal.
@@ -28,6 +30,7 @@ Developed for Python 3.6.1
 # Importations
 #==============================================================================
 
+from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.signal import stft
@@ -92,16 +95,16 @@ def plot_sig_io(vec, input_sig, output_sig, title=None, xlim=[None, None],
     plt.show()
 
 
-def plot_sig_coll(vec, sig_coll, title=None, title_plots=None,
-                  xlim=[None, None], ylim=[None, None]):
+def plot_sig(vec, signal, title=None, title_plots=None, xlim=[None, None],
+             ylim=[None, None]):
     """
-    Plots a collection of signals.
+    Plots a signal (mono or multi-dimensional).
 
     Parameters
     ----------
     vec : numpy.ndarray
         Time vector.
-    sig_coll : 2-D numpy.ndarray
+    sig : 1-D or 2-D numpy.ndarray
         Collection of signals to plot.
     title : str, optional (default=None)
         Title of the Figure. If None, will be set to a default value.
@@ -113,8 +116,17 @@ def plot_sig_coll(vec, sig_coll, title=None, title_plots=None,
         Set the y limits of all subplots. By default autoscaling is used.
     """
 
-    complex_bool = 'complex' in str(sig_coll.dtype)
-    nb_sig = sig_coll.shape[0]
+    complex_bool = 'complex' in str(signal.dtype)
+
+    shape = signal.shape
+    assert len(shape) <= 2, 'Signal has {} dimensions,'.format(len(shape)) + \
+            ' should be less or equal than 2.'
+    if len(shape) == 1: # Mono-dimensional case
+        nb_sig = 1
+        signal.shape = (1, shape[0])
+    elif len(shape) == 2: # Multi-dimensional case
+        nb_sig = shape[0]
+
     if title is None:
         title = 'Collection of signals'
     if title_plots is None:
@@ -126,20 +138,65 @@ def plot_sig_coll(vec, sig_coll, title=None, title_plots=None,
     if complex_bool:
         for n in range(nb_sig):
             plt.subplot(nb_sig, 2, 2*n+1)
-            plt.plot(vec, sig_coll[n].real, 'b')
+            plt.plot(vec, signal[n].real, 'b')
             plt.title(title_plots[n] + ' - real part')
             plt.xlim(xlim)
             plt.ylim(ylim)
             plt.subplot(nb_sig, 2, 2*n+2)
-            plt.plot(vec, sig_coll[n].imag, 'r')
+            plt.plot(vec, signal[n].imag, 'r')
             plt.title(title_plots[n] + ' - imaginary part')
             plt.xlim(xlim)
             plt.ylim(ylim)
     else:
         for n in range(nb_sig):
             plt.subplot(nb_sig, 1, n+1)
-            plt.plot(vec, sig_coll[n], 'b')
+            plt.plot(vec, signal[n], 'b')
             plt.title(title_plots[n])
+            plt.xlim(xlim)
+            plt.ylim(ylim)
+    plt.show()
+
+
+def plot_coll(vec, sig_coll, title=None, xtitle=None, ytitle=None,
+              xlim=[None, None], ylim=[None, None]):
+    """
+    Plots a collection of signals.
+
+    Parameters
+    ----------
+    vec : numpy.ndarray
+        Time vector.
+    sig : tuple(numpy.ndarray)
+        Collection of signals to plot.
+    title : str, optional (default=None)
+        Title of the Figure. If None, will be set to a default value.
+    xtitle : list(str), optional (default=None)
+        Title of each subplots on the left column.
+    ytitle : list(str), optional (default=None)
+        Title of each subplots on the upper row.
+    xlim : list(float), optionall (default=[None, None])
+        Set the x limits of all subplots. By default autoscaling is used.
+    ylim : list(float), optionall (default=[None, None])
+        Set the y limits of all subplots. By default autoscaling is used.
+    """
+
+    nb_x = len(sig_coll)
+    nb_y = sig_coll[0].shape[0]
+
+    if title is None:
+        title = 'Collection of signals'
+
+    plt.figure(title)
+    plt.clf()
+
+    for nx in range(nb_x):
+        for ny in range(nb_y):
+            plt.subplot(nb_y, nb_x, 1 + ny + nx*nb_y)
+            plt.plot(vec, sig_coll[nx][ny])
+            if (nx == 1) and (xtitle is not None):
+                plt.title(xtitle[nx])
+            if (ny == 1) and (ytitle is not None):
+                plt.ylabel(ytitle[ny])
             plt.xlim(xlim)
             plt.ylim(ylim)
     plt.show()
