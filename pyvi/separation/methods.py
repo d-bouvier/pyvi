@@ -11,10 +11,14 @@ _SeparationMethod :
     Base class for order separation methods.
 AS :
     Class for Amplitude-based Separation method.
+_PS :
+    Class for Phase-based Separation method using complex signals.
 PS :
-    Class for Phase-based Separation method.
+    Class for Phase-based Separation method into homo-phase signals.
 PAS :
     Class for Phase-and-Amplitude-based Separation method.
+PAS_v2 :
+    Class for Phase-and-Amplitude-based Separation method using fewer signals.
 
 Notes
 -----
@@ -171,10 +175,10 @@ class AS(_SeparationMethod):
         """
 
         mixing_mat = np.vander(self.factors, N=self.N+1, increasing=True)[:,1::]
-        return self._inverse_vandermonde_mat(output_coll, mixing_mat)
+        return self._inverse_mixing_mat(output_coll, mixing_mat)
 
     @staticmethod
-    def _inverse_vandermonde_mat(output_coll, mixing_mat):
+    def _inverse_mixing_mat(output_coll, mixing_mat):
         """
         Resolves the vandermonde system via inverse or pseudo-inverse.
         """
@@ -186,9 +190,9 @@ class AS(_SeparationMethod):
             return np.dot(np.linalg.pinv(mixing_mat), output_coll)
 
 
-class PS(_SeparationMethod):
+class _PS(_SeparationMethod):
     """
-    Class for Phase-based Separation method.
+    Class for Phase-based Separation method using complex signals.
 
     Parameters
     ----------
@@ -261,9 +265,75 @@ class PS(_SeparationMethod):
         return ifft(output_coll, n=N, axis=0)
 
 
+class PS(_PS):
+    """
+    Class for Phase-based Separation method into homo-phase signals.
+
+    Parameters
+    ----------
+    N : int, optional (default=3)
+        Number of nonlinear orders (truncation order of the Volterra series).
+
+    Attributes
+    ----------
+    N : int
+    K : int
+    factors : array_like (of length K)
+    rho : float (class Attribute, always 1)
+    w : float
+    nb_phase : int
+        Number of different phases used.
+
+    Methods
+    -------
+    gen_inputs(signal)
+        Returns the collection of input test signals.
+    process_output(output_coll)
+        Process outputs and returns estimated homo-phase signals.
+
+    See also
+    --------
+    _PS: Parents class
+    _SeparationMethod
+    """
+
+    rho = 1
+
+    def __init__(self, N=3):
+        self.nb_phase = 2*N + 1
+        phase_vec = self._gen_phase_factors(self.nb_phase)
+
+        _SeparationMethod.__init__(self, N, self.nb_phase, phase_vec)
+
+    def gen_inputs(self, signal):
+        """
+        Returns the collection of input test signals.
+
+        Parameters
+        ----------
+        signal : array_like
+            Input signal.
+
+        Returns
+        -------
+        input_coll : numpy.ndarray
+            Collection of the K input test signals (each with the same shape as
+            ``signal``).
+
+        See also
+        --------
+        _SeparationMethod.gen_inputs
+        """
+
+        return 2 * np.real(_SeparationMethod.gen_inputs(self, signal))
+
+    def process_outputs(self, output_coll):
+        return _PS._inverse_fft(output_coll, self.nb_phase)
+
+
 class PAS(PS, AS):
     """
-    Class for Phase-based Separation method.
+    Class for Phase-and-Amplitude-based Separation method.
 
     Parameters
     ----------
@@ -304,7 +374,6 @@ class PAS(PS, AS):
     """
 
     negative_gain = False
-    rho = 1
 
     def __init__(self, N=3, gain=1.51):
         self.gain = gain
@@ -317,29 +386,8 @@ class PAS(PS, AS):
         nb_test = self.nb_phase * self.nb_amp
         self.nb_term = (N * (N + 3)) // 2
         factors = np.tensordot(self.amp_vec, phase_vec, axes=0).flatten()
+
         _SeparationMethod.__init__(self, N, nb_test, factors)
-
-    def gen_inputs(self, signal):
-        """
-        Returns the collection of input test signals.
-
-        Parameters
-        ----------
-        signal : array_like
-            Input signal.
-
-        Returns
-        -------
-        input_coll : numpy.ndarray
-            Collection of the K input test signals (each with the same shape as
-            ``signal``).
-
-        See also
-        --------
-        _SeparationMethod.gen_inputs
-        """
-
-        return 2 * np.real(_SeparationMethod.gen_inputs(self, signal))
 
     def process_outputs(self, output_coll, raw_mode=False):
         """
@@ -390,8 +438,8 @@ class PAS(PS, AS):
         # Inverse Vandermonde matrix for each set with same phase
         for phase_idx in range(self.nb_phase):
             col_idx = np.arange(first_nl_order[phase_idx], self.N+1, 2) - 1
-            tmp = AS._inverse_vandermonde_mat(out_per_phase[:, phase_idx],
-                                              mixing_mat[:, col_idx])
+            tmp = AS._inverse_mixing_mat(out_per_phase[:, phase_idx],
+                                         mixing_mat[:, col_idx])
             if raw_mode:
                 for ind in range(tmp.shape[0]):
                     n = first_nl_order[phase_idx] + 2*ind
@@ -411,7 +459,7 @@ class PAS(PS, AS):
 
 class PAS_v2(PAS):
     """
-    Class for Phase-based Separation method using fewer test signals.
+    Class for Phase-based Separation method using fewer signals.
 
     Parameters
     ----------
@@ -456,8 +504,8 @@ class PAS_v2(PAS):
 
     See also
     --------
-    PS, AS: Parents class
-    _SeparationMethod
+    PAS: Parent class
+    _SeparationMethod, PS, AS
     """
 
     def __init__(self, N=3, gain=1.51):
@@ -545,8 +593,8 @@ class PAS_v2(PAS):
             idx2 = list(idx)
             if (self.N % 2) and ((self.K - 3) in idx):
                 idx2.remove(self.K - 3)
-            tmp = AS._inverse_vandermonde_mat(out_per_phase[idx],
-                                              self.mat[idx, :][:, idx2])
+            tmp = AS._inverse_mixing_mat(out_per_phase[idx],
+                                         self.mat[idx, :][:, idx2])
             if raw_mode:
                 for (n, q) in self.list_nq[ind_test]:
                     ind = np.where(idx == self.ind[(n, q)])[0][0]
@@ -561,50 +609,3 @@ class PAS_v2(PAS):
             return combinatorial_terms
         else:
             return np.real_if_close(output_by_order)
-
-
-class realPS(PAS):
-    """
-    Class for Phase-based Separation method into homo-phase signals.
-
-    Parameters
-    ----------
-    N : int, optional (default=3)
-        Number of nonlinear orders (truncation order of the Volterra series).
-
-    Attributes
-    ----------
-    N : int
-    K : int
-    factors : array_like (of length K)
-    negative_gain : boolean (class Attribute, always False)
-    rho : float (class Attribute, always 1)
-    w : float
-    nb_phase : int
-        Number of different phases used.
-
-    Methods
-    -------
-    gen_inputs(signal)
-        Returns the collection of input test signals.
-    process_output(output_coll)
-        Process outputs and returns estimated homo-phase signals.
-
-    See also
-    --------
-    PAS: Parents class
-    _SeparationMethod, PS
-    """
-    #TODO update docstring
-
-    def __init__(self, N=3):
-        self.nb_phase = 2*N + 1
-        phase_vec = self._gen_phase_factors(self.nb_phase)
-
-        _SeparationMethod.__init__(self, N, self.nb_phase, phase_vec)
-
-    def gen_inputs(self, signal):
-        return PAS.gen_inputs(self, signal)
-
-    def process_outputs(self, output_coll):
-        return PS._inverse_fft(output_coll, self.nb_phase)

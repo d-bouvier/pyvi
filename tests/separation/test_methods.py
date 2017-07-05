@@ -60,15 +60,15 @@ if __name__ == '__main__':
     order_cplx = system.simulation(input_cplx, out_opt='output_by_order')
     order = system.simulation(input_real, out_opt='output_by_order')
 
-    print('Testing PS method ...', end=' ')
-    PS = sep.PS(N=nl_order_max)
-    input_coll = PS.gen_inputs(input_cplx)
+    print('Testing _PS method ...', end=' ')
+    _PS = sep._PS(N=nl_order_max)
+    input_coll = _PS.gen_inputs(input_cplx)
     output_coll = np.zeros(input_coll.shape, dtype='complex128')
     for ind in range(input_coll.shape[0]):
         output_coll[ind] = system.simulation(input_coll[ind])
-    order_est_PS = PS.process_outputs(output_coll)
+    order_est_PS = _PS.process_outputs(output_coll)
     assert np.allclose(order_cplx, order_est_PS), \
-                'Separation error in PS method.'
+                'Separation error in _PS method.'
     print('Done.')
 
     print('Testing AS method ...', end=' ')
@@ -79,6 +79,18 @@ if __name__ == '__main__':
         output_coll[ind] = system.simulation(input_coll[ind])
     order_est_AS = AS.process_outputs(output_coll)
     assert np.allclose(order, order_est_AS), 'Separation error in AS method.'
+    print('Done.')
+
+    print('Testing PS method ...', end=' ')
+    PS = sep.PS(N=nl_order_max)
+    input_coll = PS.gen_inputs(input_cplx)
+    output_coll = np.zeros(input_coll.shape)
+    for ind in range(input_coll.shape[0]):
+        output_coll[ind] = system.simulation(input_coll[ind])
+    sig_est_PS = PS.process_outputs(output_coll)
+    assert np.allclose(order_cplx[nl_order_max-2:],
+                       sig_est_PS[nl_order_max-1:nl_order_max+1]), \
+                'Separation error in PS method.'
     print('Done.')
 
     print('Testing PAS method ...', end=' ')
@@ -104,17 +116,6 @@ if __name__ == '__main__':
                 'Separation error in PASv2 method.'
     print('Done.')
 
-    print('Testing realPS method ...', end=' ')
-    realPS = sep.realPS(N=nl_order_max)
-    input_coll = realPS.gen_inputs(input_cplx)
-    output_coll = np.zeros(input_coll.shape)
-    for ind in range(input_coll.shape[0]):
-        output_coll[ind] = system.simulation(input_coll[ind])
-    sig_est_realPS = realPS.process_outputs(output_coll)
-    assert np.allclose(order_cplx[nl_order_max-2:],
-                       sig_est_realPS[nl_order_max-1:nl_order_max+1]), \
-                'Separation error in realPS method.'
-    print('Done.')
 
 
     ##################
@@ -130,17 +131,17 @@ if __name__ == '__main__':
 
     plot_coll(time_vec, (np.real(order_cplx), np.real(order_est_PS),
                          np.real(order_cplx - order_est_PS)),
-              title=title.format('PS'), xtitle=title_type, ytitle=title_order)
+              title=title.format('_PS'), xtitle=title_type, ytitle=title_order)
 
     plot_coll(time_vec, (order, order_est_AS, order - order_est_AS),
               title=title.format('AS'), xtitle=title_type, ytitle=title_order)
 
+    plot_sig(time_vec, sig_est_PS[:nl_order_max+1],
+             title='Method PS - Estimated terms',
+             title_plots=title_phase)
+
     plot_coll(time_vec, (order, order_est_PAS, order - order_est_PAS),
               title=title.format('PAS'), xtitle=title_type, ytitle=title_order)
-
-    plot_coll(time_vec, (order, order_est_PASv2, order - order_est_PASv2),
-              title=title.format('PAS_v2'), xtitle=title_type,
-              ytitle=title_order)
 
     plt.figure('Method raw-PAS - Estimated terms')
     plt.clf()
@@ -153,6 +154,10 @@ if __name__ == '__main__':
             ax.plot(time_vec, np.real(term_est_PAS[(n, q)]), 'b')
             ax.plot(time_vec, np.imag(term_est_PAS[(n, q)]), 'r')
 
+    plot_coll(time_vec, (order, order_est_PASv2, order - order_est_PASv2),
+              title=title.format('PAS_v2'), xtitle=title_type,
+              ytitle=title_order)
+
     plt.figure('Method raw-PAS_v2 - Estimated terms')
     plt.clf()
     nb_col = 2*(nl_order_max+1)
@@ -163,9 +168,5 @@ if __name__ == '__main__':
             ax = plt.subplot2grid(shape, pos, colspan=2)
             ax.plot(time_vec, np.real(term_est_PAS[(n, q)]), 'b')
             ax.plot(time_vec, np.imag(term_est_PAS[(n, q)]), 'r')
-
-    plot_sig(time_vec, sig_est_realPS[:nl_order_max+1],
-             title='Method realPS - Estimated terms',
-             title_plots=title_phase)
 
     print('Done.')
