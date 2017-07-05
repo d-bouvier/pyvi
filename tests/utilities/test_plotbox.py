@@ -80,11 +80,11 @@ if __name__ == '__main__':
     ##########################
 
     col_1 = np.stack((sig_1, sig_2, sig_1 - sig_2), axis=0)
-    col_2 = np.stack((sig_1, np.real(sig_3), sig_1 - np.real(sig_3)), axis=0)
-    col_3 = np.stack((sig_2, np.real(sig_3), sig_2 - np.real(sig_3)), axis=0)
+    col_2 = np.stack((np.imag(sig_3), np.imag(sig_4),
+                      np.imag(sig_3 - sig_4)), axis=0)
 
     print('Testing plot_coll() ...', end=' ')
-    plot_coll(vector, (col_1, col_2, col_3), title='Test sig_coll()',
+    plot_coll(vector, (col_1, col_2), title='Test sig_coll()',
               xtitle=['Colonne 1', 'Colonne 2', 'Colonne 3'],
               ytitle=['Ligne 1', 'Ligne 2', 'Ligne3'])
     print('Done.')

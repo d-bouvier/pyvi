@@ -191,11 +191,11 @@ def plot_coll(vec, sig_coll, title=None, xtitle=None, ytitle=None,
 
     for nx in range(nb_x):
         for ny in range(nb_y):
-            plt.subplot(nb_y, nb_x, 1 + ny + nx*nb_y)
+            plt.subplot(nb_y, nb_x, 1 + nx + ny*nb_x)
             plt.plot(vec, sig_coll[nx][ny])
-            if (nx == 1) and (xtitle is not None):
+            if (nx == 0) and (xtitle is not None):
                 plt.title(xtitle[nx])
-            if (ny == 1) and (ytitle is not None):
+            if (ny == 0) and (ytitle is not None):
                 plt.ylabel(ytitle[ny])
             plt.xlim(xlim)
             plt.ylim(ylim)
