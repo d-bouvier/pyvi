@@ -25,6 +25,11 @@ _orderKLS_construct_phi :
     Auxiliary function of orderKLS method for Volterra basis computation.
 _termKLS_construct_phi :
     Auxiliary function of termKLS method for Volterra basis computation.
+_termKLS_core_mean_mode :
+    Auxiliary function of termKLS method using 'mean' mode.
+_termKLS_core_mmse_mode :
+    Auxiliary function of termKLS method using 'mmse' mode.
+
 _cplx_to_real :
     Cast a numpy.ndarray of complex type to real type with a specified mode.
 
@@ -167,7 +172,7 @@ def _orderKLS_construct_phi(signal, M, N):
 
 
 def termKLS(input_sig, output_by_term, M, N, phi=None, form='sym',
-            cast_mode='real-imag'):
+            cast_mode='real-imag', mode='mmse'):
     """
     Performs KLS method on each combinatorial term.
 
@@ -187,6 +192,8 @@ def termKLS(input_sig, output_by_term, M, N, phi=None, form='sym',
         Form of the returned Volterra kernel (symmetric or triangular).
     cast_mode : {'real', 'imag', 'real-imag'}, optional (default='real-imag')
         Choose how complex number are casted to real numbers.
+    mode : {'mean', 'mmse'}, optional (default='mmse')
+        Choose how are handled the redundant information from same-order terms.
 
     Returns
     -------
@@ -198,21 +205,17 @@ def termKLS(input_sig, output_by_term, M, N, phi=None, form='sym',
     if phi is None:
         phi = _termKLS_construct_phi(input_sig, M, N)
 
-    # Initialization
     kernels = dict()
-    f = dict()
-    for n in range(1, N+1):
-        f[n] = np.zeros((nb_coeff_in_kernel(M, n, form=form),))
 
-    # Identification on each combinatorial term
-    for (n, k), phi_nk in phi.items():
-        f[n] += _KLS_core_computation( \
-                     _cplx_to_real(phi_nk, cast_mode=cast_mode),
-                     _cplx_to_real(output_by_term[(n, k)], cast_mode=cast_mode))
+    # Identification
+    if mode == 'mean':
+        f = _termKLS_core_mean_mode(phi, output_by_term, M, N, form, cast_mode)
+    elif mode == 'mmse':
+        f = _termKLS_core_mmse_mode(phi, output_by_term, N, cast_mode)
 
     # Re-arranging vector f_n into volterra kernel of order n
     for n in range(1, N+1):
-        kernels[n] = vector_to_kernel(f[n] / (1+n//2), M, n, form=form)
+        kernels[n] = vector_to_kernel(f[n], M, n, form=form)
 
     return kernels
 
@@ -223,6 +226,48 @@ def _termKLS_construct_phi(signal, M, N):
     """
 
     return volterra_basis_by_term(signal, M, N)
+
+
+def _termKLS_core_mean_mode(phi, output_by_term, M, N, form, cast_mode):
+    """
+    Auxiliary function of termKLS method using 'mean' mode.
+    """
+
+    f = dict()
+
+    # Initialization
+    for n in range(1, N+1):
+        f[n] = np.zeros((nb_coeff_in_kernel(M, n, form=form),))
+
+    # Identification  on each combinatorial term
+    for (n, k), phi_nk in phi.items():
+        f[n] += _KLS_core_computation( \
+                     _cplx_to_real(phi_nk, cast_mode=cast_mode),
+                     _cplx_to_real(output_by_term[(n, k)], cast_mode=cast_mode))
+
+    # Taking mean of all identifications for each order
+    for n in range(1, N+1):
+        f[n] /= (1+n//2)
+
+    return f
+
+
+def _termKLS_core_mmse_mode(phi, output_by_term, N, cast_mode):
+    """
+    Auxiliary function of termKLS method using 'mmse' mode.
+    """
+
+    f = dict()
+
+    # Identification on each combinatorial term
+    for n in range(1, N+1):
+        phi_n = np.concatenate([phi[(n, k)] for k in range(1+n//2)], axis=0)
+        sig_n = np.concatenate([output_by_term[(n, k)] for k in range(1+n//2)],
+                                axis=0)
+        f[n] = _KLS_core_computation(_cplx_to_real(phi_n, cast_mode=cast_mode),
+                                     _cplx_to_real(sig_n, cast_mode=cast_mode))
+
+    return f
 
 
 def phaseKLS(input_sig, output_by_phase, M, N, phi=None, form='sym',
