@@ -34,7 +34,7 @@ Developed for Python 3.6.1
 
 import numpy as np
 import itertools as itr
-from scipy.linalg import toeplitz
+import scipy.linalg as sc_lin
 from ..utilities.mathbox import rms, safe_db, binomial, array_symmetrization
 
 
@@ -235,7 +235,7 @@ def volterra_basis_by_order(signal, M, N):
     """
 
     phi = dict()
-    phi[1] = toeplitz(signal, np.zeros((1, M)))
+    phi[1] = sc_lin.toeplitz(signal, np.zeros((1, M)))
 
     for n in range(2, N+1):
         size = phi[n-1].shape[1]

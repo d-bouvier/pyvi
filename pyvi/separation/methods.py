@@ -25,7 +25,7 @@ Notes
 @author: bouvier (bouvier@ircam.fr)
          Damien Bouvier, IRCAM, Paris
 
-Last modified on 05 July 2017
+Last modified on 12 July 2017
 Developed for Python 3.6.1
 """
 
@@ -35,7 +35,7 @@ Developed for Python 3.6.1
 
 import numpy as np
 import warnings as warn
-from scipy.fftpack import ifft
+import scipy.fftpack as sc_fft
 from ..utilities.mathbox import binomial
 
 
@@ -263,7 +263,7 @@ class _PS(_SeparationMethod):
         Invert Discrete Fourier Transform using the FFT algorithm.
         """
 
-        return ifft(output_coll, n=N, axis=0)
+        return sc_fft.ifft(output_coll, n=N, axis=0)
 
 
 class PS(_PS):

@@ -47,7 +47,7 @@ Developed for Python 3.6.1
 #==============================================================================
 
 import numpy as np
-from scipy.linalg import qr, solve_triangular
+import scipy.linalg as sc_lin
 from .tools import (volterra_basis_by_order, volterra_basis_by_term,
                     nb_coeff_in_kernel, vector_to_kernel, vector_to_all_kernels)
 
@@ -113,13 +113,13 @@ def _KLS_core_computation(combinatorial_matrix, output_sig):
     """
 
     # QR decomposition
-    q, r = qr(combinatorial_matrix, mode='economic')
+    q, r = sc_lin.qr(combinatorial_matrix, mode='economic')
 
     # Projection on combinatorial basis
     y = np.dot(q.T, output_sig)
 
     # Forward inverse
-    return solve_triangular(r, y)
+    return sc_lin.solve_triangular(r, y)
 
 
 def orderKLS(input_sig, output_by_order, M, N, phi=None, form='sym'):
@@ -311,7 +311,8 @@ def phaseKLS(input_sig, output_by_phase, M, N, phi=None, form='sym',
 
     # QR decomposition
     for n in range(1, N+1):
-        q_by_order[n], r_terms[(n, 0)] = qr(_cplx_to_real(phi[(n, 0)],
+        q_by_order[n], r_terms[(n, 0)] = sc_lin.qr( \
+                                            _cplx_to_real(phi[(n, 0)],
                                                           cast_mode=cast_mode),
                                             mode='economic')
         size[n] = r_terms[(n, 0)].shape[1]
@@ -332,7 +333,7 @@ def phaseKLS(input_sig, output_by_phase, M, N, phi=None, form='sym',
         r = np.bmat([[r_terms.get((p+2*k, k), np.zeros((size[p],size[p+2*k]))) \
                       for k in range(1-(p+1)//2, 1+(N-p)//2)] \
                      for p in range(1+is_odd, N+1, 2)])
-        f[is_odd] = solve_triangular(r, y)
+        f[is_odd] = sc_lin.solve_triangular(r, y)
 
     # Re-arranging (odd and even) vectors f into volterra kernel of order n
     for is_odd in [False, True]:

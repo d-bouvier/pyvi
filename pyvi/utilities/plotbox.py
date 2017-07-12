@@ -22,7 +22,7 @@ Notes
 @author: bouvier (bouvier@ircam.fr)
          Damien Bouvier, IRCAM, Paris
 
-Last modified on 05 July 2017
+Last modified on 12 July 2017
 Developed for Python 3.6.1
 """
 
@@ -33,7 +33,7 @@ Developed for Python 3.6.1
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
 import numpy as np
-from scipy.signal import stft
+import scipy.signal as sc_sig
 from .mathbox import safe_db
 
 
@@ -225,7 +225,7 @@ def plot_spectrogram(signal, title=None, db=True, logscale=False,
         Arguments that are passed to scipy.signal.stft.
     """
 
-    freq_vec, time_vec, spectrogram = stft(signal, **args)
+    freq_vec, time_vec, spectrogram = sc_sig.stft(signal, **args)
     if title is None:
         title = 'Short-Time Fourier Transform'
 

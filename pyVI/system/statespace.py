@@ -20,7 +20,7 @@ Notes
 @author: bouvier (bouvier@ircam.fr)
          Damien Bouvier, IRCAM, Paris
 
-Last modified on 27 June 2017
+Last modified on 12 July 2017
 Developed for Python 3.6.1
 """
 
@@ -28,11 +28,11 @@ Developed for Python 3.6.1
 # Importations
 #==============================================================================
 
-from sympy import pretty
-from numpy import tensordot, allclose
-from scipy.linalg import norm
-from abc import abstractmethod
+import sympy as sp
+import numpy as np
+import scipy.linalg as sc_lin
 import warnings as warn
+from abc import abstractmethod
 from ..utilities.misc import Style
 
 
@@ -144,7 +144,7 @@ class StateSpace:
                     ('Feedthrough {} D', 'input-to-output', self.D_m)]:
             print_str += Style.GREEN + Style.BRIGHT + name.format('matrice') + \
                         ' (' + desc + ')' + Style.RESET + '\n' + \
-                         pretty(mat) + '\n'
+                         sp.pretty(mat) + '\n'
         if not self.linear:
             if len(self.mpq):
                 print_str += list_nl_fct(self.mpq, 'M')
@@ -328,11 +328,11 @@ class NumericalStateSpace(StateSpace):
     def _are_nl_colinear(self):
         """Check colinearity of dynamical nonlinearities and input-to-state."""
         self.nl_colinear = True
-        norm_B = norm(self.B_m, ord=2)
+        norm_B = sc_lin.norm(self.B_m, ord=2)
         for (p, q), mpq in self.mpq.items():
-            temp = tensordot(self.B_m.transpose(), mpq, 1).squeeze()
-            norm_mpq = norm(mpq, ord=2, axis=0).squeeze()
-            if not allclose(temp, norm_B*norm_mpq):
+            temp = np.tensordot(self.B_m.transpose(), mpq, 1).squeeze()
+            norm_mpq = sc_lin.norm(mpq, ord=2, axis=0).squeeze()
+            if not np.allclose(temp, norm_B*norm_mpq):
                 self.nl_colinear = False
                 break
 
