@@ -27,7 +27,7 @@ Notes
 @author: bouvier (bouvier@ircam.fr)
          Damien Bouvier, IRCAM, Paris
 
-Last modified on 05 July 2017
+Last modified on 12 July 2017
 Developed for Python 3.6.1
 """
 
@@ -38,7 +38,7 @@ Developed for Python 3.6.1
 import numpy as np
 from scipy.linalg import qr, solve_triangular
 from .tools import (volterra_basis_by_order, volterra_basis_by_term,
-                    vector_to_kernel, vector_to_all_kernels)
+                    nb_coeff_in_kernel, vector_to_kernel, vector_to_all_kernels)
 from ..utilities.mathbox import binomial
 
 
@@ -194,7 +194,7 @@ def termKLS(input_sig, output_sigs_by_term, M, N, phi=None, form='sym',
     kernels = dict()
     f = dict()
     for n in range(1, N+1):
-        f[n] = np.zeros((binomial(M + n - 1, n),))
+        f[n] = np.zeros((nb_coeff_in_kernel(M, n, form=form),))
 
     for (n, k), phi_nk in phi.items():
         if only_real_part:
