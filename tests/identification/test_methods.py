@@ -156,6 +156,10 @@ if __name__ == '__main__':
                                               phi=phi_terms, cast_mode='real')
     kernels['phase'] = identif.phaseKLS(input_sig_cplx, phase_PS, M, N,
                                         phi=phi_terms)
+    kernels['iter_Rmode'] = identif.iterKLS(input_sig_cplx, phase_PS, M, N,
+                                            phi=phi_terms, cast_mode='real')
+    kernels['iter'] = identif.iterKLS(input_sig_cplx, phase_PS, M, N,
+                                      phi=phi_terms)
     print('Done.')
 
     # Identification (on noisy data)
@@ -177,6 +181,10 @@ if __name__ == '__main__':
                                                 cast_mode='real')
     kernels_n['phase'] = identif.phaseKLS(input_sig_cplx, phase_PS_n, M, N,
                                           phi=phi_terms)
+    kernels_n['iter_Rmode'] = identif.iterKLS(input_sig_cplx, phase_PS_n, M, N,
+                                              phi=phi_terms, cast_mode='real')
+    kernels_n['iter'] = identif.iterKLS(input_sig_cplx, phase_PS_n, M, N,
+                                        phi=phi_terms)
     print('Done.')
 
 
@@ -199,7 +207,11 @@ if __name__ == '__main__':
                  'term': 'Identification on terms estimated via PAS',
                  'phase_Rmode': 'Identification on phase signals estimated' + \
                                 ' via PS (only real part used)',
-                 'phase': 'Identification on phase signals estimated via PS'}
+                 'phase': 'Identification on phase signals estimated via PS',
+                 'iter': 'Recursive identification on phase signals' + \
+                         ' estimated via PS',
+                 'iter_Rmode': 'Recursive identification on phase signals ' + \
+                               ' estimated via PS (only real part used)'}
 
     for method, val in kernels.items():
         name = 'Kernel of order {} - ' + title_str.get(method, 'Unknown method')
