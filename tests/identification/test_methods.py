@@ -148,16 +148,21 @@ if __name__ == '__main__':
                                            phi=phi_orders)
     kernels['order_PAS'] = identif.orderKLS(input_sig, order_PAS, M, N,
                                             phi=phi_orders)
-    kernels['term_Rmode'] = identif.termKLS(input_sig_cplx, term_PAS, M, N,
+    kernels['term_Rmean'] = identif.termKLS(input_sig_cplx, term_PAS, M, N,
+                                            phi=phi_terms, cast_mode='real',
+                                            mode='mean')
+    kernels['term_Rmmse'] = identif.termKLS(input_sig_cplx, term_PAS, M, N,
                                             phi=phi_terms, cast_mode='real')
-    kernels['term'] = identif.termKLS(input_sig_cplx, term_PAS, M, N,
-                                      phi=phi_terms)
-    kernels['phase_Rmode'] = identif.phaseKLS(input_sig_cplx, phase_PS, M, N,
-                                              phi=phi_terms, cast_mode='real')
+    kernels['term_mean'] = identif.termKLS(input_sig_cplx, term_PAS, M, N,
+                                           phi=phi_terms, mode='mean')
+    kernels['term_mmse'] = identif.termKLS(input_sig_cplx, term_PAS, M, N,
+                                           phi=phi_terms)
+    kernels['phase_R'] = identif.phaseKLS(input_sig_cplx, phase_PS, M, N,
+                                          phi=phi_terms, cast_mode='real')
     kernels['phase'] = identif.phaseKLS(input_sig_cplx, phase_PS, M, N,
                                         phi=phi_terms)
-    kernels['iter_Rmode'] = identif.iterKLS(input_sig_cplx, phase_PS, M, N,
-                                            phi=phi_terms, cast_mode='real')
+    kernels['iter_R'] = identif.iterKLS(input_sig_cplx, phase_PS, M, N,
+                                        phi=phi_terms, cast_mode='real')
     kernels['iter'] = identif.iterKLS(input_sig_cplx, phase_PS, M, N,
                                       phi=phi_terms)
     print('Done.')
@@ -172,17 +177,21 @@ if __name__ == '__main__':
                                              phi=phi_orders)
     kernels_n['order_PAS'] = identif.orderKLS(input_sig, order_PAS_n, M, N,
                                               phi=phi_orders)
-    kernels_n['term_Rmode'] = identif.termKLS(input_sig_cplx, term_PAS_n, M, N,
+    kernels_n['term_Rmean'] = identif.termKLS(input_sig_cplx, term_PAS_n, M, N,
+                                              phi=phi_terms, cast_mode='real',
+                                              mode='mean')
+    kernels_n['term_Rmmse'] = identif.termKLS(input_sig_cplx, term_PAS_n, M, N,
                                               phi=phi_terms, cast_mode='real')
-    kernels_n['term'] = identif.termKLS(input_sig_cplx, term_PAS_n, M, N,
-                                        phi=phi_terms)
-    kernels_n['phase_Rmode'] = identif.phaseKLS(input_sig_cplx, phase_PS_n, M,
-                                                N, phi=phi_terms,
-                                                cast_mode='real')
+    kernels_n['term_mean'] = identif.termKLS(input_sig_cplx, term_PAS_n, M, N,
+                                             phi=phi_terms, mode='mean')
+    kernels_n['term_mmse'] = identif.termKLS(input_sig_cplx, term_PAS_n, M, N,
+                                             phi=phi_terms)
+    kernels_n['phase_R'] = identif.phaseKLS(input_sig_cplx, phase_PS_n, M,
+                                            N, phi=phi_terms, cast_mode='real')
     kernels_n['phase'] = identif.phaseKLS(input_sig_cplx, phase_PS_n, M, N,
                                           phi=phi_terms)
-    kernels_n['iter_Rmode'] = identif.iterKLS(input_sig_cplx, phase_PS_n, M, N,
-                                              phi=phi_terms, cast_mode='real')
+    kernels_n['iter_R'] = identif.iterKLS(input_sig_cplx, phase_PS_n, M, N,
+                                          phi=phi_terms, cast_mode='real')
     kernels_n['iter'] = identif.iterKLS(input_sig_cplx, phase_PS_n, M, N,
                                         phi=phi_terms)
     print('Done.')
@@ -202,16 +211,21 @@ if __name__ == '__main__':
                  'order_true': 'Identification on true orders',
                  'order_AS': 'Identification on orders estimated via AS',
                  'order_PAS': 'Identification on orders estimated via PAS',
-                 'term_Rmode': 'Identification on terms estimated via PAS' + \
-                               ' (only real part used)',
-                 'term': 'Identification on terms estimated via PAS',
-                 'phase_Rmode': 'Identification on phase signals estimated' + \
-                                ' via PS (only real part used)',
+                 'term_Rmean': 'Identification on terms estimated via PAS' + \
+                               " (only real part used and 'mean' mode used)",
+                 'term_Rmmse': 'Identification on terms estimated via PAS' + \
+                               " (only real part used and 'mmse' mode used)",
+                 'term_mean': 'Identification on terms estimated via PAS' + \
+                              " ('mean' mode used)",
+                 'term_mmse': 'Identification on terms estimated via PAS' + \
+                               " ('mmse' mode used)",
+                 'phase_R': 'Identification on phase signals estimated' + \
+                            ' via PS (only real part used)',
                  'phase': 'Identification on phase signals estimated via PS',
                  'iter': 'Recursive identification on phase signals' + \
                          ' estimated via PS',
-                 'iter_Rmode': 'Recursive identification on phase signals ' + \
-                               ' estimated via PS (only real part used)'}
+                 'iter_R': 'Recursive identification on phase signals ' + \
+                           ' estimated via PS (only real part used)'}
 
     for method, val in kernels.items():
         name = 'Kernel of order {} - ' + title_str.get(method, 'Unknown method')
