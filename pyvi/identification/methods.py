@@ -15,6 +15,8 @@ termKLS :
     Performs KLS method on each combinatorial term.
 phaseKLS :
     Performs KLS method on homogeneous-phase signals.
+iterKLS :
+    Performs KLS method recursively on homogeneous-phase signals.
 _KLS_construct_phi :
     Auxiliary function of KLS method for Volterra basis computation.
 _KLS_core_computation( :
@@ -296,6 +298,58 @@ def phaseKLS(input_sig, output_by_phase, M, N, phi=None, form='sym',
             kernels[n] = vector_to_kernel(f[is_odd][index:index+nb_term],
                                           M, n, form=form)
             index += nb_term
+
+    return kernels
+
+
+def iterKLS(input_sig, output_by_phase, M, N, phi=None, form='sym',
+            cast_mode='real-imag'):
+    """
+    Performs KLS method recursively on homogeneous-phase signals.
+
+    Parameters
+    ----------
+    input_sig : numpy.ndarray
+        Input signal.
+    output_by_phase : numpy.ndarray
+        Output signal separated in homogeneous-phase signals.
+    M : int
+        Memory length of kernels (in samples).
+    N : int
+        Highest kernel order.
+    phi : {None, dict(int: numpy.ndarray)}, optional (default=None)
+        If None, ``phi`` is computed from ``input_sig``; else, ``phi`` is used.
+    form : {'sym', 'tri', 'symmetric', 'triangular'}, optional (default='sym')
+        Form of the returned Volterra kernel (symmetric or triangular).
+    cast_mode : {'real', 'imag', 'real-imag'}, optional (default='real-imag')
+        Choose how complex number are casted to real numbers.
+
+    Returns
+    -------
+    kernels : dict(int: numpy.ndarray)
+        Dictionnary linking the Volterra kernel of order ``n`` to key ``n``.
+    """
+
+    # Input combinatoric
+    if phi is None:
+        phi = _termKLS_construct_phi(input_sig, M, N)
+
+    # Initialization
+    kernels = dict()
+    f = dict()
+
+    # Identification recursive on each homogeneous-phase signal
+    for n in range(N, 0, -1):
+        temp_sig = output_by_phase[n]
+        for m in range(n+2, N+1, 2):
+            temp_sig -= np.dot(phi[(m, (m-n)//2)], f[m])
+        f[n] = _KLS_core_computation( \
+                         _cplx_to_real(phi[(n, 0)], cast_mode=cast_mode),
+                         _cplx_to_real(output_by_phase[n], cast_mode=cast_mode))
+
+    # Re-arranging vector f_n into volterra kernel of order n
+    for n in range(1, N+1):
+        kernels[n] = vector_to_kernel(f[n], M, n, form=form)
 
     return kernels
 
