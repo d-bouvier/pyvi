@@ -13,7 +13,7 @@ Developed for Python 3.6.1
 
 __author__ = "Damien Bouvier"
 __maintainer__ = "Damien Bouvier"
-__version__ = "0.3"
+__version__ = "0.3.4"
 
 #from . import system
 #from . import utilities
