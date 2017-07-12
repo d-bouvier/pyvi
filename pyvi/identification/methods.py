@@ -21,13 +21,15 @@ _orderKLS_construct_phi :
     Auxiliary function of orderKLS method for Volterra basis computation.
 _termKLS_construct_phi :
     Auxiliary function of termKLS method for Volterra basis computation.
+_cplx_to_real :
+    Cast a numpy.ndarray of complex type to real type with a specified mode.
 
 Notes
 -----
 @author: bouvier (bouvier@ircam.fr)
          Damien Bouvier, IRCAM, Paris
 
-Last modified on 05 July 2017
+Last modified on 12 July 2017
 Developed for Python 3.6.1
 """
 
@@ -38,8 +40,7 @@ Developed for Python 3.6.1
 import numpy as np
 from scipy.linalg import qr, solve_triangular
 from .tools import (volterra_basis_by_order, volterra_basis_by_term,
-                    vector_to_kernel, vector_to_all_kernels)
-from ..utilities.mathbox import binomial
+                    nb_coeff_in_kernel, vector_to_kernel, vector_to_all_kernels)
 
 
 #==============================================================================
@@ -74,6 +75,7 @@ def KLS(input_sig, output_sig, M, N, phi=None, form='sym'):
     # Input combinatoric
     phi = _KLS_construct_phi(input_sig, M, N, phi=phi)
 
+    # Identification
     f = _KLS_core_computation(phi, output_sig)
 
     # Re-arranging vector f into volterra kernels
@@ -111,7 +113,7 @@ def _KLS_core_computation(combinatorial_matrix, output_sig):
     return solve_triangular(r, y)
 
 
-def orderKLS(input_sig, output_sig_by_order, M, N, phi=None, form='sym'):
+def orderKLS(input_sig, output_by_order, M, N, phi=None, form='sym'):
     """
     Performs KLS method on each nonlinear homogeneous order.
 
@@ -119,7 +121,7 @@ def orderKLS(input_sig, output_sig_by_order, M, N, phi=None, form='sym'):
     ----------
     input_sig : numpy.ndarray
         Input signal.
-    output_sig_by_order : numpy.ndarray
+    output_by_order : numpy.ndarray
         Output signal separated in ``N`` nonlinear homogeneous orders.
     M : int
         Memory length of kernels (in samples).
@@ -142,8 +144,9 @@ def orderKLS(input_sig, output_sig_by_order, M, N, phi=None, form='sym'):
 
     kernels = dict()
 
+    # Identification on each order
     for n, phi_n in phi.items():
-        f_n = _KLS_core_computation(phi_n, output_sig_by_order[n-1])
+        f_n = _KLS_core_computation(phi_n, output_by_order[n-1])
 
         # Re-arranging vector f_n into volterra kernel of order n
         kernels[n] = vector_to_kernel(f_n, M, n, form=form)
@@ -159,8 +162,8 @@ def _orderKLS_construct_phi(signal, M, N):
     return volterra_basis_by_order(signal, M, N)
 
 
-def termKLS(input_sig, output_sigs_by_term, M, N, phi=None, form='sym',
-            only_real_part=False):
+def termKLS(input_sig, output_by_term, M, N, phi=None, form='sym',
+            cast_mode='real-imag'):
     """
     Performs KLS method on each combinatorial term.
 
@@ -168,7 +171,7 @@ def termKLS(input_sig, output_sigs_by_term, M, N, phi=None, form='sym',
     ----------
     input_sig : numpy.ndarray
         Input signal.
-    output_sigs_by_term : dict((int, int): numpy.ndarray}
+    output_by_term : dict((int, int): numpy.ndarray}
         Output signal separated in nonlinear combinatorial terms.
     M : int
         Memory length of kernels (in samples).
@@ -178,8 +181,8 @@ def termKLS(input_sig, output_sigs_by_term, M, N, phi=None, form='sym',
         If None, ``phi`` is computed from ``input_sig``; else, ``phi`` is used.
     form : {'sym', 'tri', 'symmetric', 'triangular'}, optional (default='sym')
         Form of the returned Volterra kernel (symmetric or triangular).
-    only_real_part : boolean, optional (default=False)
-        Choose whether real and imaginary parts or only real parts are used.
+    cast_mode : {'real', 'imag', 'real-imag'}, optional (default='real-imag')
+        Choose how complex number are casted to real numbers.
 
     Returns
     -------
@@ -191,21 +194,17 @@ def termKLS(input_sig, output_sigs_by_term, M, N, phi=None, form='sym',
     if phi is None:
         phi = _termKLS_construct_phi(input_sig, M, N)
 
+    # Initialization
     kernels = dict()
     f = dict()
     for n in range(1, N+1):
-        f[n] = np.zeros((binomial(M + n - 1, n),))
+        f[n] = np.zeros((nb_coeff_in_kernel(M, n, form=form),))
 
+    # Identification on each combinatorial term
     for (n, k), phi_nk in phi.items():
-        if only_real_part:
-            phi = 2 * np.real(phi_nk)
-            output_sig = 2 * np.real(output_sigs_by_term[(n, k)])
-        else:
-            phi = np.concatenate((np.real(phi_nk), np.imag(phi_nk)), axis=0)
-            output_sig = np.concatenate((np.real(output_sigs_by_term[(n, k)]),
-                                         np.imag(output_sigs_by_term[(n, k)])),
-                                        axis=0)
-        f[n] += _KLS_core_computation(phi, output_sig)
+        f[n] += _KLS_core_computation( \
+                     _cplx_to_real(phi_nk, cast_mode=cast_mode),
+                     _cplx_to_real(output_by_term[(n, k)], cast_mode=cast_mode))
 
     # Re-arranging vector f_n into volterra kernel of order n
     for n in range(1, N+1):
@@ -221,3 +220,31 @@ def _termKLS_construct_phi(signal, M, N):
 
     return volterra_basis_by_term(signal, M, N)
 
+
+def _cplx_to_real(sig_cplx, cast_mode='real-imag'):
+    """
+    Cast a numpy.ndarray of complex type to real type with a specified mode.
+
+    Parameters
+    ----------
+    sig_cplx : numpy.ndarray
+        Array to cast to real numbers.
+    cast_mode : {'real', 'imag', 'real-imag'}, optional (default='real-imag')
+        Choose how complex number are casted to real numbers.
+
+    Returns
+    -------
+    sig_casted : numpy.ndarray
+        Array ``sig_cplx`` casted to real numbers following ``cast_mode``.
+    """
+
+    if cast_mode not in {'real', 'imag', 'real-imag'}:
+        print("Unknown cast_mode, mode 'real' used.")
+        cast_mode ='real'
+
+    if cast_mode == 'real':
+        return 2 * np.real(sig_cplx)
+    elif cast_mode == 'imag':
+        return 2 * np.real(sig_cplx)
+    elif cast_mode == 'real-imag':
+        return np.concatenate((np.real(sig_cplx), np.imag(sig_cplx)), axis=0)

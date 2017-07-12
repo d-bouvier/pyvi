@@ -7,7 +7,7 @@ Notes
 @author: bouvier (bouvier@ircam.fr)
          Damien Bouvier, IRCAM, Paris
 
-Last modified on 05 July 2017
+Last modified on 12 July 2017
 Developed for Python 3.6.1
 """
 
@@ -120,10 +120,6 @@ if __name__ == '__main__':
     # Initialization
     kernels = dict()
     kernels_n = dict()
-    methods_list = ['true', 'direct', 'order_true', 'order_by_AS',
-                    'order_by_PAS', 'term_by_PAS', 'term_by_PAS2']
-    methods_list_n = ['direct_n', 'order_n', 'order_by_AS_n',
-                      'order_by_PAS_n', 'term_by_PAS_n', 'term_by_PAS2_n']
 
     # Pre-computation of phi
     print('Computing phi...', end=' ')
@@ -136,34 +132,32 @@ if __name__ == '__main__':
     kernels['true'] = system4simu.compute_kernels(tau, which='time')
     kernels['direct'] = identif.KLS(input_sig, out_order_true.sum(axis=0),
                                     M, N, phi=phi_orders)
-    kernels['order_true'] = identif.orderKLS(input_sig, out_order_true,
-                                             M, N, phi=phi_orders)
-    kernels['order_by_AS'] = identif.orderKLS(input_sig, order_AS,
-                                              M, N, phi=phi_orders)
-    kernels['order_by_PAS'] = identif.orderKLS(input_sig, order_PAS,
-                                               M, N, phi=phi_orders)
-    kernels['term_by_PAS'] = identif.termKLS(input_sig_cplx, term_PAS,
-                                             M, N, phi=phi_terms,
-                                                  only_real_part=True)
-    kernels['term_by_PAS2'] = identif.termKLS(input_sig_cplx, term_PAS,
-                                              M, N, phi=phi_terms)
+    kernels['order_true'] = identif.orderKLS(input_sig, out_order_true, M, N,
+                                             phi=phi_orders)
+    kernels['order_AS'] = identif.orderKLS(input_sig, order_AS, M, N,
+                                           phi=phi_orders)
+    kernels['order_PAS'] = identif.orderKLS(input_sig, order_PAS, M, N,
+                                            phi=phi_orders)
+    kernels['term_Rmode'] = identif.termKLS(input_sig_cplx, term_PAS, M, N,
+                                            phi=phi_terms, cast_mode='real')
+    kernels['term'] = identif.termKLS(input_sig_cplx, term_PAS, M, N,
+                                      phi=phi_terms)
     print('Done.')
 
     # Identification (on noisy data)
     print('Computing identification (on noisy data)...', end=' ')
-    kernels_n['direct_n'] = identif.KLS(input_sig, out_order_n.sum(axis=0),
-                                        M, N, phi=phi_orders)
-    kernels_n['order_n'] = identif.orderKLS(input_sig, out_order_n,
-                                            M, N, phi=phi_orders)
-    kernels_n['order_by_AS_n'] = identif.orderKLS(input_sig, order_AS_n,
-                                                  M, N, phi=phi_orders)
-    kernels_n['order_by_PAS_n'] = identif.orderKLS(input_sig, order_PAS_n,
-                                                   M, N, phi=phi_orders)
-    kernels_n['term_by_PAS_n'] = identif.termKLS(input_sig_cplx, term_PAS_n,
-                                                 M, N, phi=phi_terms,
-                                                  only_real_part=True)
-    kernels_n['term_by_PAS2_n'] = identif.termKLS(input_sig_cplx, term_PAS_n,
-                                                  M, N, phi=phi_terms)
+    kernels_n['direct'] = identif.KLS(input_sig, out_order_n.sum(axis=0),
+                                      M, N, phi=phi_orders)
+    kernels_n['order_true'] = identif.orderKLS(input_sig, out_order_n, M, N,
+                                               phi=phi_orders)
+    kernels_n['order_AS'] = identif.orderKLS(input_sig, order_AS_n, M, N,
+                                             phi=phi_orders)
+    kernels_n['order_PAS'] = identif.orderKLS(input_sig, order_PAS_n, M, N,
+                                              phi=phi_orders)
+    kernels_n['term_Rmode'] = identif.termKLS(input_sig_cplx, term_PAS_n, M, N,
+                                              phi=phi_terms, cast_mode='real')
+    kernels_n['term'] = identif.termKLS(input_sig_cplx, term_PAS_n, M, N,
+                                        phi=phi_terms)
     print('Done.')
 
 
@@ -179,12 +173,14 @@ if __name__ == '__main__':
     title_str = {'true': 'Ground truth',
                  'direct': 'Identification on output signal',
                  'order_true': 'Identification on true orders',
-                 'order_by_AS': 'Identification on orders estimated via AS',
-                 'order_by_PAS': 'Identification on orders estimated via PAS',
-                 'term_by_PAS': 'Identification on terms estimated via PAS'}
+                 'order_AS': 'Identification on orders estimated via AS',
+                 'order_PAS': 'Identification on orders estimated via PAS',
+                 'term_Rmode': 'Identification on terms estimated via PAS' + \
+                               ' (only real part used)',
+                 'term': 'Identification on terms estimated via PAS'}
 
     for method, val in kernels.items():
-        name = 'Kernel of order {} - ' + title_str.get(method, 'unknown')
+        name = 'Kernel of order {} - ' + title_str.get(method, 'Unknown method')
         plot_kernel_time(tau_vec, val[1], title=name.format(1))
         plot_kernel_time(tau_vec, val[2], style=style2D, title=name.format(2))
 
@@ -201,7 +197,7 @@ if __name__ == '__main__':
     errors = dict()
     for method, val in kernels.items():
         errors[method] = error_measure(kernels['true'], val)
-        print('{:13} :'.format(method), errors[method])
+        print('{:10} :'.format(method), errors[method])
 
     # Estimation error (without noise)
     print('\nIdentification error (with noise)')
@@ -209,5 +205,5 @@ if __name__ == '__main__':
     errors_n = dict()
     for method, val in kernels_n.items():
         errors_n[method] = error_measure(kernels['true'], val)
-        print('{:14} :'.format(method), errors_n[method])
+        print('{:10} :'.format(method), errors_n[method])
     print()
