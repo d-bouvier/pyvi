@@ -112,9 +112,9 @@ if __name__ == '__main__':
 
     print('Testing plot_kernel_freq() ...', end=' ')
     plot_kernel_freq(freq_vec, kernel_freq_1,
-                     title='Test plot_kernel_time() [Ordre 1]')
+                     title='Test plot_kernel_freq() [Ordre 1]')
     plot_kernel_freq(freq_vec, kernel_freq_1, logscale=True,
-                     title='Test plot_kernel_freq() [Ordre 2 - logscale]')
+                     title='Test plot_kernel_freq() [Ordre 1 - logscale]')
     plot_kernel_freq(freq_vec, kernel_freq_2, style='contour',
                      title="Test plot_kernel_freq() [Ordre 2 - 'contour']")
     plot_kernel_freq(freq_vec, kernel_freq_2, style='surface',
