@@ -98,6 +98,14 @@ if __name__ == '__main__':
         outputs_PAS[ind] = system4simu.simulation(inputs_PAS[ind])
     order_PAS, term_PAS = PAS.process_outputs(outputs_PAS, raw_mode=True)
 
+    # Data for PS separation method
+    PS = sep.PS(N=N)
+    inputs_PS = PS.gen_inputs(input_sig_cplx)
+    outputs_PS = np.zeros(inputs_PS.shape)
+    for ind in range(inputs_PS.shape[0]):
+        outputs_PS[ind] = system4simu.simulation(inputs_PS[ind])
+    phase_PS = PS.process_outputs(outputs_PS)
+
     # Noisy data
     amp_max = max(np.max(np.abs(order_AS)), np.max(np.abs(order_PAS)))
     amp_noise = amp_max * 10**(snr/20)
@@ -106,10 +114,12 @@ if __name__ == '__main__':
 
     nb_AS = outputs_AS.shape[0]
     nb_PAS = outputs_PAS.shape[0]
+    nb_PS = outputs_PS.shape[0]
     out_order_n = out_order_true + noise[:N]
     order_AS_n = AS.process_outputs(outputs_AS + noise[:nb_AS])
     order_PAS_n, term_PAS_n = PAS.process_outputs(outputs_PAS + noise[:nb_PAS],
                                                   raw_mode=True)
+    phase_PS_n = PS.process_outputs(outputs_PS + noise[:nb_PS])
     print('Done.')
 
 
@@ -142,6 +152,10 @@ if __name__ == '__main__':
                                             phi=phi_terms, cast_mode='real')
     kernels['term'] = identif.termKLS(input_sig_cplx, term_PAS, M, N,
                                       phi=phi_terms)
+    kernels['phase_Rmode'] = identif.phaseKLS(input_sig_cplx, phase_PS, M, N,
+                                              phi=phi_terms, cast_mode='real')
+    kernels['phase'] = identif.phaseKLS(input_sig_cplx, phase_PS, M, N,
+                                        phi=phi_terms)
     print('Done.')
 
     # Identification (on noisy data)
@@ -158,6 +172,11 @@ if __name__ == '__main__':
                                               phi=phi_terms, cast_mode='real')
     kernels_n['term'] = identif.termKLS(input_sig_cplx, term_PAS_n, M, N,
                                         phi=phi_terms)
+    kernels_n['phase_Rmode'] = identif.phaseKLS(input_sig_cplx, phase_PS_n, M,
+                                                N, phi=phi_terms,
+                                                cast_mode='real')
+    kernels_n['phase'] = identif.phaseKLS(input_sig_cplx, phase_PS_n, M, N,
+                                          phi=phi_terms)
     print('Done.')
 
 
@@ -177,7 +196,10 @@ if __name__ == '__main__':
                  'order_PAS': 'Identification on orders estimated via PAS',
                  'term_Rmode': 'Identification on terms estimated via PAS' + \
                                ' (only real part used)',
-                 'term': 'Identification on terms estimated via PAS'}
+                 'term': 'Identification on terms estimated via PAS',
+                 'phase_Rmode': 'Identification on phase signals estimated' + \
+                                ' via PS (only real part used)',
+                 'phase': 'Identification on phase signals estimated via PS'}
 
     for method, val in kernels.items():
         name = 'Kernel of order {} - ' + title_str.get(method, 'Unknown method')
@@ -197,7 +219,7 @@ if __name__ == '__main__':
     errors = dict()
     for method, val in kernels.items():
         errors[method] = error_measure(kernels['true'], val)
-        print('{:10} :'.format(method), errors[method])
+        print('{:11} :'.format(method), errors[method])
 
     # Estimation error (without noise)
     print('\nIdentification error (with noise)')
@@ -205,5 +227,5 @@ if __name__ == '__main__':
     errors_n = dict()
     for method, val in kernels_n.items():
         errors_n[method] = error_measure(kernels['true'], val)
-        print('{:10} :'.format(method), errors_n[method])
+        print('{:11} :'.format(method), errors_n[method])
     print()
