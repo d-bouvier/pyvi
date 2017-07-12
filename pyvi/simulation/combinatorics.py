@@ -19,7 +19,7 @@ Notes
 @author: bouvier (bouvier@ircam.fr)
          Damien Bouvier, IRCAM, Paris
 
-Last modified on 27 June 2017
+Last modified on 12 July 2017
 Developed for Python 3.6.1
 """
 
@@ -27,8 +27,8 @@ Developed for Python 3.6.1
 # Importations
 #==============================================================================
 
+import numpy as np
 from itertools import combinations_with_replacement, filterfalse, product
-from numpy import array, empty, concatenate
 from ..utilities.mathbox import binomial
 
 
@@ -54,20 +54,20 @@ def make_list_pq(nl_order_max):
     """
 
     # Initialisation
-    list_pq = empty((0, 3), dtype=int)
+    list_pq = np.empty((0, 3), dtype=int)
     # Variable for reporting sets from the previous order
     nb_set_2_report = 0
 
     # Loop on order of nonlinearity
     for n in range(2, nl_order_max+1):
         # Report previous sets and change the corresponding order
-        list_pq = concatenate((list_pq, list_pq[-nb_set_2_report-1:-1,:]))
+        list_pq = np.concatenate((list_pq, list_pq[-nb_set_2_report-1:-1,:]))
         list_pq[-nb_set_2_report:,0] += 1
         # Loop on all new combination (p,q)
         for q in range(n+1):
-            array_tmp = array([n, n-q, q])
+            array_tmp = np.array([n, n-q, q])
             array_tmp.shape = (1, 3)
-            list_pq = concatenate((list_pq, array_tmp))
+            list_pq = np.concatenate((list_pq, array_tmp))
             # We don't report the use of the pq-function for p = 0
             if not (n == q):
                 nb_set_2_report += 1
@@ -94,7 +94,7 @@ def elimination(pq_dict, list_pq):
     """
 
     # Initialisation
-    mask_pq = empty(list_pq.shape[0], dtype=bool)
+    mask_pq = np.empty(list_pq.shape[0], dtype=bool)
     # Loop on all set combination
     for idx in range(list_pq.shape[0]):
         # In the following:

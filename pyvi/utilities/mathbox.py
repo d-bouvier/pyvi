@@ -20,7 +20,7 @@ Notes
 @author: bouvier (bouvier@ircam.fr)
          Damien Bouvier, IRCAM, Paris
 
-Last modified on 28 June 2017
+Last modified on 12 July 2017
 Developed for Python 3.6.1
 """
 
@@ -28,10 +28,10 @@ Developed for Python 3.6.1
 # Importations
 #==============================================================================
 
+import math
 import numpy as np
 import itertools as itr
-from math import factorial
-from scipy.special import binom as fct_binomial
+import scipy.special as sc_sp
 
 
 #==============================================================================
@@ -151,7 +151,7 @@ def binomial(n, k):
          Binomial coefficient.
     """
 
-    return int(fct_binomial(n, k))
+    return int(sc_sp.binom(n, k))
 
 
 def array_symmetrization(array):
@@ -177,4 +177,4 @@ def array_symmetrization(array):
     array_sym = np.zeros(shape, dtype=array.dtype)
     for ind in itr.permutations(range(n), n):
         array_sym += np.transpose(array, ind)
-    return array_sym / factorial(n)
+    return array_sym / math.factorial(n)

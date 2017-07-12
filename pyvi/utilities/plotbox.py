@@ -22,7 +22,7 @@ Notes
 @author: bouvier (bouvier@ircam.fr)
          Damien Bouvier, IRCAM, Paris
 
-Last modified on 28 June 2017
+Last modified on 12 July 2017
 Developed for Python 3.6.1
 """
 
@@ -33,7 +33,7 @@ Developed for Python 3.6.1
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
 import numpy as np
-from scipy.signal import stft
+import scipy.signal as sc_sig
 from .mathbox import safe_db
 
 
@@ -225,7 +225,7 @@ def plot_spectrogram(signal, title=None, db=True, logscale=False,
         Arguments that are passed to scipy.signal.stft.
     """
 
-    freq_vec, time_vec, spectrogram = stft(signal, **args)
+    freq_vec, time_vec, spectrogram = sc_sig.stft(signal, **args)
     if title is None:
         title = 'Short-Time Fourier Transform'
 
@@ -287,6 +287,7 @@ def plot_kernel_time(vec, kernel, style='wireframe', title=None, nb_levels=20):
         plt.plot(vec, kernel)
         plt.xlabel('Time (s)')
         plt.ylabel('Amplitude')
+        plt.xlim([vec[0], vec[-1]])
 
     elif order ==2:
         if title is None:
@@ -308,6 +309,8 @@ def plot_kernel_time(vec, kernel, style='wireframe', title=None, nb_levels=20):
             ax.set_xlabel('Time (s)')
             ax.set_ylabel('Time (s)')
             ax.set_zlabel('Amplitude')
+            ax.set_xlim([vec[0], vec[-1]])
+            ax.set_ylim([vec[0], vec[-1]])
         elif style == 'wireframe':
             ax = plt.subplot(111, projection='3d')
             ax.plot_wireframe(time_x, time_y, kernel, antialiased=True,
@@ -315,6 +318,8 @@ def plot_kernel_time(vec, kernel, style='wireframe', title=None, nb_levels=20):
             ax.set_xlabel('Time (s)')
             ax.set_ylabel('Time (s)')
             ax.set_zlabel('Amplitude')
+            ax.set_xlim([vec[0], vec[-1]])
+            ax.set_ylim([vec[0], vec[-1]])
 
     else:
         print('No plot possible, the kernel is of order {}.'.format(order))
@@ -413,6 +418,10 @@ def plot_kernel_freq(vec, kernel, style='wireframe', title=None, db=True,
             ax2.set_ylabel('Frequency (Hz)')
             ax1.set_zlabel(amplabel)
             ax2.set_zlabel('Phase (radians)')
+            ax1.set_xlim([vec[0], vec[-1]])
+            ax1.set_ylim([vec[0], vec[-1]])
+            ax2.set_xlim([vec[0], vec[-1]])
+            ax2.set_ylim([vec[0], vec[-1]])
         if logscale:
             ax1.set_xscale('symlog')
             ax1.set_yscale('symlog')

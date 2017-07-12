@@ -7,7 +7,7 @@ Notes
 @author: bouvier (bouvier@ircam.fr)
          Damien Bouvier, IRCAM, Paris
 
-Last modified on 27 June 2017
+Last modified on 12 July 2017
 Developed for Python 3.6.1
 """
 
@@ -18,7 +18,9 @@ Developed for Python 3.6.1
 import string, time
 import numpy as np
 import itertools as itr
-from pyvi.identification.tools import (error_measure, vector_to_kernel,
+from pyvi.identification.tools import (error_measure, nb_coeff_in_kernel,
+                                       nb_coeff_in_all_kernels,
+                                       vector_to_kernel,
                                        vector_to_all_kernels,
                                        volterra_basis_by_order,
                                        volterra_basis_by_term)
@@ -62,6 +64,53 @@ if __name__ == '__main__':
         print('Relative error     :', error)
         print('Relative error (dB):', error_db)
         print()
+
+
+    ###################################
+    ## Function nb_coeff_in_kernel() ##
+    ###################################
+
+    N = 5
+    M = 20
+
+    print('Testing nb_coeff_in_kernel()...', end=' ')
+    for n in range(1, N+1):
+        for M in range(1, M+1):
+            nb_coeff_1 = binomial(M + n - 1, n)
+            nb_coeff_2 = M**n
+            nb_coeff_sym = nb_coeff_in_kernel(M, n, form='sym')
+            nb_coeff_tri = nb_coeff_in_kernel(M, n, form='tri')
+            nb_coeff_raw = nb_coeff_in_kernel(M, n, form=None)
+            assert nb_coeff_sym == nb_coeff_1, \
+                    'Returns wrong number of coefficient for symmetric form.'
+            assert nb_coeff_tri == nb_coeff_1, \
+                    'Returns wrong number of coefficient for triangular form.'
+            assert nb_coeff_raw == nb_coeff_2, \
+                    'Returns wrong number of coefficient for raw form.'
+    print('Done.')
+
+
+    ########################################
+    ## Function nb_coeff_in_all_kernels() ##
+    ########################################
+
+    Nmax = 5
+
+    print('Testing nb_coeff_in_all_kernels()...', end=' ')
+    for N in range(1, Nmax+1):
+        for M in range(1, M+1):
+            nb_coeff_1 = binomial(M + N, N) - 1
+            nb_coeff_2 = sum([M**n for n in range(1, N+1)])
+            nb_coeff_sym = nb_coeff_in_all_kernels(M, N, form='sym')
+            nb_coeff_tri = nb_coeff_in_all_kernels(M, N, form='tri')
+            nb_coeff_raw = nb_coeff_in_all_kernels(M, N, form=None)
+            assert nb_coeff_sym == nb_coeff_1, \
+                    'Returns wrong number of coefficient for symmetric form.'
+            assert nb_coeff_tri == nb_coeff_1, \
+                    'Returns wrong number of coefficient for triangular form.'
+            assert nb_coeff_raw == nb_coeff_2, \
+                    'Returns wrong number of coefficient for raw form.'
+    print('Done.')
 
 
     #################################

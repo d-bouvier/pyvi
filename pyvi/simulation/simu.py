@@ -17,7 +17,7 @@ Notes
 @author: bouvier (bouvier@ircam.fr)
          Damien Bouvier, IRCAM, Paris
 
-Last modified on 27 June 2017
+Last modified on 12 July 2017
 Developed for Python 3.6.1
 """
 
@@ -26,9 +26,7 @@ Developed for Python 3.6.1
 #==============================================================================
 
 import numpy as np
-from scipy import linalg
-from scipy.fftpack import fftn
-from scipy.signal import resample_poly
+import scipy as sc
 from itertools import filterfalse, product
 from .combinatorics import make_pq_combinatorics
 from ..system.statespace import NumericalStateSpace
@@ -119,7 +117,7 @@ class SimulationObject:
                                                       system.pq_symmetry)
 
         # Filter matrix and holder bias matrices
-        self.A_inv = linalg.inv(system.A_m)
+        self.A_inv = sc.linalg.inv(system.A_m)
 
         self.filter_mat_orig = self._compute_filter(self.fs_orig, system.A_m)
         self.holder_bias_mat_orig = self._compute_holder(self.fs_orig,
@@ -151,7 +149,7 @@ class SimulationObject:
         Compute the discrete filter matrix for a given sampling frequency.
         """
 
-        return linalg.expm(A_m / fs)
+        return sc.linalg.expm(A_m / fs)
 
 
     def _compute_holder(self, fs, filter_mat, dim_state):
@@ -217,7 +215,8 @@ class SimulationObject:
 
         # Upsampling (if wanted)
         if self.resampling:
-            input_sig = resample_poly(input_sig, self.nl_order_max, 1, axis=1)
+            input_sig = sc.signal.resample_poly(input_sig, self.nl_order_max,
+                                                1, axis=1)
         sig_len = input_sig.shape[1]
 
         # By-order state and output initialization
@@ -295,10 +294,10 @@ class SimulationObject:
 
         # Downsampling(if necessary)
         if self.resampling:
-            state_by_order = resample_poly(state_by_order, 1,
-                                           self.nl_order_max, axis=2)
-            output_by_order = resample_poly(output_by_order, 1,
-                                            self.nl_order_max, axis=2)
+            state_by_order = sc.signal.resample_poly(state_by_order, 1,
+                                                     self.nl_order_max, axis=2)
+            output_by_order = sc.signal.resample_poly(output_by_order, 1,
+                                                      self.nl_order_max, axis=2)
 
         # Reshaping state (if necessary)
         if self.dim['state'] == 1:
@@ -357,7 +356,7 @@ class SimulationObject:
             volterra_kernels = self._compute_time_kernels(T)
             transfer_kernels = dict()
             for n, kernel in volterra_kernels.items():
-                transfer_kernels[n] = np.fft.fftshift(fftn(kernel))
+                transfer_kernels[n] = np.fft.fftshift(sc.fftpack.fftn(kernel))
 
             return volterra_kernels, transfer_kernels
 

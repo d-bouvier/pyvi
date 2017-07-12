@@ -6,6 +6,10 @@ Functions
 ---------
 error_measure :
     Returns the relative error between kernels and their estimates.
+nb_coeff_in_kernel :
+    Returns the number of coefficient of a kernel of specified order and memory.
+nb_coeff_in_all_kernels :
+    Returns the number of coefficient of all kernels up to a specified order.
 vector_to_kernel :
     Rearranges vector of order n Volterra kernel coefficients into tensor.
 vector_to_all_kernels :
@@ -20,7 +24,7 @@ Notes
 @author: bouvier (bouvier@ircam.fr)
          Damien Bouvier, IRCAM, Paris
 
-Last modified on 28 June 2017
+Last modified on 12 July 2017
 Developed for Python 3.6.1
 """
 
@@ -30,7 +34,7 @@ Developed for Python 3.6.1
 
 import numpy as np
 import itertools as itr
-from scipy.linalg import toeplitz
+import scipy.linalg as sc_lin
 from ..utilities.mathbox import rms, safe_db, binomial, array_symmetrization
 
 
@@ -78,6 +82,56 @@ def error_measure(kernels_ref, kernels_est, db=True):
     return errors
 
 
+def nb_coeff_in_kernel(M, n, form='sym'):
+    """
+    Returns the number of coefficient of a kernel of specified order and memory.
+
+    Parameters
+    ----------
+    M : int
+        Memory length of the kernel (in samples).
+    n : int
+        Kernel order.
+    form : {'sym', 'tri', 'symmetric', 'triangular'}, optional (default='sym')
+        Form of the returned Volterra kernel (symmetric or triangular).
+
+    Returns
+    -------
+    nb_coeff : int
+        The corresponding number of coefficient.
+    """
+
+    if form in {'sym', 'symmetric', 'tri', 'triangular'}:
+        return binomial(M + n - 1, n)
+    else:
+        return M**n
+
+
+def nb_coeff_in_all_kernels(M, N, form='sym'):
+    """
+    Returns the number of coefficient of all kernels up to a specified order.
+
+    Parameters
+    ----------
+    M : int
+        Memory length of the kernel (in samples).
+    N : int
+        Highest kernel order.
+    form : {'sym', 'tri', 'symmetric', 'triangular'}, optional (default='sym')
+        Form of the returned Volterra kernel (symmetric or triangular).
+
+    Returns
+    -------
+    nb_coeff : int
+        The corresponding number of coefficient.
+    """
+
+    if form in {'sym', 'symmetric', 'tri', 'triangular'}:
+        return binomial(M + N, N) - 1
+    else:
+        return sum([nb_coeff_in_kernel(M, n, form=form) for n in range(1, N+1)])
+
+
 def vector_to_kernel(vec_kernel, M, n, form='sym'):
     """
     Rearranges vector of order n Volterra kernel coefficients into tensor.
@@ -100,7 +154,7 @@ def vector_to_kernel(vec_kernel, M, n, form='sym'):
     """
 
     # Check dimension
-    length = binomial(M + n - 1, n)
+    length = nb_coeff_in_kernel(M, n, form=form)
     assert len(vec_kernel) == length, 'The vector of coefficients for ' + \
             'Volterra kernel of order {} has wrong length'.format(n) + \
             '(got {}, expected {}).'.format(vec_kernel.shape[0], length)
@@ -142,7 +196,7 @@ def vector_to_all_kernels(f, M, N, form='sym'):
     """
 
     # Check dimension
-    length = binomial(M + N, N) - 1
+    length = nb_coeff_in_all_kernels(M, N, form=form)
     assert f.shape[0] == length, \
            'The vector of Volterra coefficients has wrong length ' + \
            '(got {}, expected {}).'.format(f.shape[0], length)
@@ -153,10 +207,10 @@ def vector_to_all_kernels(f, M, N, form='sym'):
 
     # Loop on all orders of nonlinearity
     for n in range(1, N+1):
-        nb_term = binomial(M + n - 1, n)
-        kernels[n] = vector_to_kernel(f[current_ind:current_ind+nb_term],
+        nb_coeff = nb_coeff_in_kernel(M, n, form=form)
+        kernels[n] = vector_to_kernel(f[current_ind:current_ind+nb_coeff],
                                       M, n, form=form)
-        current_ind += nb_term
+        current_ind += nb_coeff
 
     return kernels
 
@@ -181,7 +235,7 @@ def volterra_basis_by_order(signal, M, N):
     """
 
     phi = dict()
-    phi[1] = toeplitz(signal, np.zeros((1, M)))
+    phi[1] = sc_lin.toeplitz(signal, np.zeros((1, M)))
 
     for n in range(2, N+1):
         size = phi[n-1].shape[1]
