@@ -388,13 +388,13 @@ def iterKLS(input_sig, output_by_phase, M, N, phi=None, form='sym',
 
     # Identification recursive on each homogeneous-phase signal
     for n in range(N, 0, -1):
-        temp_sig = output_by_phase[n]
+        temp_sig = output_by_phase[n].copy()
         for n2 in range(n+2, N+1, 2):
             k = (n2-n)//2
             temp_sig -= binomial(n2, k) * np.dot(phi[(n2, k)], f[n2])
         f[n] = _KLS_core_computation( \
                          _cplx_to_real(phi[(n, 0)], cast_mode=cast_mode),
-                         _cplx_to_real(output_by_phase[n], cast_mode=cast_mode))
+                         _cplx_to_real(temp_sig, cast_mode=cast_mode))
 
     # Re-arranging vector f_n into volterra kernel of order n
     for n in range(1, N+1):
