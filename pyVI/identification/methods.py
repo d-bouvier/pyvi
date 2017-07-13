@@ -38,7 +38,7 @@ Notes
 @author: bouvier (bouvier@ircam.fr)
          Damien Bouvier, IRCAM, Paris
 
-Last modified on 12 July 2017
+Last modified on 13 July 2017
 Developed for Python 3.6.1
 """
 
@@ -50,6 +50,7 @@ import numpy as np
 import scipy.linalg as sc_lin
 from .tools import (volterra_basis_by_order, volterra_basis_by_term,
                     nb_coeff_in_kernel, vector_to_kernel, vector_to_all_kernels)
+from ..utilities.mathbox import binomial
 
 
 #==============================================================================
@@ -317,7 +318,8 @@ def phaseKLS(input_sig, output_by_phase, M, N, phi=None, form='sym',
                                             mode='economic')
         size[n] = r_terms[(n, 0)].shape[1]
         for k in range((n+1)//2):
-            r_terms[(n, k)] = np.dot(q_by_order[n-2*k].T,
+            r_terms[(n, k)] = binomial(n, k) * \
+                              np.dot(q_by_order[n-2*k].T,
                                      _cplx_to_real(phi[(n, k)],
                                                    cast_mode=cast_mode))
 
@@ -387,8 +389,9 @@ def iterKLS(input_sig, output_by_phase, M, N, phi=None, form='sym',
     # Identification recursive on each homogeneous-phase signal
     for n in range(N, 0, -1):
         temp_sig = output_by_phase[n]
-        for m in range(n+2, N+1, 2):
-            temp_sig -= np.dot(phi[(m, (m-n)//2)], f[m])
+        for n2 in range(n+2, N+1, 2):
+            k = (n2-n)//2
+            temp_sig -= binomial(n2, k) * np.dot(phi[(n2, k)], f[n2])
         f[n] = _KLS_core_computation( \
                          _cplx_to_real(phi[(n, 0)], cast_mode=cast_mode),
                          _cplx_to_real(output_by_phase[n], cast_mode=cast_mode))
