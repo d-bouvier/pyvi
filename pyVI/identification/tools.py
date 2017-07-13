@@ -24,7 +24,7 @@ Notes
 @author: bouvier (bouvier@ircam.fr)
          Damien Bouvier, IRCAM, Paris
 
-Last modified on 12 July 2017
+Last modified on 13 July 2017
 Developed for Python 3.6.1
 """
 
@@ -66,7 +66,7 @@ def error_measure(kernels_ref, kernels_est, db=True):
     errors = []
 
     # Loop on all estimated kernels
-    for order, kernel_est in kernels_est.items():
+    for order, kernel_est in sorted(kernels_est.items()):
         if order in kernels_ref:
             rms_error = rms(kernel_est - kernels_ref[order])
             rms_ref = rms(kernels_ref[order])
