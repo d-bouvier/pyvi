@@ -309,13 +309,13 @@ def phaseKLS(input_sig, output_by_phase, M, N, phi=None, form='sym',
     size = dict()
     f = dict()
     kernels = dict()
+    y_phase = dict()
 
     # QR decomposition
     for n in range(1, N+1):
-        q_by_order[n], r_terms[(n, 0)] = sc_lin.qr( \
-                                            _cplx_to_real(phi[(n, 0)],
-                                                          cast_mode=cast_mode),
-                                            mode='economic')
+        q_by_order[n], r_terms[(n, 0)] = \
+                    sc_lin.qr(_cplx_to_real(phi[(n, 0)], cast_mode=cast_mode),
+                              mode='economic')
         size[n] = r_terms[(n, 0)].shape[1]
         for k in range((n+1)//2):
             r_terms[(n, k)] = binomial(n, k) * \
@@ -324,7 +324,6 @@ def phaseKLS(input_sig, output_by_phase, M, N, phi=None, form='sym',
                                                    cast_mode=cast_mode))
 
     # Projection on combinatorial basis
-    y_phase = dict()
     for n, q_n in q_by_order.items():
         y_phase[n] = np.dot(q_n.T, _cplx_to_real(output_by_phase[n],
                                                  cast_mode=cast_mode))

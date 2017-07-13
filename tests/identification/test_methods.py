@@ -7,7 +7,7 @@ Notes
 @author: bouvier (bouvier@ircam.fr)
          Damien Bouvier, IRCAM, Paris
 
-Last modified on 12 July 2017
+Last modified on 13 July 2017
 Developed for Python 3.6.1
 """
 
@@ -47,10 +47,10 @@ if __name__ == '__main__':
                                damping=damping, nl_coeff=[3, 7e-4])
 
     # Input signal specification
-    fs = 3000
+    fs = 2500
     T = 2
     sigma = 1/10
-    tau = 0.005
+    tau = 0.006
 
     time_vec = np.arange(0, T, 1/fs)
     L = time_vec.shape[0]
@@ -245,7 +245,8 @@ if __name__ == '__main__':
     errors = dict()
     for method, val in kernels.items():
         errors[method] = error_measure(kernels['true'], val)
-        print('{:11} :'.format(method), errors[method])
+        print('{:11} :'.format(method),
+              *['{:>8.3f}'.format(value) for value in errors[method]])
 
     # Estimation error (without noise)
     print('\nIdentification error (with noise)')
@@ -253,5 +254,6 @@ if __name__ == '__main__':
     errors_n = dict()
     for method, val in kernels_n.items():
         errors_n[method] = error_measure(kernels['true'], val)
-        print('{:11} :'.format(method), errors_n[method])
+        print('{:11} :'.format(method),
+              *['{:>8.3f}'.format(value) for value in errors_n[method]])
     print()
