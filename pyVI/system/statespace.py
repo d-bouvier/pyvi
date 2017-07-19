@@ -9,11 +9,11 @@ https://en.wikipedia.org/wiki/State-space_representation).
 Class
 -----
 StateSpace :
-    Defines physical systems by their state-space representations parameters.
+    Defines physical systems by their state-space representations.
 NumericalStateSpace :
     Numerical version of StateSpace class.
 SymbolicStateSpace :
-    Characterize a system by its symbolic state-space representation.
+    Symbolic version of StateSpace class, using sympy package.
 
 Notes
 -----
@@ -42,7 +42,7 @@ from ..utilities.misc import Style
 
 class StateSpace:
     """
-    Defines physical systems by their state-space representations parameters.
+    Defines physical systems by their state-space representations.
 
     This class represents a system (linear or nonlinear) by its state-space
     representation, a mathematical formalism used in control engineering
