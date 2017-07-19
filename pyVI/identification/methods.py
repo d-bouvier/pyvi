@@ -101,9 +101,9 @@ def _KLS_construct_phi(signal, M, N, phi=None):
 
     if phi is None:
         phi_dict = volterra_basis_by_order(signal, M, N)
-    elif type(phi) == dict:
+    elif isinstance(phi, dict):
         phi_dict = phi
-    elif type(phi) == np.ndarray:
+    elif isinstance(phi, np.ndarray):
         return phi
     return np.concatenate([val for n, val in sorted(phi_dict.items())], axis=1)
 

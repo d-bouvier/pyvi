@@ -80,7 +80,7 @@ def create_folder(folder_relative_path, abs_path=None):
     else:
         folder_abs_path = abs_path
 
-    if type(folder_relative_path) != str:
+    if not isinstance(folder_relative_path, str):
         for elt in folder_relative_path:
             folder_abs_path += os.sep + elt
             _folder_check(folder_abs_path)
@@ -103,7 +103,7 @@ def _check_path(folder_path, abs_path=None):
         Absolute path where to begin relative path. If None, os.cwd() is used.
     """
 
-    if (type(folder_path) != str) or (not os.path.isabs(folder_path)):
+    if not (isinstance(folder_path, str) and os.path.isabs(folder_path)):
         return create_folder(folder_path, abs_path=abs_path)
     else:
         return folder_path

@@ -97,12 +97,12 @@ def safe_db(num, den):
     """
 
     # Initialization
-    if type(num) != np.ndarray:
+    if not isinstance(num, np.ndarray):
         _num = np.array(num)
     else:
         _num = num
 
-    if type(den) != np.ndarray:
+    if not isinstance(den, np.ndarray):
         _den = np.array(den)
     else:
         _den = den
