@@ -146,9 +146,9 @@ class StateSpace:
                         ' (' + desc + ')' + Style.RESET + '\n' + \
                          sp.pretty(mat) + '\n'
         if not self.linear:
-            if len(self.mpq):
+            if self.mpq:
                 print_str += list_nl_fct(self.mpq, 'M')
-            if len(self.npq):
+            if self.npq:
                 print_str += list_nl_fct(self.npq, 'N')
         return print_str
 
@@ -259,8 +259,8 @@ class StateSpace:
 
     def _is_linear(self):
         """Check if the system is linear."""
-        self._state_eqn_linear = len(self.mpq) == 0
-        self._output_eqn_linear = len(self.npq) == 0
+        self._state_eqn_linear = bool(self.mpq)
+        self._output_eqn_linear = bool(self.npq)
         self.linear = self._state_eqn_linear and self._output_eqn_linear
 
     def _is_state_eqn_linear_analytic(self):
