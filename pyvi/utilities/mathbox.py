@@ -20,7 +20,7 @@ Notes
 @author: bouvier (bouvier@ircam.fr)
          Damien Bouvier, IRCAM, Paris
 
-Last modified on 12 July 2017
+Last modified on 19 July 2017
 Developed for Python 3.6.1
 """
 
@@ -97,19 +97,19 @@ def safe_db(num, den):
     """
 
     # Initialization
-    if type(num) != np.ndarray:
+    if not isinstance(num, np.ndarray):
         _num = np.array(num)
     else:
         _num = num
 
-    if type(den) != np.ndarray:
+    if not isinstance(den, np.ndarray):
         _den = np.array(den)
     else:
         _den = den
 
     # Assert same shape
-    assert _num.shape == _den.shape, 'Dimensions of num and den not equal ' + \
-            '(they are respectively {} and {}).'.format(_num.shape, _den.shape)
+    assert _num.shape == _den.shape, 'Dimensions of num and den not equal' + \
+        ' (they are respectively {} and {}).'.format(_num.shape, _den.shape)
 
     if _num.shape == ():
         if _num == 0:

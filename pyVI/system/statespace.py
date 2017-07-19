@@ -20,7 +20,7 @@ Notes
 @author: bouvier (bouvier@ircam.fr)
          Damien Bouvier, IRCAM, Paris
 
-Last modified on 12 July 2017
+Last modified on 19 July 2017
 Developed for Python 3.6.1
 """
 
@@ -28,11 +28,11 @@ Developed for Python 3.6.1
 # Importations
 #==============================================================================
 
+import warnings as warn
+from abc import abstractmethod
 import sympy as sp
 import numpy as np
 import scipy.linalg as sc_lin
-import warnings as warn
-from abc import abstractmethod
 from ..utilities.misc import Style
 
 
@@ -142,13 +142,13 @@ class StateSpace:
                     ('Input {} B', 'input-to-state', self.B_m),
                     ('Output {} C', 'state-to-output', self.C_m),
                     ('Feedthrough {} D', 'input-to-output', self.D_m)]:
-            print_str += Style.GREEN + Style.BRIGHT + name.format('matrice') + \
-                        ' (' + desc + ')' + Style.RESET + '\n' + \
-                         sp.pretty(mat) + '\n'
+            print_str += Style.GREEN + Style.BRIGHT + \
+                         name.format('matrice') + ' (' + desc + ')' + \
+                         Style.RESET + '\n' + sp.pretty(mat) + '\n'
         if not self.linear:
-            if len(self.mpq):
+            if self.mpq:
                 print_str += list_nl_fct(self.mpq, 'M')
-            if len(self.npq):
+            if self.npq:
                 print_str += list_nl_fct(self.npq, 'N')
         return print_str
 
@@ -200,32 +200,32 @@ class StateSpace:
         list_dim_input = [self.B_m.shape[1], self.D_m.shape[1]]
         list_dim_output = [self.C_m.shape[0], self.D_m.shape[0]]
         assert check_equal(list_dim_state, self.dim['state']), \
-               'State dimension not consistent'
+            'State dimension not consistent'
         assert check_equal(list_dim_input, self.dim['input']), \
-               'Input dimension not consistent'
+            'Input dimension not consistent'
         assert check_equal(list_dim_output, self.dim['output']), \
-               'Output dimension not consistent'
+            'Output dimension not consistent'
 
     def _check_dim_nl_tensor(self, p, q, tensor, name, dim_result):
         """Verify shape of the multilinear tensors."""
         str_tensor = '{}_{}{} tensor: '.format(name, p, q)
         shape = tensor.shape
         assert len(shape) == p + q + 1, \
-               str_tensor + 'wrong number of dimension ' + \
-               '(got {}, expected {}).'.format(len(shape), p + q + 1)
+            str_tensor + 'wrong number of dimension ' + \
+            '(got {}, expected {}).'.format(len(shape), p + q + 1)
         assert shape[0] == dim_result, \
-               str_tensor + 'wrong size for dimension 1 ' + \
-               '(got {}, expected {}).'.format(dim_result, shape[0])
+            str_tensor + 'wrong size for dimension 1 ' + \
+            '(got {}, expected {}).'.format(dim_result, shape[0])
         for ind in range(p):
             assert shape[1+ind] == self.dim['state'], \
-                   str_tensor + 'wrong size for dimension ' + \
-                   '{} (got {}, expected {}).'.format(1+ind, shape[1+ind],
-                                                      self.dim['state'])
+                str_tensor + 'wrong size for dimension ' + \
+                '{} (got {}, expected {}).'.format(1+ind, shape[1+ind],
+                                                   self.dim['state'])
         for ind in range(q):
             assert shape[1+p+ind] == self.dim['input'], \
-                   str_tensor + 'wrong size for dimension ' + \
-                   '{} (got {}, expected {}).'.format(1+p+ind, shape[1+p+ind],
-                                                      self.dim['input'])
+                str_tensor + 'wrong size for dimension ' + \
+                '{} (got {}, expected {}).'.format(1+p+ind, shape[1+p+ind],
+                                                   self.dim['input'])
 
     def _is_single_input(self):
         """Check if the input dimension is one."""
@@ -234,8 +234,8 @@ class StateSpace:
         if not self._single_input:
             message = '\nInput dimension is not equal to 1' + \
                       ' (it is {}).\n'.format(self.dim['input']) + \
-                      'Simulation, kernel computation, order separation and' + \
-                      ' system  identification may not work as intended.\n'
+                      'Simulation, kernel computation, order separation ' + \
+                      'and system  identification may not work as intended.\n'
             warn.showwarning(message, UserWarning, __file__, 239, line='')
 
     def _is_single_output(self):
@@ -245,8 +245,8 @@ class StateSpace:
         if not self._single_output:
             message = '\nOutput dimension is not equal to 1' + \
                       ' (it is {}).\n'.format(self.dim['output']) + \
-                      'Simulation, kernel computation, order separation and' + \
-                      ' system  identification may not work as intended.\n'
+                      'Simulation, kernel computation, order separation ' + \
+                      'and system  identification may not work as intended.\n'
             warn.showwarning(message, UserWarning, __file__, 250, line='')
 
     #=============================================#
@@ -259,8 +259,8 @@ class StateSpace:
 
     def _is_linear(self):
         """Check if the system is linear."""
-        self._state_eqn_linear = len(self.mpq) == 0
-        self._output_eqn_linear = len(self.npq) == 0
+        self._state_eqn_linear = bool(self.mpq)
+        self._output_eqn_linear = bool(self.npq)
         self.linear = self._state_eqn_linear and self._output_eqn_linear
 
     def _is_state_eqn_linear_analytic(self):

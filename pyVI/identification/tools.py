@@ -7,9 +7,9 @@ Functions
 error_measure :
     Returns the relative error between kernels and their estimates.
 nb_coeff_in_kernel :
-    Returns the number of coefficient of a kernel of specified order and memory.
+    Returns the number of coefficient in a kernel.
 nb_coeff_in_all_kernels :
-    Returns the number of coefficient of all kernels up to a specified order.
+    Returns the number of coefficient in all kernels up to a specified order.
 vector_to_kernel :
     Rearranges vector of order n Volterra kernel coefficients into tensor.
 vector_to_all_kernels :
@@ -24,7 +24,7 @@ Notes
 @author: bouvier (bouvier@ircam.fr)
          Damien Bouvier, IRCAM, Paris
 
-Last modified on 13 July 2017
+Last modified on 19 July 2017
 Developed for Python 3.6.1
 """
 
@@ -32,8 +32,8 @@ Developed for Python 3.6.1
 # Importations
 #==============================================================================
 
-import numpy as np
 import itertools as itr
+import numpy as np
 import scipy.linalg as sc_lin
 from ..utilities.mathbox import rms, safe_db, binomial, array_symmetrization
 
@@ -84,7 +84,7 @@ def error_measure(kernels_ref, kernels_est, db=True):
 
 def nb_coeff_in_kernel(M, n, form='sym'):
     """
-    Returns the number of coefficient of a kernel of specified order and memory.
+    Returns the number of coefficient in a kernel.
 
     Parameters
     ----------
@@ -109,7 +109,7 @@ def nb_coeff_in_kernel(M, n, form='sym'):
 
 def nb_coeff_in_all_kernels(M, N, form='sym'):
     """
-    Returns the number of coefficient of all kernels up to a specified order.
+    Returns the number of coefficient in all kernels up to a specified order.
 
     Parameters
     ----------

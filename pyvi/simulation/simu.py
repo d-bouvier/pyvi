@@ -17,7 +17,7 @@ Notes
 @author: bouvier (bouvier@ircam.fr)
          Damien Bouvier, IRCAM, Paris
 
-Last modified on 12 July 2017
+Last modified on 19 July 2017
 Developed for Python 3.6.1
 """
 
@@ -25,9 +25,9 @@ Developed for Python 3.6.1
 # Importations
 #==============================================================================
 
+import itertools as itr
 import numpy as np
 import scipy as sc
-from itertools import filterfalse, product
 from .combinatorics import make_pq_combinatorics
 from ..system.statespace import NumericalStateSpace
 from ..utilities.mathbox import array_symmetrization
@@ -247,7 +247,8 @@ class SimulationObject:
                 state_by_order[n-1,:,1::] += np.dot(bias_1sample_lag,
                                                     mpq_output[:,0:-1])
         elif self.holder_order == 1:
-            bias_0sample_lag = self.holder_bias_mat[0] - self.holder_bias_mat[1]
+            bias_0sample_lag = self.holder_bias_mat[0] - \
+                               self.holder_bias_mat[1]
             bias_1sample_lag = self.holder_bias_mat[1]
             def holder_bias(mpq_output, n):
                 state_by_order[n-1,:,:] += np.dot(bias_0sample_lag, mpq_output)
@@ -271,8 +272,9 @@ class SimulationObject:
         # Nonlinear states (due to Mpq functions)
         for n, elt in sorted(self.mpq_combinatoric.items()):
             for p, q, order_set, nb in elt:
-                mpq_output = nb * pq_computation(p, q, [m-1 for m in order_set],
-                                                 self.mpq[(p, q)])
+                mpq_output = \
+                    nb * pq_computation(p, q, [m-1 for m in order_set],
+                                        self.mpq[(p, q)])
                 holder_bias(mpq_output, n)
             filtering(n)
 
@@ -286,7 +288,8 @@ class SimulationObject:
         for n, elt in sorted(self.npq_combinatoric.items()):
             for p, q, order_set, nb in elt:
                 output_by_order[n-1,:,:] += nb * \
-                pq_computation(p, q, [m-1 for m in order_set], self.npq[(p, q)])
+                pq_computation(p, q, [m-1 for m in order_set],
+                               self.npq[(p, q)])
 
         ######################
         ## Function outputs ##
@@ -295,9 +298,11 @@ class SimulationObject:
         # Downsampling(if necessary)
         if self.resampling:
             state_by_order = sc.signal.resample_poly(state_by_order, 1,
-                                                     self.nl_order_max, axis=2)
+                                                     self.nl_order_max,
+                                                     axis=2)
             output_by_order = sc.signal.resample_poly(output_by_order, 1,
-                                                      self.nl_order_max, axis=2)
+                                                      self.nl_order_max,
+                                                      axis=2)
 
         # Reshaping state (if necessary)
         if self.dim['state'] == 1:
@@ -383,16 +388,16 @@ class SimulationObject:
         ####################
 
         # Input-to-state and input-to-output kernels initialization
-        len_kernels = 1 + int(self.fs_orig * T)
+        len_ker = 1 + int(self.fs_orig * T)
         kernels_in2state = dict()
         kernels_in2out = dict()
         shape = (self.dim['state'],)
         for n in range(1, self.nl_order_max+1):
-            shape += (len_kernels,)
+            shape += (len_ker,)
             kernels_in2state[n] = np.zeros(shape)
 
         # Dirac-delta
-        dirac = np.zeros((self.dim['input'], len_kernels))
+        dirac = np.zeros((self.dim['input'], len_ker))
         dirac[:, 0] = 1
 
         # Enforce good shape when input dimension is 1
@@ -425,11 +430,10 @@ class SimulationObject:
         if self.holder_order == 0:
             bias_1sample_lag = self.holder_bias_mat_orig[0]
             def holder_bias(mpq_output, n):
-                idx_in = [slice(None)] + [slice(len_kernels-1)] * n
-                idx_out = [slice(None)] + [slice(1, len_kernels)] * n
-                kernels_in2state[n][idx_out] += np.tensordot(bias_1sample_lag,
-                                                             mpq_output[idx_in],
-                                                             1)
+                idx_in = [slice(None)] + [slice(len_ker-1)] * n
+                idx_out = [slice(None)] + [slice(1, len_ker)] * n
+                kernels_in2state[n][idx_out] += \
+                    np.tensordot(bias_1sample_lag, mpq_output[idx_in], 1)
         elif self.holder_order == 1:
             bias_0sample_lag = self.holder_bias_mat_orig[0] - \
                                self.holder_bias_mat_orig[1]
@@ -437,18 +441,17 @@ class SimulationObject:
             def holder_bias(mpq_output, n):
                 kernels_in2state[n] += np.tensordot(bias_0sample_lag,
                                                     mpq_output, 1)
-                idx_in = [slice(None)] + [slice(len_kernels-1)] * n
-                idx_out = [slice(None)] + [slice(1, len_kernels)] * n
-                kernels_in2state[n][idx_out] += np.tensordot(bias_1sample_lag,
-                                                             mpq_output[idx_in],
-                                                             1)
+                idx_in = [slice(None)] + [slice(len_ker-1)] * n
+                idx_out = [slice(None)] + [slice(1, len_ker)] * n
+                kernels_in2state[n][idx_out] += \
+                    np.tensordot(bias_1sample_lag, mpq_output[idx_in], 1)
 
         # Filter function
         def filtering(n):
-            for ind in range(n,n*(len_kernels-1)+1):
-                for indexes in filterfalse(lambda x: sum(x)-ind,
-                                           product(range(1, len_kernels),
-                                                   repeat=n)):
+            for ind in range(n,n*(len_ker-1)+1):
+                for indexes in itr.filterfalse(lambda x: sum(x)-ind,
+                                               itr.product(range(1, len_ker),
+                                                           repeat=n)):
                     idx_in = [slice(None)] + [(m-1) for m in indexes]
                     idx_out = [slice(None)] + list(indexes)
                     kernels_in2state[n][idx_out] += \
@@ -471,7 +474,7 @@ class SimulationObject:
                 holder_bias(mpq_output, n)
             for ind in range(self.dim['state']):
                 kernels_in2state[n][ind] = \
-                            array_symmetrization(kernels_in2state[n][ind])
+                    array_symmetrization(kernels_in2state[n][ind])
             filtering(n)
 
         ## Output equation ##
@@ -487,7 +490,7 @@ class SimulationObject:
                                                          self.npq[(p, q)])
             for ind in range(self.dim['output']):
                 kernels_in2out[n][ind] = \
-                            array_symmetrization(kernels_in2state[n][ind])
+                    array_symmetrization(kernels_in2state[n][ind])
 
         ######################
         ## Function outputs ##
@@ -520,16 +523,15 @@ class SimulationObject:
         ####################
 
         # Frequency vector
-        len_kernels = 1 + int(self.fs_orig * T)
-        freq_vec = np.fft.fftshift(np.fft.fftfreq(len_kernels,
-                                                  d=1/self.fs_orig))
+        len_ker = 1 + int(self.fs_orig * T)
+        freq_vec = np.fft.fftshift(np.fft.fftfreq(len_ker, d=1/self.fs_orig))
 
         # Input-to-state and input-to-output kernels initialization
         kernels_in2state = dict()
         kernels_in2out = dict()
         shape = (self.dim['state'],)
         for n in range(1, self.nl_order_max+1):
-            shape += (len_kernels,)
+            shape += (len_ker,)
             kernels_in2state[n] = np.zeros(shape, dtype=np.complex)
 
         # Enforce good shape when input dimension is 1
@@ -546,7 +548,7 @@ class SimulationObject:
                          np.sinc(freq_vec/self.fs_orig)
         elif self.holder_order == 1:
             input_freq = np.sinc(freq_vec/self.fs_orig)**2
-        input_freq = np.reshape(input_freq, (self.dim['input'], len_kernels))
+        input_freq = np.reshape(input_freq, (self.dim['input'], len_ker))
 
        ##################################################
         ## Creation of functions for kernel computation ##
@@ -568,7 +570,7 @@ class SimulationObject:
 
         # Filter function
         def filtering(n):
-            freq_tensor = np.zeros((len_kernels,)*n)
+            freq_tensor = np.zeros((len_ker,)*n)
             freq_tensor += freq_vec
             idx = [slice(None)]
             for ind in range(1, n):
@@ -613,7 +615,7 @@ class SimulationObject:
                                                          self.npq[(p, q)])
             for ind in range(self.dim['output']):
                 kernels_in2out[n][ind] = \
-                            array_symmetrization(kernels_in2state[n][ind])
+                    array_symmetrization(kernels_in2state[n][ind])
 
         ######################
         ## Function outputs ##
