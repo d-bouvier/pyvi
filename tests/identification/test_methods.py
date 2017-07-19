@@ -72,7 +72,7 @@ if __name__ == '__main__':
     # Assert signal length is great enough
     nb_samples_in_kernels = binomial(M+N, N) - 1
     assert nb_samples_in_kernels <= L, '{} data samples given, '.format(L) + \
-            'require at least {}'.format(nb_samples_in_kernels)
+        'require at least {}'.format(nb_samples_in_kernels)
 
 
     #####################

@@ -88,7 +88,7 @@ if __name__ == '__main__':
     pq_sets_computed = comb.state_combinatorics(list_pq_computed, N, True)
     pq_sets_2_computed = comb.state_combinatorics(list_pq_2_computed, N, True)
     assert np.all(pq_sets == pq_sets_computed), \
-            'Error in state_combinatorics().'
+        'Error in state_combinatorics().'
     assert np.all(pq_sets_2 == pq_sets_2_computed), \
-            'Error in state_combinatorics().'
+        'Error in state_combinatorics().'
     print('Done.')

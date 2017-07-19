@@ -156,8 +156,8 @@ def vector_to_kernel(vec_kernel, M, n, form='sym'):
     # Check dimension
     length = nb_coeff_in_kernel(M, n, form=form)
     assert len(vec_kernel) == length, 'The vector of coefficients for ' + \
-            'Volterra kernel of order {} has wrong length'.format(n) + \
-            '(got {}, expected {}).'.format(vec_kernel.shape[0], length)
+        'Volterra kernel of order {} has wrong length'.format(n) + \
+        '(got {}, expected {}).'.format(vec_kernel.shape[0], length)
 
     # Initialization
     kernel = np.zeros((M,)*n, dtype=vec_kernel.dtype)
@@ -198,8 +198,8 @@ def vector_to_all_kernels(f, M, N, form='sym'):
     # Check dimension
     length = nb_coeff_in_all_kernels(M, N, form=form)
     assert f.shape[0] == length, \
-           'The vector of Volterra coefficients has wrong length ' + \
-           '(got {}, expected {}).'.format(f.shape[0], length)
+        'The vector of Volterra coefficients has wrong length ' + \
+        '(got {}, expected {}).'.format(f.shape[0], length)
 
     # Initialization
     kernels = dict()

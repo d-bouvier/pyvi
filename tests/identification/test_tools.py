@@ -83,11 +83,11 @@ if __name__ == '__main__':
             nb_coeff_tri = nb_coeff_in_kernel(M, n, form='tri')
             nb_coeff_raw = nb_coeff_in_kernel(M, n, form=None)
             assert nb_coeff_sym == nb_coeff_1, \
-                    'Returns wrong number of coefficient for symmetric form.'
+                'Returns wrong number of coefficient for symmetric form.'
             assert nb_coeff_tri == nb_coeff_1, \
-                    'Returns wrong number of coefficient for triangular form.'
+                'Returns wrong number of coefficient for triangular form.'
             assert nb_coeff_raw == nb_coeff_2, \
-                    'Returns wrong number of coefficient for raw form.'
+                'Returns wrong number of coefficient for raw form.'
     print('Done.')
 
 
@@ -106,11 +106,11 @@ if __name__ == '__main__':
             nb_coeff_tri = nb_coeff_in_all_kernels(M, N, form='tri')
             nb_coeff_raw = nb_coeff_in_all_kernels(M, N, form=None)
             assert nb_coeff_sym == nb_coeff_1, \
-                    'Returns wrong number of coefficient for symmetric form.'
+                'Returns wrong number of coefficient for symmetric form.'
             assert nb_coeff_tri == nb_coeff_1, \
-                    'Returns wrong number of coefficient for triangular form.'
+                'Returns wrong number of coefficient for triangular form.'
             assert nb_coeff_raw == nb_coeff_2, \
-                    'Returns wrong number of coefficient for raw form.'
+                'Returns wrong number of coefficient for raw form.'
     print('Done.')
 
 

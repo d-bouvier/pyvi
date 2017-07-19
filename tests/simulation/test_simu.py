@@ -49,24 +49,24 @@ if __name__ == '__main__':
     out3 = SimuObj(system, holder_order=0, resampling=True).simulation(sig)
     out4 = SimuObj(system, holder_order=1, resampling=True).simulation(sig)
     assert out1.shape == sig.shape, 'Shape error in simulation output' + \
-            ' with holder of order 0 and without resampling.'
+        ' with holder of order 0 and without resampling.'
     assert out2.shape == sig.shape, 'Shape error in simulation output' + \
-            ' with holder of order 1 and without resampling.'
+        ' with holder of order 1 and without resampling.'
     assert out3.shape == sig.shape, 'Shape error in simulation output' + \
-            ' with holder of order 0 and with resampling.'
+        ' with holder of order 0 and with resampling.'
     assert out4.shape == sig.shape, 'Shape error in simulation output' + \
-            ' with holder of order 1 and with resampling.'
+        ' with holder of order 1 and with resampling.'
 
     simu = SimuObj(system, nl_order_max=3)
     out5 = simu.simulation(sig, out_opt='output_by_order')
     out6 = simu.simulation(sig, out_opt='state')
     out7 = simu.simulation(sig, out_opt='state_by_order')
     assert out5.shape == (3, ) + sig.shape, 'Shape error in simulation' + \
-            ' output when output_by_order is wanted.'
+        ' output when output_by_order is wanted.'
     assert out6.shape == (system.dim['state'],) + sig.shape, \
-            'Shape error in simulation output when state is wanted.'
+        'Shape error in simulation output when state is wanted.'
     assert out7.shape == (3, system.dim['state']) + sig.shape, \
-            'Shape error in simulation output when state_by_order is wanted.'
+        'Shape error in simulation output when state_by_order is wanted.'
 
     print('Done.')
 
@@ -190,17 +190,13 @@ if __name__ == '__main__':
 
     print("Checking equality with 'resample' mode on or off...", end=' ')
     assert np.all(time_kernels[1] == time_kernels_2[1]), "Error in kernels" + \
-            " computation with 'resample' mode on."
+        " computation with 'resample' mode on."
     assert np.all(time_kernels[2] == time_kernels_2[2]), "Error in kernels" + \
-            " computation with 'resample' mode on."
-    assert np.all(freq_kernels[1] == freq_kernels_2[1]), "Error in kernels" + \
-            " computation with 'resample' mode on."
-    assert np.all(freq_kernels[2] == freq_kernels_2[2]), "Error in kernels" + \
-            " computation with 'resample' mode on."
+        " computation with 'resample' mode on."
     assert np.all(freq_kernels_from_time[1] == freq_kernels_from_time_2[1]), \
-            "Error in kernels computation with 'resample' mode on."
+        "Error in kernels computation with 'resample' mode on."
     assert np.all(freq_kernels_from_time[2] == freq_kernels_from_time_2[2]), \
-            "Error in kernels computation with 'resample' mode on."
+        "Error in kernels computation with 'resample' mode on."
     print('Done.')
 
     print('Plotting kernels...', end=' ')
