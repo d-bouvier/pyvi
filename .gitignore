@@ -1,2 +1,4 @@
 data/
 draft
+*.sublime-project
+*.sublime-workspace
