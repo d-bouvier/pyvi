@@ -7,7 +7,7 @@ Notes
 @author: bouvier (bouvier@ircam.fr)
          Damien Bouvier, IRCAM, Paris
 
-Last modified on 05 July 2017
+Last modified on 19 July 2017
 Developed for Python 3.6.1
 """
 
@@ -16,11 +16,11 @@ Developed for Python 3.6.1
 #==============================================================================
 
 import numpy as np
+import matplotlib.pyplot as plt
 import pyvi.separation.methods as sep
 from pyvi.system.dict import create_nl_damping
 from pyvi.simulation.simu import SimulationObject
 from pyvi.utilities.plotbox import plot_sig, plot_coll
-import matplotlib.pyplot as plt
 
 
 #==============================================================================

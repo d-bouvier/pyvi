@@ -20,7 +20,7 @@ Notes
 @author: bouvier (bouvier@ircam.fr)
          Damien Bouvier, IRCAM, Paris
 
-Last modified on 12 July 2017
+Last modified on 19 July 2017
 Developed for Python 3.6.1
 """
 
@@ -28,11 +28,11 @@ Developed for Python 3.6.1
 # Importations
 #==============================================================================
 
+import warnings as warn
+from abc import abstractmethod
 import sympy as sp
 import numpy as np
 import scipy.linalg as sc_lin
-import warnings as warn
-from abc import abstractmethod
 from ..utilities.misc import Style
 
 

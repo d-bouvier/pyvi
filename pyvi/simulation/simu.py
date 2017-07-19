@@ -17,7 +17,7 @@ Notes
 @author: bouvier (bouvier@ircam.fr)
          Damien Bouvier, IRCAM, Paris
 
-Last modified on 12 July 2017
+Last modified on 19 July 2017
 Developed for Python 3.6.1
 """
 
@@ -25,9 +25,9 @@ Developed for Python 3.6.1
 # Importations
 #==============================================================================
 
+import itertools as itr
 import numpy as np
 import scipy as sc
-from itertools import filterfalse, product
 from .combinatorics import make_pq_combinatorics
 from ..system.statespace import NumericalStateSpace
 from ..utilities.mathbox import array_symmetrization
@@ -446,9 +446,9 @@ class SimulationObject:
         # Filter function
         def filtering(n):
             for ind in range(n,n*(len_kernels-1)+1):
-                for indexes in filterfalse(lambda x: sum(x)-ind,
-                                           product(range(1, len_kernels),
-                                                   repeat=n)):
+                for indexes in itr.filterfalse(lambda x: sum(x)-ind,
+                                               itr.product(range(1, len_kernels),
+                                                           repeat=n)):
                     idx_in = [slice(None)] + [(m-1) for m in indexes]
                     idx_out = [slice(None)] + list(indexes)
                     kernels_in2state[n][idx_out] += \

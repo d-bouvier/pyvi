@@ -25,7 +25,7 @@ Notes
 @author: bouvier (bouvier@ircam.fr)
          Damien Bouvier, IRCAM, Paris
 
-Last modified on 12 July 2017
+Last modified on 19 July 2017
 Developed for Python 3.6.1
 """
 
@@ -33,8 +33,8 @@ Developed for Python 3.6.1
 # Importations
 #==============================================================================
 
-import numpy as np
 import warnings as warn
+import numpy as np
 import scipy.fftpack as sc_fft
 from ..utilities.mathbox import binomial
 

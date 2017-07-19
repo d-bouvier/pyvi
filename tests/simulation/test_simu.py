@@ -7,7 +7,7 @@ Notes
 @author: bouvier (bouvier@ircam.fr)
          Damien Bouvier, IRCAM, Paris
 
-Last modified on 05 July 2017
+Last modified on 19 July 2017
 Developed for Python 3.6.1
 """
 
@@ -15,8 +15,8 @@ Developed for Python 3.6.1
 # Importations
 #==============================================================================
 
-import numpy as np
 import time
+import numpy as np
 from pyvi.system.dict import (create_test, create_loudspeaker_sica,
                               create_nl_damping)
 from pyvi.simulation.simu import SimulationObject as SimuObj
