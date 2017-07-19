@@ -420,7 +420,7 @@ def _cplx_to_real(sig_cplx, cast_mode='real-imag'):
     """
 
     if cast_mode not in {'real', 'imag', 'real-imag'}:
-        print("Unknown cast_mode, mode 'real' used.")
+        print("Unknown cast_mode, mode 'real-imag' used.")
         cast_mode ='real'
 
     if cast_mode == 'real':

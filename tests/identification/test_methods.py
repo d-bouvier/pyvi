@@ -64,7 +64,9 @@ if __name__ == '__main__':
 
     # Simulation specification
     N = 3
-    system4simu = SimulationObject(system, fs=fs, nl_order_max=N)
+    resampling = False
+    system4simu = SimulationObject(system, fs=fs, nl_order_max=N,
+                                   resampling=resampling)
     snr = -50
 
     # Assert signal length is great enough
