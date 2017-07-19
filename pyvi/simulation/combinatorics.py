@@ -145,8 +145,10 @@ def state_combinatorics(list_pq, nl_order_max, sym_bool=False):
         k_max = k_sum - elt[1] + 1
         # Loop on all possible sets
         if sym_bool:
-            list_idx = itr.combinations_with_replacement(range(1, k_max+1), elt[1])
-            list_idx_filtre = itr.filterfalse(lambda x: sum(x) != k_sum, list_idx)
+            list_idx = itr.combinations_with_replacement(range(1, k_max+1),
+                                                         elt[1])
+            list_idx_filtre = itr.filterfalse(lambda x: sum(x) != k_sum,
+                                              list_idx)
             for index in list_idx_filtre:
                 nb_repetitions = 1
                 current_max = 0
@@ -158,7 +160,8 @@ def state_combinatorics(list_pq, nl_order_max, sym_bool=False):
                                         nb_repetitions))
         else:
             list_idx = itr.product(range(1, k_max+1), repeat=elt[1])
-            list_idx_filtre = itr.filterfalse(lambda x: sum(x) != k_sum, list_idx)
+            list_idx_filtre = itr.filterfalse(lambda x: sum(x) != k_sum,
+                                              list_idx)
             for index in list_idx_filtre:
                 pq_sets[elt[0]].append((elt[1], elt[2], index, 1))
 

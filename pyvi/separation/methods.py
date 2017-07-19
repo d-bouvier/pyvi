@@ -175,7 +175,8 @@ class AS(_SeparationMethod):
             Estimation of the N first nonlinear homogeneous orders.
         """
 
-        mixing_mat = np.vander(self.factors, N=self.N+1, increasing=True)[:,1::]
+        mixing_mat = \
+            np.vander(self.factors, N=self.N+1, increasing=True)[:,1::]
         return self._inverse_mixing_mat(output_coll, mixing_mat)
 
     @staticmethod
@@ -420,7 +421,8 @@ class PAS(PS, AS):
         if raw_mode:
             combinatorial_terms = dict()
 
-        mixing_mat = np.vander(self.amp_vec, N=self.N+1, increasing=True)[:,1::]
+        mixing_mat = \
+            np.vander(self.amp_vec, N=self.N+1, increasing=True)[:,1::]
 
         # Inverse DFT for each set with same amplitude
         for idx in range(self.nb_amp):
@@ -451,9 +453,9 @@ class PAS(PS, AS):
         if np.iscomplexobj(output_by_order):
             output_by_order = np.real(output_by_order)
             message = '\nEstimated orders have non-negligible imaginary ' + \
-                      'parts. Only real parts have been retruned, but this ' + \
-                      'indicates a probable malfunction in PAS method.\n'
-            warn.showwarning(message, UserWarning, __file__, 456, line='')
+                      'parts. Only real parts have been retruned, but ' + \
+                      'this indicates a probable malfunction in PAS method.\n'
+            warn.showwarning(message, UserWarning, __file__, 458, line='')
 
         # Function output
         if raw_mode:
@@ -498,7 +500,8 @@ class PAS_v2(PAS):
     list_nq : dict(int: (int, int))
         List of 'p, q) terms appearing in a given matrix inversion.
     ind_coll : dict(int: (int, int))
-         Index of all output test signals appearing in a given matrix inversion.
+         Index of all output test signals appearing in a given matrix
+         inversion.
 
     Methods
     -------
@@ -526,7 +529,8 @@ class PAS_v2(PAS):
 
         factors = []
         for ii, nb_phase in enumerate(self.nb_phase_vec):
-            factors.append(self.amp_vec[ii] * self._gen_phase_factors(nb_phase))
+            factors.append(self.amp_vec[ii] * \
+                           self._gen_phase_factors(nb_phase))
 
         _SeparationMethod.__init__(self, N, np.sum(self.nb_phase_vec),
                                    np.concatenate(factors))
@@ -548,7 +552,8 @@ class PAS_v2(PAS):
                 phase = (n - 2*q)
                 ind_test = phase % self.nb_phase_vec[-1]
                 ind_coll = offsets + phase % self.nb_phase_vec
-                self.ind[(n, q)] = offsets[idx] + phase % self.nb_phase_vec[idx]
+                self.ind[(n, q)] = offsets[idx] + \
+                                   phase % self.nb_phase_vec[idx]
                 self.mat[ind_coll, self.ind[(n, q)]] = self.amp_vec**n
                 self.list_nq[ind_test].append((n, q))
                 self.ind_coll[ind_test].update(set(ind_coll))
@@ -609,9 +614,9 @@ class PAS_v2(PAS):
         if np.iscomplexobj(output_by_order):
             output_by_order = np.real(output_by_order)
             message = '\nEstimated orders have non-negligible imaginary ' + \
-                      'parts. Only real parts have been returned, but this ' + \
-                      'indicates a probable malfunction in PAS_v2 method.\n'
-            warn.showwarning(message, UserWarning, __file__, 614, line='')
+                      'parts. Only real parts have been returned, but this' + \
+                      ' indicates a probable malfunction in PAS_v2 method.\n'
+            warn.showwarning(message, UserWarning, __file__, 619, line='')
 
         # Function output
         if raw_mode:

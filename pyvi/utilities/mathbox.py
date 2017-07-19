@@ -108,8 +108,8 @@ def safe_db(num, den):
         _den = den
 
     # Assert same shape
-    assert _num.shape == _den.shape, 'Dimensions of num and den not equal ' + \
-            '(they are respectively {} and {}).'.format(_num.shape, _den.shape)
+    assert _num.shape == _den.shape, 'Dimensions of num and den not equal' + \
+        ' (they are respectively {} and {}).'.format(_num.shape, _den.shape)
 
     if _num.shape == ():
         if _num == 0:

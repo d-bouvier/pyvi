@@ -35,7 +35,8 @@ import numpy as np
 # Global variables
 #==============================================================================
 
-__pivy_directory__ = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
+__pivy_directory__ = \
+    os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
 __numpy_extension__ = '.npz'
 __pickle_extension__ = '.pyvi'
 
@@ -163,23 +164,25 @@ def load_data(name, folder_path, mode=None, abs_path=None):
 
     if ext == '':
         if mode == 'numpy':
-            assert _has_numpy_version, 'No file {} found with'.format(name) + \
-                ' with specified extension {} '.format(__numpy_extension__) + \
-                '(full search path is {}).'.format(_full_numpy_path)
+            assert _has_numpy_version, 'No file {} found '.format(name) + \
+                'with specified extension {}'.format(__numpy_extension__) + \
+                ' (full search path is {}).'.format(_full_numpy_path)
             full_path = _full_numpy_path
         if mode == 'pickle':
-            assert _has_pickle_version, 'No file {} found with'.format(name) + \
-                ' specified extension {} '.format(__pickle_extension__) + \
-                '(full search path is {}).'.format(_full_pickle_path)
+            assert _has_pickle_version, 'No file {} found '.format(name) + \
+                'with specified extension {}'.format(__pickle_extension__) + \
+                ' (full search path is {}).'.format(_full_pickle_path)
             full_path = _full_pickle_path
         if mode is None:
             assert not (_has_numpy_version and _has_pickle_version), \
                 'Two files {} found with extension '.format(name) + \
-                '{} and {}'.format(__numpy_extension__, __pickle_extension__) +\
+                '{} and '.format(__numpy_extension__) + \
+                '{} '.format(__pickle_extension__) + \
                 '(full search path is {})'.format(full_path)
             assert not (not _has_numpy_version and not _has_pickle_version), \
                 'No files {} found with extension '.format(name) + \
-                '{} or {}'.format(__numpy_extension__, __pickle_extension__) + \
+                '{} or '.format(__numpy_extension__) + \
+                '{} '.format(__pickle_extension__) + \
                 '(full search path is {})'.format(full_path)
             if _has_numpy_version:
                 mode = 'numpy'
