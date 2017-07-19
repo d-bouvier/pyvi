@@ -29,7 +29,6 @@ _termKLS_core_mean_mode :
     Auxiliary function of termKLS method using 'mean' mode.
 _termKLS_core_mmse_mode :
     Auxiliary function of termKLS method using 'mmse' mode.
-
 _cplx_to_real :
     Cast a numpy.ndarray of complex type to real type with a specified mode.
 
@@ -38,7 +37,7 @@ Notes
 @author: bouvier (bouvier@ircam.fr)
          Damien Bouvier, IRCAM, Paris
 
-Last modified on 13 July 2017
+Last modified on 19 July 2017
 Developed for Python 3.6.1
 """
 
@@ -49,7 +48,8 @@ Developed for Python 3.6.1
 import numpy as np
 import scipy.linalg as sc_lin
 from .tools import (volterra_basis_by_order, volterra_basis_by_term,
-                    nb_coeff_in_kernel, vector_to_kernel, vector_to_all_kernels)
+                    nb_coeff_in_kernel, vector_to_kernel,
+                    vector_to_all_kernels)
 from ..utilities.mathbox import binomial
 
 
@@ -101,9 +101,9 @@ def _KLS_construct_phi(signal, M, N, phi=None):
 
     if phi is None:
         phi_dict = volterra_basis_by_order(signal, M, N)
-    elif type(phi) == dict:
+    elif isinstance(phi, dict):
         phi_dict = phi
-    elif type(phi) == np.ndarray:
+    elif isinstance(phi, np.ndarray):
         return phi
     return np.concatenate([val for n, val in sorted(phi_dict.items())], axis=1)
 
@@ -243,8 +243,8 @@ def _termKLS_core_mean_mode(phi, output_by_term, M, N, form, cast_mode):
     # Identification  on each combinatorial term
     for (n, k), phi_nk in phi.items():
         f[n] += _KLS_core_computation( \
-                     _cplx_to_real(phi_nk, cast_mode=cast_mode),
-                     _cplx_to_real(output_by_term[(n, k)], cast_mode=cast_mode))
+            _cplx_to_real(phi_nk, cast_mode=cast_mode),
+            _cplx_to_real(output_by_term[(n, k)], cast_mode=cast_mode))
 
     # Taking mean of all identifications for each order
     for n in range(1, N+1):
@@ -331,9 +331,10 @@ def phaseKLS(input_sig, output_by_phase, M, N, phi=None, form='sym',
     # Forward inverse
     for is_odd in [False, True]:
         y = np.concatenate([y_phase[n] for n in range(1+is_odd, N+1, 2)])
-        r = np.bmat([[r_terms.get((p+2*k, k), np.zeros((size[p],size[p+2*k]))) \
-                      for k in range(1-(p+1)//2, 1+(N-p)//2)] \
-                     for p in range(1+is_odd, N+1, 2)])
+        r = np.bmat( \
+            [[r_terms.get((p+2*k, k), np.zeros((size[p], size[p+2*k]))) \
+              for k in range(1-(p+1)//2, 1+(N-p)//2)] \
+             for p in range(1+is_odd, N+1, 2)])
         f[is_odd] = sc_lin.solve_triangular(r, y)
 
     # Re-arranging (odd and even) vectors f into volterra kernel of order n
@@ -392,8 +393,8 @@ def iterKLS(input_sig, output_by_phase, M, N, phi=None, form='sym',
             k = (n2-n)//2
             temp_sig -= binomial(n2, k) * np.dot(phi[(n2, k)], f[n2])
         f[n] = _KLS_core_computation( \
-                         _cplx_to_real(phi[(n, 0)], cast_mode=cast_mode),
-                         _cplx_to_real(temp_sig, cast_mode=cast_mode))
+            _cplx_to_real(phi[(n, 0)], cast_mode=cast_mode),
+            _cplx_to_real(temp_sig, cast_mode=cast_mode))
 
     # Re-arranging vector f_n into volterra kernel of order n
     for n in range(1, N+1):
@@ -420,7 +421,7 @@ def _cplx_to_real(sig_cplx, cast_mode='real-imag'):
     """
 
     if cast_mode not in {'real', 'imag', 'real-imag'}:
-        print("Unknown cast_mode, mode 'real' used.")
+        print("Unknown cast_mode, mode 'real-imag' used.")
         cast_mode ='real'
 
     if cast_mode == 'real':

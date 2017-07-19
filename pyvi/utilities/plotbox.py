@@ -22,7 +22,7 @@ Notes
 @author: bouvier (bouvier@ircam.fr)
          Damien Bouvier, IRCAM, Paris
 
-Last modified on 12 July 2017
+Last modified on 19 July 2017
 Developed for Python 3.6.1
 """
 
@@ -120,7 +120,7 @@ def plot_sig(vec, signal, title=None, title_plots=None, xlim=[None, None],
 
     shape = signal.shape
     assert len(shape) <= 2, 'Signal has {} dimensions,'.format(len(shape)) + \
-            ' should be less or equal than 2.'
+        ' should be less or equal than 2.'
     if len(shape) == 1: # Mono-dimensional case
         nb_sig = 1
         signal.shape = (1, shape[0])

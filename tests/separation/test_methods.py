@@ -7,7 +7,7 @@ Notes
 @author: bouvier (bouvier@ircam.fr)
          Damien Bouvier, IRCAM, Paris
 
-Last modified on 05 July 2017
+Last modified on 19 July 2017
 Developed for Python 3.6.1
 """
 
@@ -16,11 +16,11 @@ Developed for Python 3.6.1
 #==============================================================================
 
 import numpy as np
+import matplotlib.pyplot as plt
 import pyvi.separation.methods as sep
 from pyvi.system.dict import create_nl_damping
 from pyvi.simulation.simu import SimulationObject
 from pyvi.utilities.plotbox import plot_sig, plot_coll
-import matplotlib.pyplot as plt
 
 
 #==============================================================================
@@ -75,7 +75,7 @@ if __name__ == '__main__':
         output_coll[ind] = system.simulation(input_coll[ind])
     order_est_PS = _PS.process_outputs(output_coll)
     assert np.allclose(order_cplx, order_est_PS), \
-                'Separation error in _PS method.'
+        'Separation error in _PS method.'
     print('Done.')
 
     print('Testing AS method ...', end=' ')
@@ -97,7 +97,7 @@ if __name__ == '__main__':
     sig_est_PS = PS.process_outputs(output_coll)
     assert np.allclose(order_cplx[nl_order_max-2:],
                        sig_est_PS[nl_order_max-1:nl_order_max+1]), \
-                'Separation error in PS method.'
+        'Separation error in PS method.'
     print('Done.')
 
     print('Testing PAS method ...', end=' ')
@@ -120,7 +120,7 @@ if __name__ == '__main__':
     order_est_PASv2, term_est_PASv2 = PAS_v2.process_outputs(output_coll,
                                                              raw_mode=True)
     assert np.allclose(order, order_est_PASv2), \
-                'Separation error in PASv2 method.'
+        'Separation error in PASv2 method.'
     print('Done.')
 
 

@@ -87,7 +87,7 @@ def create_loudspeaker_sica(version='tristan', output='pos'):
         C_m = np.array([[1, 0, 0]])
     D_m = np.zeros((1, 1)) # Input-to-output matrix
 
-     # Dictionnaries of Mpq & Npq tensors
+    # Dictionnaries of Mpq & Npq tensors
     m20 = np.zeros((3, 3, 3))
     m20[2, 1, 1] = -k[1]/Mms
     m30 = np.zeros((3, 3, 3, 3))

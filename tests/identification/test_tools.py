@@ -7,7 +7,7 @@ Notes
 @author: bouvier (bouvier@ircam.fr)
          Damien Bouvier, IRCAM, Paris
 
-Last modified on 12 July 2017
+Last modified on 19 July 2017
 Developed for Python 3.6.1
 """
 
@@ -15,9 +15,10 @@ Developed for Python 3.6.1
 # Importations
 #==============================================================================
 
-import string, time
-import numpy as np
+import string
+import time
 import itertools as itr
+import numpy as np
 from pyvi.identification.tools import (error_measure, nb_coeff_in_kernel,
                                        nb_coeff_in_all_kernels,
                                        vector_to_kernel,
@@ -82,11 +83,11 @@ if __name__ == '__main__':
             nb_coeff_tri = nb_coeff_in_kernel(M, n, form='tri')
             nb_coeff_raw = nb_coeff_in_kernel(M, n, form=None)
             assert nb_coeff_sym == nb_coeff_1, \
-                    'Returns wrong number of coefficient for symmetric form.'
+                'Returns wrong number of coefficient for symmetric form.'
             assert nb_coeff_tri == nb_coeff_1, \
-                    'Returns wrong number of coefficient for triangular form.'
+                'Returns wrong number of coefficient for triangular form.'
             assert nb_coeff_raw == nb_coeff_2, \
-                    'Returns wrong number of coefficient for raw form.'
+                'Returns wrong number of coefficient for raw form.'
     print('Done.')
 
 
@@ -105,11 +106,11 @@ if __name__ == '__main__':
             nb_coeff_tri = nb_coeff_in_all_kernels(M, N, form='tri')
             nb_coeff_raw = nb_coeff_in_all_kernels(M, N, form=None)
             assert nb_coeff_sym == nb_coeff_1, \
-                    'Returns wrong number of coefficient for symmetric form.'
+                'Returns wrong number of coefficient for symmetric form.'
             assert nb_coeff_tri == nb_coeff_1, \
-                    'Returns wrong number of coefficient for triangular form.'
+                'Returns wrong number of coefficient for triangular form.'
             assert nb_coeff_raw == nb_coeff_2, \
-                    'Returns wrong number of coefficient for raw form.'
+                'Returns wrong number of coefficient for raw form.'
     print('Done.')
 
 

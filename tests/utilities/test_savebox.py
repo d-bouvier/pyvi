@@ -7,7 +7,7 @@ Notes
 @author: bouvier (bouvier@ircam.fr)
          Damien Bouvier, IRCAM, Paris
 
-Last modified on 27 June 2017
+Last modified on 19 July 2017
 Developed for Python 3.6.1
 """
 
@@ -99,13 +99,13 @@ if __name__ == '__main__':
 
     print('Suppressing created files and folders...', end=' ')
     os.remove('a/test1.npz')
-    os.remove('b/test2.npz')
+    os.remove(filepath_abs + os.sep + 'b/test2.npz')
     os.remove('c/c1/test3.pyvi')
     os.remove('c/c2/test4.pyvi')
     os.remove('figs/fig.png')
     os.remove('figs/fig.pdf')
     os.rmdir('a')
-    os.rmdir('b')
+    os.rmdir(filepath_abs + os.sep + 'b')
     os.rmdir('c/c1')
     os.rmdir('c/c2')
     os.rmdir('c')
