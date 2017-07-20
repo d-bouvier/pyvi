@@ -102,9 +102,7 @@ class StateSpace:
         self.D_m = D_m
 
         # Extrapolate system dimensions
-        self.dim = {'input': B_m.shape[1],
-                    'state': A_m.shape[0],
-                    'output': C_m.shape[0]}
+        self._system_dimension()
 
         # Initialize the nonlinear part
         self.mpq = mpq
@@ -163,6 +161,60 @@ class StateSpace:
         raise NotImplementedError
 
     #=============================================#
+
+    def _system_dimension(self):
+        """Get dimensions of the system from matrices of the linear part."""
+
+        # Initialization
+        self.dim = dict()
+
+        # Dimension of state
+        assert len(self.A_m.shape) == 2, \
+            "State-to-state matrix 'A_m' is not a 2D-array " + \
+            "(it has {} dimensions).".format(len(self.A_m.shape))
+        assert self.A_m.shape[0] == self.A_m.shape[1], \
+            "State-to-state matrix 'A_m' is not square " + \
+            "(it has shape {}).".format(self.A_m.shape)
+        self.dim['state'] = self.A_m.shape[0]
+
+        # Dimension of input
+        assert len(self.B_m.shape) in [1, 2], \
+            "Input-to-state matrix 'B_m' is not a 1D or 2D-array " + \
+            "(it has {} dimensions).".format(len(self.B_m.shape))
+        assert self.B_m.shape[0] == self.dim['state'], "Shape of input-to-" + \
+            "state matrix 'B_m' {} is not ".format(self.B_m.shape) + \
+            "consistent with the state's dimension " + \
+            "{}.".format(self.dim['state'])
+        if len(self.B_m.shape) == 1:
+            self.B_m.shape = (self.dim['state'], 1)
+        self.dim['input'] = self.B_m.shape[1]
+
+        # Dimension of output
+        C_shape = self.C_m.shape
+        assert len(self.C_m.shape) in [1, 2], \
+            "State-to-output matrix 'C_m' is not a 1D or 2D-array " + \
+            "(it has {} dimensions).".format(len(self.C_m.shape))
+        assert self.C_m.shape[-1] == self.dim['state'], "Shape of state-to" + \
+            "output matrix 'C_m' {} is not ".format(self.C_m.shape) + \
+            "consistent with the state's dimension " + \
+            "{}.".format(self.dim['state'])
+        if len(self.C_m.shape) == 1:
+            self.C_m.shape = (1, self.dim['state'])
+        self.dim['output'] = self.C_m.shape[0]
+
+        if self.D_m.shape != (self.dim['output'], self.dim['input']):
+            try:
+                self.D_m.shape = (self.dim['output'], self.dim['input'])
+            except ValueError:
+                assert False, "Shape of input-to-output matrix 'D_m' " + \
+                "{} is not consistent with the ".format(self.D_m.shape) + \
+                "input and/or output's dimension (respectively " + \
+                "{} and {})".format(self.dim['input'], self.dim['output'])
+            except AttributeError:
+                assert False, "Shape of input-to-output matrix 'D_m' " + \
+                "{} cannot be casted to ".format(self.D_m.shape) + \
+                "({}, {})".format(self.dim['input'], self.dim['output']) + \
+                "because shape's of sympy Matrix are not alterable."
 
     def _check_dim(self):
         """Verify that input, state and output dimensions are respected."""
