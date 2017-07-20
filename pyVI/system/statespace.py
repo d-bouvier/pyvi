@@ -28,7 +28,7 @@ Developed for Python 3.6.1
 # Importations
 #==============================================================================
 
-import warnings as warn
+import warnings
 from abc import abstractmethod
 import sympy as sp
 import numpy as np
@@ -287,8 +287,8 @@ class StateSpace:
             message = '\nInput dimension is not equal to 1' + \
                       ' (it is {}).\n'.format(self.dim['input']) + \
                       'Simulation, kernel computation, order separation ' + \
-                      'and system  identification may not work as intended.\n'
-            warn.showwarning(message, UserWarning, __file__, 239, line='')
+                      'and system  identification may not work as intended.'
+            warnings.warn(message, UserWarning)
 
     def _is_single_output(self):
         """Check if the output dimension is one."""
@@ -298,8 +298,8 @@ class StateSpace:
             message = '\nOutput dimension is not equal to 1' + \
                       ' (it is {}).\n'.format(self.dim['output']) + \
                       'Simulation, kernel computation, order separation ' + \
-                      'and system  identification may not work as intended.\n'
-            warn.showwarning(message, UserWarning, __file__, 250, line='')
+                      'and system  identification may not work as intended.'
+            warnings.warn(message, UserWarning)
 
     #=============================================#
 
