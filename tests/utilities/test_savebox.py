@@ -16,6 +16,7 @@ Developed for Python 3.6.1
 #==============================================================================
 
 import os
+import argparse
 import numpy as np
 import matplotlib.pyplot as plt
 from pyvi.utilities.savebox import (create_folder, save_data, load_data,
@@ -31,15 +32,24 @@ if __name__ == '__main__':
     Main script for testing.
     """
 
-    print('')
-
     filepath_abs = os.path.dirname(__file__)
+
+    #####################
+    ## Parsing options ##
+    #####################
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-ind', '--indentation', type=int, default=0)
+    args = parser.parse_args()
+    indent = args.indentation
+    ss = ' ' * indent
+
 
     ##############################
     ## Function create_folder() ##
     ##############################
 
-    print('Testing create_folder()...', end=' ')
+    print(ss + 'Testing create_folder()...', end=' ')
     path1 = create_folder('a')
     path2 = create_folder('b', abs_path=filepath_abs)
     path3 = create_folder(['c', 'c1'])
@@ -51,7 +61,7 @@ if __name__ == '__main__':
     ## Function save_data() ##
     ##########################
 
-    print('Testing save_data()...', end=' ')
+    print(ss + 'Testing save_data()...', end=' ')
     data_n = {'1': np.ones((1,)), '2': 2*np.ones((1,))}
     data_p = {'1': 1, '2': 2}
     save_data(data_n, 'test1', 'a', mode='numpy')
@@ -65,7 +75,7 @@ if __name__ == '__main__':
     ## Function load_data() ##
     ##########################
 
-    print('Testing load_data()...', end=' ')
+    print(ss + 'Testing load_data()...', end=' ')
     data1 = load_data('test1', 'a')
     data2 = load_data('test2.npz', path2)
     data3 = load_data('test3.pyvi', ['c', 'c1'])
@@ -84,7 +94,7 @@ if __name__ == '__main__':
     ## Function save_figure() ##
     ############################
 
-    print('Testing save_figure()...', end=' ')
+    print(ss + 'Testing save_figure()...', end=' ')
     test = plt.figure('Test')
     plt.plot([1, 2, 3])
     save_figure(test, 'fig.png', 'figs')
@@ -97,7 +107,6 @@ if __name__ == '__main__':
     ## Cleaning working directory() ##
     ##################################
 
-    print('Suppressing created files and folders...', end=' ')
     os.remove('a/test1.npz')
     os.remove(filepath_abs + os.sep + 'b/test2.npz')
     os.remove('c/c1/test3.pyvi')
@@ -110,4 +119,3 @@ if __name__ == '__main__':
     os.rmdir('c/c2')
     os.rmdir('c')
     os.rmdir('figs')
-    print('Done.')
