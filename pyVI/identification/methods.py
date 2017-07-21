@@ -17,27 +17,13 @@ phaseKLS :
     Performs KLS method on homogeneous-phase signals.
 iterKLS :
     Performs KLS method recursively on homogeneous-phase signals.
-_KLS_construct_phi :
-    Auxiliary function of KLS method for Volterra basis computation.
-_KLS_core_computation( :
-    Auxiliary function of KLS method for the core computation.
-_orderKLS_construct_phi :
-    Auxiliary function of orderKLS method for Volterra basis computation.
-_termKLS_construct_phi :
-    Auxiliary function of termKLS method for Volterra basis computation.
-_termKLS_core_mean_mode :
-    Auxiliary function of termKLS method using 'mean' mode.
-_termKLS_core_mmse_mode :
-    Auxiliary function of termKLS method using 'mmse' mode.
-_cplx_to_real :
-    Cast a numpy.ndarray of complex type to real type with a specified mode.
 
 Notes
 -----
 @author: bouvier (bouvier@ircam.fr)
          Damien Bouvier, IRCAM, Paris
 
-Last modified on 19 July 2017
+Last modified on 21 July 2017
 Developed for Python 3.6.1
 """
 
@@ -48,7 +34,8 @@ Developed for Python 3.6.1
 import numpy as np
 import scipy.linalg as sc_lin
 from .tools import (volterra_basis_by_order, volterra_basis_by_term,
-                    nb_coeff_in_kernel, vector_to_kernel,
+                    nb_coeff_in_kernel, nb_coeff_in_all_kernels,
+                    assert_enough_data_samples, vector_to_kernel,
                     vector_to_all_kernels)
 from ..utilities.mathbox import binomial
 
@@ -82,6 +69,9 @@ def KLS(input_sig, output_sig, M, N, phi=None, form='sym'):
         Dictionnary linking the Volterra kernel of order ``n`` to key ``n``.
     """
 
+    # Checking that there is enough data samples
+    _KLS_check_feasability(input_sig.shape[0], M, N, form=form)
+
     # Input combinatoric
     phi = _KLS_construct_phi(input_sig, M, N, phi=phi)
 
@@ -93,11 +83,14 @@ def KLS(input_sig, output_sig, M, N, phi=None, form='sym'):
 
     return kernels
 
+def _KLS_check_feasability(nb_data, M, N, form='sym'):
+    """Auxiliary function of KLS() for checking feasability."""
+
+    nb_coeff = nb_coeff_in_all_kernels(M, N, form=form)
+    assert_enough_data_samples(nb_data, nb_coeff, M, N, name='KLS')
 
 def _KLS_construct_phi(signal, M, N, phi=None):
-    """
-    Auxiliary function of KLS method for Volterra basis computation.
-    """
+    """Auxiliary function of KLS() for Volterra basis computation."""
 
     if phi is None:
         phi_dict = volterra_basis_by_order(signal, M, N)
@@ -107,11 +100,8 @@ def _KLS_construct_phi(signal, M, N, phi=None):
         return phi
     return np.concatenate([val for n, val in sorted(phi_dict.items())], axis=1)
 
-
 def _KLS_core_computation(combinatorial_matrix, output_sig):
-    """
-    Auxiliary function of KLS method for the core computation.
-    """
+    """Auxiliary function of KLS() for the core computation."""
 
     # QR decomposition
     q, r = sc_lin.qr(combinatorial_matrix, mode='economic')
@@ -122,6 +112,8 @@ def _KLS_core_computation(combinatorial_matrix, output_sig):
     # Forward inverse
     return sc_lin.solve_triangular(r, y)
 
+
+#=============================================#
 
 def orderKLS(input_sig, output_by_order, M, N, phi=None, form='sym'):
     """
@@ -148,6 +140,9 @@ def orderKLS(input_sig, output_by_order, M, N, phi=None, form='sym'):
         Dictionnary linking the Volterra kernel of order ``n`` to key ``n``.
     """
 
+    # Checking that there is enough data samples
+    _orderKLS_check_feasability(input_sig.shape[0], M, N, form=form)
+
     # Input combinatoric
     if phi is None:
         phi = _orderKLS_construct_phi(input_sig, M, N)
@@ -156,21 +151,31 @@ def orderKLS(input_sig, output_by_order, M, N, phi=None, form='sym'):
 
     # Identification on each order
     for n, phi_n in phi.items():
-        f_n = _KLS_core_computation(phi_n, output_by_order[n-1])
+        f_n = _orderKLS_core_computation(phi_n, output_by_order[n-1])
 
         # Re-arranging vector f_n into volterra kernel of order n
         kernels[n] = vector_to_kernel(f_n, M, n, form=form)
 
     return kernels
 
+def _orderKLS_check_feasability(nb_data, M, N, form='sym', name='orderKLS'):
+    """Auxiliary function of orderKLS() for checking feasability."""
+
+    nb_coeff = nb_coeff_in_kernel(M, N, form=form)
+    assert_enough_data_samples(nb_data, nb_coeff, M, N, name=name)
 
 def _orderKLS_construct_phi(signal, M, N):
-    """
-    Auxiliary function of orderKLS method for Volterra basis computation.
-    """
+    """Auxiliary function of orderKLS() for Volterra basis computation."""
 
     return volterra_basis_by_order(signal, M, N)
 
+def _orderKLS_core_computation(combinatorial_matrix, output_sig):
+    """Auxiliary function of orderKLS()) for the core computation."""
+
+    return _KLS_core_computation(combinatorial_matrix, output_sig)
+
+
+#=============================================#
 
 def termKLS(input_sig, output_by_term, M, N, phi=None, form='sym',
             cast_mode='real-imag', mode='mmse'):
@@ -202,6 +207,9 @@ def termKLS(input_sig, output_by_term, M, N, phi=None, form='sym',
         Dictionnary linking the Volterra kernel of order ``n`` to key ``n``.
     """
 
+    # Checking that there is enough data samples
+    _termKLS_check_feasability(input_sig.shape[0], M, N, form=form)
+
     # Input combinatoric
     if phi is None:
         phi = _termKLS_construct_phi(input_sig, M, N)
@@ -220,19 +228,18 @@ def termKLS(input_sig, output_by_term, M, N, phi=None, form='sym',
 
     return kernels
 
+def _termKLS_check_feasability(nb_data, M, N, form='sym'):
+    """Auxiliary function of termKLS() for checking feasability."""
+
+    _orderKLS_check_feasability(nb_data, M, N, form=form, name='termKLS')
 
 def _termKLS_construct_phi(signal, M, N):
-    """
-    Auxiliary function of termKLS method for Volterra basis computation.
-    """
+    """Auxiliary function of termKLS() for Volterra basis computation."""
 
     return volterra_basis_by_term(signal, M, N)
 
-
 def _termKLS_core_mean_mode(phi, output_by_term, M, N, form, cast_mode):
-    """
-    Auxiliary function of termKLS method using 'mean' mode.
-    """
+    """Auxiliary function of termKLS() using 'mean' mode."""
 
     f = dict()
 
@@ -252,11 +259,8 @@ def _termKLS_core_mean_mode(phi, output_by_term, M, N, form, cast_mode):
 
     return f
 
-
 def _termKLS_core_mmse_mode(phi, output_by_term, N, cast_mode):
-    """
-    Auxiliary function of termKLS method using 'mmse' mode.
-    """
+    """Auxiliary function of termKLS() using 'mmse' mode."""
 
     f = dict()
 
@@ -270,6 +274,8 @@ def _termKLS_core_mmse_mode(phi, output_by_term, N, cast_mode):
 
     return f
 
+
+#=============================================#
 
 def phaseKLS(input_sig, output_by_phase, M, N, phi=None, form='sym',
              cast_mode='real-imag'):
@@ -299,9 +305,12 @@ def phaseKLS(input_sig, output_by_phase, M, N, phi=None, form='sym',
         Dictionnary linking the Volterra kernel of order ``n`` to key ``n``.
     """
 
+    # Checking that there is enough data samples
+    _phaseKLS_check_feasability(input_sig.shape[0], M, N, form=form)
+
     # Input combinatoric
     if phi is None:
-        phi = _termKLS_construct_phi(input_sig, M, N)
+        phi = _phaseKLS_construct_phi(input_sig, M, N)
 
     # Initialization
     q_by_order = dict()
@@ -349,6 +358,21 @@ def phaseKLS(input_sig, output_by_phase, M, N, phi=None, form='sym',
 
     return kernels
 
+def _phaseKLS_check_feasability(nb_data, M, N, form='sym'):
+    """Auxiliary function of phaseKLS() for checking feasability."""
+
+    nb_coeff = 0
+    for n in range(2 - N%2, N+1, 2):
+        nb_coeff += nb_coeff_in_kernel(M, n, form=form)
+    assert_enough_data_samples(nb_data, nb_coeff, M, N, name='phaseKLS')
+
+def _phaseKLS_construct_phi(signal, M, N):
+    """Auxiliary function of phaseKLS() for Volterra basis computation."""
+
+    return _termKLS_construct_phi(signal, M, N)
+
+
+#=============================================#
 
 def iterKLS(input_sig, output_by_phase, M, N, phi=None, form='sym',
             cast_mode='real-imag'):
@@ -378,9 +402,12 @@ def iterKLS(input_sig, output_by_phase, M, N, phi=None, form='sym',
         Dictionnary linking the Volterra kernel of order ``n`` to key ``n``.
     """
 
+    # Checking that there is enough data samples
+    _iterKLS_check_feasability(input_sig.shape[0], M, N, form=form)
+
     # Input combinatoric
     if phi is None:
-        phi = _termKLS_construct_phi(input_sig, M, N)
+        phi = _iterKLS_construct_phi(input_sig, M, N)
 
     # Initialization
     kernels = dict()
@@ -402,6 +429,18 @@ def iterKLS(input_sig, output_by_phase, M, N, phi=None, form='sym',
 
     return kernels
 
+def _iterKLS_check_feasability(nb_data, M, N, form='sym'):
+    """Auxiliary function of iterKLS() for checking feasability."""
+
+    _orderKLS_check_feasability(nb_data, M, N, form='sym', name='iterKLS')
+
+def _iterKLS_construct_phi(signal, M, N):
+    """Auxiliary function of iterKLS() for Volterra basis computation."""
+
+    return _termKLS_construct_phi(signal, M, N)
+
+
+#=============================================#
 
 def _cplx_to_real(sig_cplx, cast_mode='real-imag'):
     """

@@ -10,6 +10,9 @@ create_loudspeaker_sica :
 create_nl_damping :
     Returns a NumericalStateSpace object corresponding to a second_order system
     with nonlinear stiffness.
+def create_moog :
+    Function that create and returns the StateSpace object corresponding to a
+    Moog Ladder Filter.
 create_test :
     Returns either a NumricalStateSpace or SymbolicStateSpace object of a
     theoretical system for tests.
@@ -19,7 +22,7 @@ Notes
 @author: bouvier (bouvier@ircam.fr)
          Damien Bouvier, IRCAM, Paris
 
-Last modified on 12 July 2017
+Last modified on 21 July 2017
 Developed for Python 3.6.1
 """
 
@@ -27,10 +30,12 @@ Developed for Python 3.6.1
 # Importations
 #==============================================================================
 
+import math
 import numpy as np
 from sympy import symbols, Matrix
 from sympy.tensor.array import MutableDenseNDimArray
 from .statespace import NumericalStateSpace, SymbolicStateSpace
+from pyvi.utilities.mathbox import binomial
 
 
 #==============================================================================
@@ -140,6 +145,82 @@ def create_nl_damping(gain=1., f0=100., damping=0.2, nl_coeff=[0., 1e-6]):
         temp_mpq = np.zeros((2,)*(p_count+1))
         temp_mpq[(1,)*(p_count+1)] = val
         mpq_dict[(p_count, 0)] = temp_mpq.copy()
+
+    return NumericalStateSpace(A_m, B_m, C_m, D_m, mpq_dict, npq_dict,
+                               pq_symmetry=True)
+
+
+def create_moog(f0=1000., r=0., taylor_series_truncation=3):
+    """
+    Function that create and returns the StateSpace object corresponding to a
+    Moog Ladder Filter.
+
+    Parameters
+    ----------
+    f0 : float, optional (default=1000.)
+        Cut-off frequency of the filter.
+    r : float, optional(default=0.)
+        Feedback gain.
+    taylor_series_truncation : int
+        Truncation order for the Taylor series of tanh.
+
+    Returns
+    -------
+    Object of class NumericalStateSpace.
+    """
+
+    # System parameters
+    Vt = 25.85 * 1e-3 # Thermal voltage
+    w = 2 * np.pi * f0 # Cut-off angular frequency
+
+    # Bernoulli number
+    bernoulli = np.zeros((taylor_series_truncation+2, 1))
+    bernoulli[0] = 1
+    bernoulli[1] = 1/2
+
+    for n in range(2, taylor_series_truncation+2, 2):
+        bernoulli[n] = 1
+        for k in range(0, n):
+            bernoulli[n] -= binomial(n, k) * bernoulli[k] / (n-k+1)
+
+    # Taylor series of tanh
+    t = np.zeros((taylor_series_truncation+1,1))
+    for n in range(1, taylor_series_truncation+1, 2):
+        m = n + 1
+        t[n] = bernoulli[m] * 2**m * (2**m - 1) / (math.factorial(m))
+
+    # State-space matrices
+    A_m = w * t[1] * np.array([[-1, 0, 0, -4*r],
+                               [1, -1, 0, 0],
+                               [0, 1, -1, 0],
+                               [0, 0, 1, -1]]) # State-to-state matrix
+    B_m = w * t[1] * np.array([[1.], [0], [0], [0]]); # Input-to-state matrix
+    C_m = np.array([[0, 0, 0, 1]]) # State-to-output matrix
+    D_m = np.zeros((1, 1)) # Input-to-output matrix
+
+    # Dictionnaries of Mpq & Npq tensors
+    mpq_dict = dict()
+    npq_dict = dict()
+
+    for p in range(3, taylor_series_truncation+1, 2):
+        temp = np.zeros((4,) + (4,)*p)
+        # Nonlinear terms from voltage of same stage
+        temp[(0,) + (0,)*p] = - w * t[p]
+        temp[(1,) + (1,)*p] = - w * t[p]
+        temp[(2,) + (2,)*p] = - w * t[p]
+        temp[(3,) + (3,)*p] = - w * t[p]
+        # Nonlinear effect from voltage of previous stage
+        temp[(0,) + (3,)*p] = - (4*r)**p * w * t[p]
+        temp[(1,) + (0,)*p] = w * t[p]
+        temp[(2,) + (1,)*p] = w * t[p]
+        temp[(3,) + (2,)*p] = w * t[p]
+        # Multilinear Mpq tensors
+        mpq_dict[(p, 0)] = temp.copy()
+        for k in range(1, p+1):
+            temp = np.zeros((4,) + (4,)*(p-k) + (1,)*k)
+            ind = (0,) + (3,)*(p-k) + (0,)*k
+            temp[ind] = w * t[p] * binomial(p, k) * (-4*r)**(p-k)
+            mpq_dict[(p-k, k)] = temp.copy()
 
     return NumericalStateSpace(A_m, B_m, C_m, D_m, mpq_dict, npq_dict,
                                pq_symmetry=True)

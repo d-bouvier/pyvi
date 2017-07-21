@@ -10,6 +10,8 @@ nb_coeff_in_kernel :
     Returns the number of coefficient in a kernel.
 nb_coeff_in_all_kernels :
     Returns the number of coefficient in all kernels up to a specified order.
+assert_enough_data_samples :
+    Assert that there is enough data samples for the identification.
 vector_to_kernel :
     Rearranges vector of order n Volterra kernel coefficients into tensor.
 vector_to_all_kernels :
@@ -24,7 +26,7 @@ Notes
 @author: bouvier (bouvier@ircam.fr)
          Damien Bouvier, IRCAM, Paris
 
-Last modified on 19 July 2017
+Last modified on 21 July 2017
 Developed for Python 3.6.1
 """
 
@@ -130,6 +132,37 @@ def nb_coeff_in_all_kernels(M, N, form='sym'):
         return binomial(M + N, N) - 1
     else:
         return sum([nb_coeff_in_kernel(M, n, form=form) for n in range(1, N+1)])
+
+
+def assert_enough_data_samples(nb_data, max_nb_est, M, N, name):
+    """
+    Assert that there is enough data samples for the identification.
+
+    Parameters
+    ----------
+    nb_data : int
+        Number of data samples in the input signal used for identification.
+    max_nb_est : int
+        Maximum size of linear problem to solve.
+    M : int
+        Memory length of the kernel (in samples).
+    N : int
+        Highest kernel order.
+    name : str
+        Name of the identification method.
+
+    Raises
+    ------
+    ValueError
+        If L is inferior to the number of Volterra coefficients.
+    """
+
+    if nb_data < max_nb_est:
+        raise ValueError('Input signal has {} data samples'.format(nb_data) + \
+                         ', it should have at least {} '.format(max_nb_est) + \
+                         'for a truncation to order {} '.format(N) + \
+                         'and a {}-samples memory length'.format(M) + \
+                         'using {} method.'.format(name))
 
 
 def vector_to_kernel(vec_kernel, M, n, form='sym'):
