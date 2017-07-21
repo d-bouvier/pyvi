@@ -37,7 +37,7 @@ Notes
 @author: bouvier (bouvier@ircam.fr)
          Damien Bouvier, IRCAM, Paris
 
-Last modified on 19 July 2017
+Last modified on 21 July 2017
 Developed for Python 3.6.1
 """
 
@@ -82,6 +82,9 @@ def KLS(input_sig, output_sig, M, N, phi=None, form='sym'):
         Dictionnary linking the Volterra kernel of order ``n`` to key ``n``.
     """
 
+    # Checking that there is enough data samples
+    _KLS_check_feasability(input_sig.shape[0], M, N, form=form)
+
     # Input combinatoric
     phi = _KLS_construct_phi(input_sig, M, N, phi=phi)
 
@@ -93,6 +96,11 @@ def KLS(input_sig, output_sig, M, N, phi=None, form='sym'):
 
     return kernels
 
+def _KLS_check_feasability(nb_data, M, N, form='sym'):
+    """Auxiliary function of KLS() for checking feasability."""
+
+    nb_coeff = nb_coeff_in_all_kernels(M, N, form=form)
+    assert_enough_data_samples(nb_data, nb_coeff, M, N, name='KLS')
 
 def _KLS_construct_phi(signal, M, N, phi=None):
     """
@@ -148,6 +156,9 @@ def orderKLS(input_sig, output_by_order, M, N, phi=None, form='sym'):
         Dictionnary linking the Volterra kernel of order ``n`` to key ``n``.
     """
 
+    # Checking that there is enough data samples
+    _orderKLS_check_feasability(input_sig.shape[0], M, N, form=form)
+
     # Input combinatoric
     if phi is None:
         phi = _orderKLS_construct_phi(input_sig, M, N)
@@ -163,6 +174,11 @@ def orderKLS(input_sig, output_by_order, M, N, phi=None, form='sym'):
 
     return kernels
 
+def _orderKLS_check_feasability(nb_data, M, N, form='sym', name='orderKLS'):
+    """Auxiliary function of orderKLS() for checking feasability."""
+
+    nb_coeff = nb_coeff_in_kernel(M, N, form=form)
+    assert_enough_data_samples(nb_data, nb_coeff, M, N, name=name)
 
 def _orderKLS_construct_phi(signal, M, N):
     """
@@ -202,6 +218,9 @@ def termKLS(input_sig, output_by_term, M, N, phi=None, form='sym',
         Dictionnary linking the Volterra kernel of order ``n`` to key ``n``.
     """
 
+    # Checking that there is enough data samples
+    _termKLS_check_feasability(input_sig.shape[0], M, N, form=form)
+
     # Input combinatoric
     if phi is None:
         phi = _termKLS_construct_phi(input_sig, M, N)
@@ -220,6 +239,10 @@ def termKLS(input_sig, output_by_term, M, N, phi=None, form='sym',
 
     return kernels
 
+def _termKLS_check_feasability(nb_data, M, N, form='sym'):
+    """Auxiliary function of termKLS() for checking feasability."""
+
+    _orderKLS_check_feasability(nb_data, M, N, form=form, name='termKLS')
 
 def _termKLS_construct_phi(signal, M, N):
     """
@@ -299,6 +322,9 @@ def phaseKLS(input_sig, output_by_phase, M, N, phi=None, form='sym',
         Dictionnary linking the Volterra kernel of order ``n`` to key ``n``.
     """
 
+    # Checking that there is enough data samples
+    _phaseKLS_check_feasability(input_sig.shape[0], M, N, form=form)
+
     # Input combinatoric
     if phi is None:
         phi = _termKLS_construct_phi(input_sig, M, N)
@@ -349,6 +375,14 @@ def phaseKLS(input_sig, output_by_phase, M, N, phi=None, form='sym',
 
     return kernels
 
+def _phaseKLS_check_feasability(nb_data, M, N, form='sym'):
+    """Auxiliary function of phaseKLS() for checking feasability."""
+
+    nb_coeff = 0
+    for n in range(2 - N%2, N+1, 2):
+        nb_coeff += nb_coeff_in_kernel(M, n, form=form)
+    assert_enough_data_samples(nb_data, nb_coeff, M, N, name='phaseKLS')
+
 
 def iterKLS(input_sig, output_by_phase, M, N, phi=None, form='sym',
             cast_mode='real-imag'):
@@ -378,6 +412,9 @@ def iterKLS(input_sig, output_by_phase, M, N, phi=None, form='sym',
         Dictionnary linking the Volterra kernel of order ``n`` to key ``n``.
     """
 
+    # Checking that there is enough data samples
+    _iterKLS_check_feasability(input_sig.shape[0], M, N, form=form)
+
     # Input combinatoric
     if phi is None:
         phi = _termKLS_construct_phi(input_sig, M, N)
@@ -401,6 +438,11 @@ def iterKLS(input_sig, output_by_phase, M, N, phi=None, form='sym',
         kernels[n] = vector_to_kernel(f[n], M, n, form=form)
 
     return kernels
+
+def _iterKLS_check_feasability(nb_data, M, N, form='sym'):
+    """Auxiliary function of iterKLS() for checking feasability."""
+
+    _orderKLS_check_feasability(nb_data, M, N, form='sym', name='iterKLS')
 
 
 def _cplx_to_real(sig_cplx, cast_mode='real-imag'):
