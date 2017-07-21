@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
 """
-Test script for pyvi.system.dict
+Test script for pyvi/system/dict.py
 
 Notes
 -----
 @author: bouvier (bouvier@ircam.fr)
          Damien Bouvier, IRCAM, Paris
 
-Last modified on 27 June 2017
+Last modified on 21 July 2017
 Developed for Python 3.6.1
 """
 

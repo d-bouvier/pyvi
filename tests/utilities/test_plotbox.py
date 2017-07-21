@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
 """
-Test script for pyvi.utilities.plotbox
+Test script for pyvi/utilities/plotbox.py
 
 Notes
 -----
 @author: bouvier (bouvier@ircam.fr)
          Damien Bouvier, IRCAM, Paris
 
-Last modified on 05 July 2017
+Last modified on 20 July 2017
 Developed for Python 3.6.1
 """
 

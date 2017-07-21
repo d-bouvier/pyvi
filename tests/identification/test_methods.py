@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
 """
-Test script for pyvi.identification.methods
+Test script for pyvi/identification/methods.py
 
 Notes
 -----
 @author: bouvier (bouvier@ircam.fr)
          Damien Bouvier, IRCAM, Paris
 
-Last modified on 13 July 2017
+Last modified on 20 July 2017
 Developed for Python 3.6.1
 """
 
