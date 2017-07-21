@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
 """
-Test script for pyvi.system.statespace
+Test script for pyvi/system/statespace.py
 
 Notes
 -----
 @author: bouvier (bouvier@ircam.fr)
          Damien Bouvier, IRCAM, Paris
 
-Last modified on 27 June 2017
+Last modified on 21 July 2017
 Developed for Python 3.6.1
 """
 
@@ -15,9 +15,11 @@ Developed for Python 3.6.1
 # Importations
 #==============================================================================
 
+import argparse
 import warnings
 import numpy as np
-from pyvi.system.statespace import StateSpace, NumericalStateSpace
+from pyvi.system.statespace import (StateSpace, NumericalStateSpace,
+                                    SymbolicStateSpace)
 import pyvi.system.dict as systems
 
 
@@ -30,52 +32,22 @@ if __name__ == '__main__':
     Main script for testing.
     """
 
-    print('')
+    #####################
+    ## Parsing options ##
+    #####################
 
-    ######################
-    ## StateSpace class ##
-    ######################
-
-    print('Testing equality between Numerical and Symbolic StateSpace ' + \
-          'objects...', end=' ')
-    sys_num = systems.create_test(mode='numeric')
-    sys_symb = systems.create_test(mode='symbolic')
-    assert sys_num._type == sys_symb._type, \
-        "Similar Numerical and Symbolic StateSpace objects have different " + \
-        "attribute '_type'"
-    assert sys_num._single_input == sys_symb._single_input, \
-        "Similar Numerical and Symbolic StateSpace objects have different " + \
-        "attribute '_single_input'"
-    assert sys_num._single_output == sys_symb._single_output, \
-        "Similar Numerical and Symbolic StateSpace objects have different " + \
-        "attribute '_single_output'"
-    assert sys_num._dim_ok == sys_symb._dim_ok, \
-        "Similar Numerical and Symbolic StateSpace objects have different " + \
-        "attribute '_dim_ok'"
-    assert sys_num._state_eqn_linear == sys_symb._state_eqn_linear, \
-        "Similar Numerical and Symbolic StateSpace objects have different " + \
-        "attribute '_state_eqn_linear'"
-    assert sys_num._output_eqn_linear == sys_symb._output_eqn_linear, \
-        "Similar Numerical and Symbolic StateSpace objects have different " + \
-        "attribute '_output_eqn_linear'"
-    assert sys_num.linear == sys_symb.linear, \
-        "Similar Numerical and Symbolic StateSpace objects have different " + \
-        "attribute 'linear'"
-    assert sys_num.state_eqn_linear_analytic == \
-        sys_symb.state_eqn_linear_analytic, \
-        "Similar Numerical and Symbolic StateSpace objects have different " + \
-        "attribute 'state_eqn_linear_analytic'"
-    assert sys_num.dynamical_nl_only_on_state == \
-        sys_symb.dynamical_nl_only_on_state, \
-        "Similar Numerical and Symbolic StateSpace objects have different " + \
-        "attribute 'dynamical_nl_only_on_state'"
-    print('Done')
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-ind', '--indentation', type=int, default=0)
+    args = parser.parse_args()
+    indent = args.indentation
+    ss = ' ' * indent
 
 
-    ################
-    ## Dimensions ##
-    ################
+    #######################
+    ## Matrix dimensions ##
+    #######################
 
+    print(ss + 'Testing StateSpace class...', end=' ')
     def dim_check(text, shapeA, shapeB, shapeC, shapeD,
                   mpq=dict(), npq=dict()):
         try:
@@ -86,82 +58,61 @@ if __name__ == '__main__':
         except AssertionError:
             pass
 
-    print('Testing matrix dimension checking...', end=' ')
-    dim_check('Error in checking that A is square.',
+    message = 'Error in checking consistency of {} dimension.'
+    dim_check('Error in checking A is square.',
               (3, 3, 3), (3, 2), (2, 3), (2, 2))
-    dim_check('Error in checking that A is square.',
-              (3, 4), (3, 2), (2, 3), (2, 2))
-    dim_check('Error in checking that consistency of state dimension.',
+    dim_check('Error in checking A is square.', (3, 4), (3, 2), (2, 3), (2, 2))
+    dim_check(message.format('state'),
               (3, 3), (4, 2), (2, 3), (2, 2))
-    dim_check('Error in checking that consistency of state dimension.',
-              (3, 3), (4), (2, 3), (2, 1))
-    dim_check('Error in checking that consistency of state dimension.',
-              (3, 3), (3, 2), (2, 4), (2, 2))
-    dim_check('Error in checking that consistency of state dimension.',
-              (3, 3), (3, 2), (4), (1, 2))
-    dim_check('Error in checking that consistency of input dimension.',
-              (3, 3), (3, 2), (2, 3), (2, 4))
-    dim_check('Error in checking that consistency of input dimension.',
-              (3, 3), (3,), (2, 3), (2, 2))
-    dim_check('Error in checking that consistency of input dimension.',
-              (3, 3), (3, 2), (2, 3), (2,))
-    dim_check('Error in checking that consistency of output dimension.',
-              (3, 3), (3, 2), (2, 3), (4, 2))
-    dim_check('Error in checking that consistency of output dimension.',
-              (3, 3), (3,), (2, 3), (2, 2))
-    dim_check('Error in checking that consistency of output dimension.',
-              (3, 3), (3, 2), (2, 3), (2))
-    print('Done')
+    dim_check(message.format('state'), (3, 3), (4), (2, 3), (2, 1))
+    dim_check(message.format('state'), (3, 3), (3, 2), (2, 4), (2, 2))
+    dim_check(message.format('state'), (3, 3), (3, 2), (4), (1, 2))
+    dim_check(message.format('input'), (3, 3), (3, 2), (2, 3), (2, 4))
+    dim_check(message.format('input'), (3, 3), (3,), (2, 3), (2, 2))
+    dim_check(message.format('input'), (3, 3), (3, 2), (2, 3), (2,))
+    dim_check(message.format('output'), (3, 3), (3, 2), (2, 3), (4, 2))
+    dim_check(message.format('output'), (3, 3), (3,), (2, 3), (2, 2))
+    dim_check(message.format('output'), (3, 3), (3, 2), (2, 3), (2))
 
-    print('Testing tensor dimension checking...', end=' ')
-    dim_check('Error in checking dimensions of Mpq tensors.',
-              (3, 3), (3, 2), (2, 3), (2, 2),
+
+    ###############################
+    ## Tensor dimension checking ##
+    ###############################
+
+    message = 'Error in checking dimensions of Mpq tensors.'
+    dim_check(message, (3, 3), (3, 2), (2, 3), (2, 2),
               mpq={(2, 0): np.empty((3, 3, 4))})
-    dim_check('Error in checking dimensions of Mpq tensors.',
-              (3, 3), (3, 2), (2, 3), (2, 2),
+    dim_check(message, (3, 3), (3, 2), (2, 3), (2, 2),
               mpq={(2, 0): np.empty((4, 3, 3))})
-    dim_check('Error in checking dimensions of Mpq tensors.',
-              (3, 3), (3, 2), (2, 3), (2, 2),
+    dim_check(message, (3, 3), (3, 2), (2, 3), (2, 2),
               mpq={(1, 1): np.empty((3, 3, 1))})
-    dim_check('Error in checking dimensions of Mpq tensors.',
-              (3, 3), (3, 2), (2, 3), (2, 2),
+    dim_check(message, (3, 3), (3, 2), (2, 3), (2, 2),
               mpq={(1, 1): np.empty((3, 4, 2))})
-    dim_check('Error in checking dimensions of Mpq tensors.',
-              (3, 3), (3, 2), (2, 3), (2, 2),
+    dim_check(message, (3, 3), (3, 2), (2, 3), (2, 2),
               mpq={(1, 1): np.empty((4, 3, 2))})
-    dim_check('Error in checking dimensions of Mpq tensors.',
-              (3, 3), (3, 2), (2, 3), (2, 2),
+    dim_check(message, (3, 3), (3, 2), (2, 3), (2, 2),
               mpq={(0, 2): np.empty((3, 2, 1))})
-    dim_check('Error in checking dimensions of Mpq tensors.',
-              (3, 3), (3, 2), (2, 3), (2, 2),
+    dim_check(message, (3, 3), (3, 2), (2, 3), (2, 2),
               mpq={(0, 2): np.empty((4, 2, 2))})
-    dim_check('Error in checking dimensions of Npq tensors.',
-              (3, 3), (3, 2), (2, 3), (2, 2),
+    dim_check(message, (3, 3), (3, 2), (2, 3), (2, 2),
               npq={(2, 0): np.empty((2, 3, 4))})
-    dim_check('Error in checking dimensions of Npq tensors.',
-              (3, 3), (3, 2), (2, 3), (2, 2),
+    dim_check(message, (3, 3), (3, 2), (2, 3), (2, 2),
               npq={(2, 0): np.empty((3, 3, 3))})
-    dim_check('Error in checking dimensions of Npq tensors.',
-              (3, 3), (3, 2), (2, 3), (2, 2),
+    dim_check(message, (3, 3), (3, 2), (2, 3), (2, 2),
               npq={(1, 1): np.empty((2, 3, 1))})
-    dim_check('Error in checking dimensions of Npq tensors.',
-              (3, 3), (3, 2), (2, 3), (2, 2),
+    dim_check(message, (3, 3), (3, 2), (2, 3), (2, 2),
               npq={(1, 1): np.empty((2, 4, 2))})
-    dim_check('Error in checking dimensions of Npq tensors.',
-              (3, 3), (3, 2), (2, 3), (2, 2),
+    dim_check(message, (3, 3), (3, 2), (2, 3), (2, 2),
               npq={(1, 1): np.empty((3, 3, 2))})
-    dim_check('Error in checking dimensions of Npq tensors.',
-              (3, 3), (3, 2), (2, 3), (2, 2),
+    dim_check(message, (3, 3), (3, 2), (2, 3), (2, 2),
               npq={(0, 2): np.empty((2, 2, 1))})
-    dim_check('Error in checking dimensions of Npq tensors.',
-              (3, 3), (3, 2), (2, 3), (2, 2),
+    dim_check(message, (3, 3), (3, 2), (2, 3), (2, 2),
               npq={(0, 2): np.empty((3, 2, 2))})
-    print('Done')
 
 
-    #############################
-    ## Warnings and properties ##
-    #############################
+    ###################################
+    ## Warnings for non-SISO systems ##
+    ###################################
 
     warnings.filterwarnings("error")
 
@@ -173,11 +124,14 @@ if __name__ == '__main__':
         except UserWarning:
             pass
 
-    print('Testing that warnings are issued for non-SISO systems...', end=' ')
     check_warnings(3, 2, 1)
     check_warnings(3, 1, 2)
     check_warnings(3, 2, 2)
-    print('Done')
+
+
+    #######################
+    ## Attribute '_type' ##
+    #######################
 
     warnings.filterwarnings("ignore")
 
@@ -187,12 +141,15 @@ if __name__ == '__main__':
         assert tmp._type == sys_type, \
             "Error in computation of attribute '_type'."
 
-    print("Testing that attribute '_type' is correctly computed...", end=' ')
     check_type('SISO', 1, 3, 1)
     check_type('MISO', 2, 3, 1)
     check_type('SIMO', 1, 3, 2)
     check_type('MIMO', 2, 3, 2)
-    print('Done')
+
+
+    ####################
+    ## Categorization ##
+    ####################
 
     warnings.filterwarnings("default")
 
@@ -213,7 +170,6 @@ if __name__ == '__main__':
         assert tmp.dynamical_nl_only_on_state == expected_values[2], \
             "Error in computation of attribute 'dynamical_nl_only_on_state'."
 
-    print("Testing that system are categorized correctly...", end=' ')
     check_categories([True, True, True], [], [])
     check_categories([False, True, True], [(2, 0)], [])
     check_categories([False, True, True], [], [(2, 0)])
@@ -230,8 +186,12 @@ if __name__ == '__main__':
     check_categories([False, False, False], [(0, 2)], [(0, 2)])
     print('Done')
 
-    print("Testing that attribute 'nl_colinear' is correctly computed...",
-          end=' ')
+
+    #############################
+    ## Attribute 'nl_colinear' ##
+    #############################
+
+    print(ss + 'Testing NumericalStateSpace class...', end=' ')
     A = np.empty((3, 3))
     B = np.zeros((3, 1))
     C = np.empty((1, 3))
@@ -254,4 +214,35 @@ if __name__ == '__main__':
     assert tmp_t2.nl_colinear == True, message
     assert tmp_f1.nl_colinear == False, message
     assert tmp_f2.nl_colinear == False, message
+
+    sys_num = systems.create_test(mode='numeric')
     print('Done')
+
+
+    ################################################################
+    ## Equality between Numerical and Symbolic StateSpace objects ##
+    ################################################################
+
+    print(ss + 'Testing SymbolicalStateSpace class...', end=' ')
+    sys_symb = systems.create_test(mode='symbolic')
+    message = "Similar Numerical and Symbolic StateSpace objects have " + \
+              "different attribute '{}'."
+    assert sys_num._type == sys_symb._type, message.format('_type')
+    assert sys_num._single_input == sys_symb._single_input, \
+        message.format('_single_input')
+    assert sys_num._single_output == sys_symb._single_output, \
+        message.format('_single_output')
+    assert sys_num._dim_ok == sys_symb._dim_ok, message.format('_dim_ok')
+    assert sys_num._state_eqn_linear == sys_symb._state_eqn_linear, \
+        message.format('_state_eqn_linear')
+    assert sys_num._output_eqn_linear == sys_symb._output_eqn_linear, \
+        message.format('_output_eqn_linear')
+    assert sys_num.linear == sys_symb.linear, message.format('linear')
+    assert sys_num.state_eqn_linear_analytic == \
+        sys_symb.state_eqn_linear_analytic, \
+        message.format('state_eqn_linear_analytic')
+    assert sys_num.dynamical_nl_only_on_state == \
+        sys_symb.dynamical_nl_only_on_state, \
+        message.format('dynamical_nl_only_on_state')
+    print('Done')
+
