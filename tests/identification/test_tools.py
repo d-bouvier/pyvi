@@ -22,6 +22,7 @@ import itertools as itr
 import numpy as np
 from pyvi.identification.tools import (error_measure, nb_coeff_in_kernel,
                                        nb_coeff_in_all_kernels,
+                                       assert_enough_data_samples,
                                        vector_to_kernel,
                                        vector_to_all_kernels,
                                        volterra_basis_by_order,
@@ -118,6 +119,25 @@ if __name__ == '__main__':
                 'Returns wrong number of coefficient for triangular form.'
             assert nb_coeff_raw == nb_coeff_2, \
                 'Returns wrong number of coefficient for raw form.'
+    print('Done.')
+
+
+    ###########################################
+    ## Function assert_enough_data_samples() ##
+    ###########################################
+
+    print(ss + 'Testing assert_enough_data_samples()...', end=' ')
+    max_nb_coeff = 9
+    for nb_data in [8, 9, 10]:
+        should_error_be_raised = nb_data < max_nb_coeff
+        try:
+            assert_enough_data_samples(nb_data, max_nb_coeff, 3, 2, 'KLS')
+            error_raised = False
+        except ValueError as err:
+            error_raised = True
+        assert should_error_be_raised == error_raised, 'No error was ' + \
+            'raised by assert_enough_data_samples() when it should have ' + \
+            '(nb_data={} < max_nb_coeff={}).'.format(nb_data, max_nb_coeff)
     print('Done.')
 
 
