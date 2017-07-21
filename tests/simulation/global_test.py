@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
 """
-Test script for pyvi/separation/tools.py
+Global test script for pyvi/utilities module.
 
 Notes
 -----
 @author: bouvier (bouvier@ircam.fr)
          Damien Bouvier, IRCAM, Paris
 
-Last modified on 20 July 2017
+Last modified on 21 July 2017
 Developed for Python 3.6.1
 """
 
@@ -15,9 +15,8 @@ Developed for Python 3.6.1
 # Importations
 #==============================================================================
 
+import os
 import argparse
-import numpy as np
-from pyvi.separation.tools import error_measure
 
 
 #==============================================================================
@@ -40,25 +39,16 @@ if __name__ == '__main__':
     ss = ' ' * indent
 
 
-    ##############################
-    ## Function error_measure() ##
-    ##############################
+    #######################
+    ## Call test scripts ##
+    #######################
 
-    print(ss + 'Testing error_measure()...', end=' ')
-
-    N = 3
-    L = 1000
-    size=(N, L)
-
-    sig = np.random.uniform(low=-1.0, high=1.0, size=size)
-    for sigma in [0, 0.001, 0.01, 0.1, 1]:
-        sig_est = sig + np.random.normal(scale=sigma, size=size)
-
-        error = error_measure(sig, sig_est, db=False)
-        error_db = error_measure(sig, sig_est)
-
-        assert len(error) == size[0], \
-            'Error in length of returned error measure.'
-        assert len(error_db) == size[0], \
-            'Error in length of returned error measure.'
-    print('Done.')
+    default_path = os.getcwd()
+    test_base_path = os.path.abspath(os.path.dirname(__file__))
+    os.chdir(test_base_path)
+    command = 'python test_{}.py --indentation ' + str(3 + indent)
+    list_files = ['combinatorics', 'simu']
+    for file_name in list_files:
+        print(ss + 'File:', file_name + '.py')
+        os.system(command.format(file_name))
+    os.chdir(default_path)

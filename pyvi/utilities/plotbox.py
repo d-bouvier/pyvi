@@ -92,7 +92,6 @@ def plot_sig_io(vec, input_sig, output_sig, title=None, xlim=[None, None],
         plt.title('Output - imaginary part')
         plt.xlim(xlim)
         plt.ylim(ylim)
-    plt.show()
 
 
 def plot_sig(vec, signal, title=None, title_plots=None, xlim=[None, None],
@@ -154,7 +153,6 @@ def plot_sig(vec, signal, title=None, title_plots=None, xlim=[None, None],
             plt.title(title_plots[n])
             plt.xlim(xlim)
             plt.ylim(ylim)
-    plt.show()
 
 
 def plot_coll(vec, sig_coll, title=None, xtitle=None, ytitle=None,
@@ -199,7 +197,6 @@ def plot_coll(vec, sig_coll, title=None, xtitle=None, ytitle=None,
                 plt.ylabel(ytitle[ny])
             plt.xlim(xlim)
             plt.ylim(ylim)
-    plt.show()
 
 
 def plot_spectrogram(signal, title=None, db=True, logscale=False,
