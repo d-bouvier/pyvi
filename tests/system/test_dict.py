@@ -61,6 +61,43 @@ if __name__ == '__main__':
     assert not loudspeaker_sica.nl_colinear, message
     print('Done')
 
+
+    print(ss + 'Testing create_moog()...', end=' ')
+    moog_1 = systems.create_moog(taylor_series_truncation=1)
+    moog_2 = systems.create_moog(taylor_series_truncation=2)
+    moog_3 = systems.create_moog(taylor_series_truncation=3)
+    tmp_3 = {(3, 0): 0, (2, 1): 0, (1, 2): 0, (0, 3): 0}
+    moog_5 = systems.create_moog(taylor_series_truncation=5)
+    tmp_5 = {(5, 0): 0, (4, 1): 0, (3, 2): 0, (2, 3): 0, (1, 4): 0, (0, 5): 0,
+             (3, 0): 0, (2, 1): 0, (1, 2): 0, (0, 3): 0}
+    message = 'Error in create_moog().'
+    assert moog_1.dim['input'] == 1, message
+    assert moog_1.dim['state'] == 4, message
+    assert moog_1.dim['output'] == 1, message
+    assert moog_1._type == 'SISO', message
+    assert moog_1.linear, message
+    for key, val_1 in moog_1.__dict__.items():
+        if (key in ['A_m', 'B_m', 'C_m', 'D_m']) and (key in moog_2.__dict__):
+            assert (val_1 == moog_2.__dict__[key]).all(), message
+        elif key in moog_2.__dict__:
+            assert val_1 == moog_2.__dict__[key], message
+        else:
+            assert False, message
+    assert not moog_3.linear, message
+    assert moog_3._output_eqn_linear, message
+    assert not moog_3.state_eqn_linear_analytic, message
+    assert not moog_3.dynamical_nl_only_on_state, message
+    assert not moog_3.nl_colinear, message
+    assert moog_3.mpq.keys() == tmp_3.keys(), message
+    assert not moog_5.linear, message
+    assert moog_5._output_eqn_linear, message
+    assert not moog_5.state_eqn_linear_analytic, message
+    assert not moog_5.dynamical_nl_only_on_state, message
+    assert not moog_5.nl_colinear, message
+    assert moog_5.mpq.keys() == tmp_5.keys(), message
+    print('Done')
+
+
     print(ss + 'Testing create_nl_damping()...', end=' ')
     second_order = systems.create_nl_damping()
     message = 'Error in create_nl_damping().'
