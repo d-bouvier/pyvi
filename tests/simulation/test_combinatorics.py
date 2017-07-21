@@ -15,6 +15,7 @@ Developed for Python 3.6.1
 # Importations
 #==============================================================================
 
+import argparse
 import numpy as np
 import pyvi.simulation.combinatorics as comb
 
@@ -28,7 +29,16 @@ if __name__ == '__main__':
     Main script for testing.
     """
 
-    print()
+    #####################
+    ## Parsing options ##
+    #####################
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-ind', '--indentation', type=int, default=0)
+    args = parser.parse_args()
+    indent = args.indentation
+    ss = ' ' * indent
+
 
     ##########
     ## Data ##
@@ -74,17 +84,17 @@ if __name__ == '__main__':
     ## Functions of pyvi.simulation.combinatorics ##
     ################################################
 
-    print('Testing make_list_pq()...', end=' ')
+    print(ss + 'Testing make_list_pq()...', end=' ')
     list_pq_computed = comb.make_list_pq(N)
     list_pq_2_computed = comb.elimination(pq_dict, list_pq_computed)
     assert np.all(list_pq == list_pq_computed), 'Error in make_list_pq().'
     print('Done.')
 
-    print('Testing elimination()...', end=' ')
+    print(ss + 'Testing elimination()...', end=' ')
     assert np.all(list_pq_2 == list_pq_2_computed), 'Error in elimination().'
     print('Done.')
 
-    print('Testing state_combinatorics()...', end=' ')
+    print(ss + 'Testing state_combinatorics()...', end=' ')
     pq_sets_computed = comb.state_combinatorics(list_pq_computed, N, True)
     pq_sets_2_computed = comb.state_combinatorics(list_pq_2_computed, N, True)
     assert np.all(pq_sets == pq_sets_computed), \
