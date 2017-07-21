@@ -43,11 +43,6 @@ if __name__ == '__main__':
     ## Systems dictionary ##
     ########################
 
-    print(ss + 'Testing create_test()...', end=' ')
-    sys_num = systems.create_test(mode='numeric')
-    sys_symb = systems.create_test(mode='symbolic')
-    print('Done')
-
     print(ss + 'Testing create_loudspeaker_sica()...', end=' ')
     loudspeaker_sica = systems.create_loudspeaker_sica()
     message = 'Error in create_loudspeaker_sica().'
@@ -55,6 +50,7 @@ if __name__ == '__main__':
     assert loudspeaker_sica.dim['state'] == 3, message
     assert loudspeaker_sica.dim['output'] == 1, message
     assert loudspeaker_sica._type == 'SISO', message
+    assert not loudspeaker_sica.linear, message
     assert loudspeaker_sica._output_eqn_linear, message
     assert loudspeaker_sica.state_eqn_linear_analytic, message
     assert loudspeaker_sica.dynamical_nl_only_on_state, message
@@ -105,8 +101,18 @@ if __name__ == '__main__':
     assert second_order.dim['state'] == 2, message
     assert second_order.dim['output'] == 1, message
     assert second_order._type == 'SISO', message
+    assert not second_order.linear, message
     assert second_order._output_eqn_linear, message
     assert second_order.state_eqn_linear_analytic, message
     assert second_order.dynamical_nl_only_on_state, message
     assert second_order.nl_colinear, message
+    print('Done')
+
+
+    print(ss + 'Testing create_test()...', end=' ')
+    sys_num = systems.create_test(mode='numeric')
+    sys_symb = systems.create_test(mode='symbolic')
+    message = 'Error in create_test().'
+    assert not sys_num.linear, message
+    assert not sys_symb.linear, message
     print('Done')
