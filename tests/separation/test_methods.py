@@ -15,6 +15,7 @@ Developed for Python 3.6.1
 # Importations
 #==============================================================================
 
+import argparse
 import numpy as np
 import matplotlib.pyplot as plt
 import pyvi.separation.methods as sep
@@ -33,7 +34,16 @@ if __name__ == '__main__':
     Main script for testing.
     """
 
-    print()
+    #####################
+    ## Parsing options ##
+    #####################
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-ind', '--indentation', type=int, default=0)
+    args = parser.parse_args()
+    indent = args.indentation
+    ss = ' ' * indent
+
 
     ################
     ## Parameters ##
@@ -57,8 +67,8 @@ if __name__ == '__main__':
 
     # Simulation specification
     nl_order_max = 3
-    system = SimulationObject(system, fs=fs,
-                              nl_order_max=nl_order_max)
+    system = SimulationObject(system, fs=fs, nl_order_max=nl_order_max)
+
 
     ################
     ## Separation ##
@@ -67,7 +77,7 @@ if __name__ == '__main__':
     order_cplx = system.simulation(input_cplx, out_opt='output_by_order')
     order = system.simulation(input_real, out_opt='output_by_order')
 
-    print('Testing _PS method ...', end=' ')
+    print(ss + 'Testing _PS method...', end=' ')
     _PS = sep._PS(N=nl_order_max)
     input_coll = _PS.gen_inputs(input_cplx)
     output_coll = np.zeros(input_coll.shape, dtype='complex128')
@@ -78,7 +88,7 @@ if __name__ == '__main__':
         'Separation error in _PS method.'
     print('Done.')
 
-    print('Testing AS method ...', end=' ')
+    print(ss + 'Testing AS method...', end=' ')
     AS = sep.AS(N=nl_order_max)
     input_coll = AS.gen_inputs(input_real)
     output_coll = np.zeros(input_coll.shape)
@@ -88,7 +98,7 @@ if __name__ == '__main__':
     assert np.allclose(order, order_est_AS), 'Separation error in AS method.'
     print('Done.')
 
-    print('Testing PS method ...', end=' ')
+    print(ss + 'Testing PS method...', end=' ')
     PS = sep.PS(N=nl_order_max)
     input_coll = PS.gen_inputs(input_cplx)
     output_coll = np.zeros(input_coll.shape)
@@ -100,7 +110,7 @@ if __name__ == '__main__':
         'Separation error in PS method.'
     print('Done.')
 
-    print('Testing PAS method ...', end=' ')
+    print(ss + 'Testing PAS method...', end=' ')
     PAS = sep.PAS(N=nl_order_max)
     input_coll = PAS.gen_inputs(input_cplx)
     output_coll = np.zeros(input_coll.shape)
@@ -111,7 +121,7 @@ if __name__ == '__main__':
     assert np.allclose(order, order_est_PAS), 'Separation error in PAS method.'
     print('Done.')
 
-    print('Testing PAS_v2 method ...', end=' ')
+    print(ss + 'Testing PAS_v2 method...', end=' ')
     PAS_v2 = sep.PAS_v2(N=nl_order_max)
     input_coll = PAS_v2.gen_inputs(input_cplx)
     output_coll = np.zeros(input_coll.shape)
@@ -121,59 +131,4 @@ if __name__ == '__main__':
                                                              raw_mode=True)
     assert np.allclose(order, order_est_PASv2), \
         'Separation error in PASv2 method.'
-    print('Done.')
-
-
-
-    ##################
-    ## Signal plots ##
-    ##################
-
-    title = 'Method {} - True orders, estimated orders and errors.'
-    title_order = ['Order {}'.format(n) for n in range(1, nl_order_max+1)]
-    title_type = ['True orders', 'Estimated orders', 'Error']
-    title_phase = ['Phase {}'.format(n) for n in range(nl_order_max+1)]
-
-    print('Printing plots ...', end=' ')
-
-    plot_coll(time_vec, (np.real(order_cplx), np.real(order_est_PS),
-                         np.real(order_cplx - order_est_PS)),
-              title=title.format('_PS'), xtitle=title_type, ytitle=title_order)
-
-    plot_coll(time_vec, (order, order_est_AS, order - order_est_AS),
-              title=title.format('AS'), xtitle=title_type, ytitle=title_order)
-
-    plot_sig(time_vec, sig_est_PS[:nl_order_max+1],
-             title='Method PS - Estimated terms',
-             title_plots=title_phase)
-
-    plot_coll(time_vec, (order, order_est_PAS, order - order_est_PAS),
-              title=title.format('PAS'), xtitle=title_type, ytitle=title_order)
-
-    plt.figure('Method raw-PAS - Estimated terms')
-    plt.clf()
-    nb_col = 2*(nl_order_max+1)
-    shape = (nl_order_max, nb_col)
-    for n in range(1, nl_order_max+1):
-        for q in range(0, n+1):
-            pos = (n-1, nl_order_max - n + 2*q)
-            ax = plt.subplot2grid(shape, pos, colspan=2)
-            ax.plot(time_vec, np.real(term_est_PAS[(n, q)]), 'b')
-            ax.plot(time_vec, np.imag(term_est_PAS[(n, q)]), 'r')
-
-    plot_coll(time_vec, (order, order_est_PASv2, order - order_est_PASv2),
-              title=title.format('PAS_v2'), xtitle=title_type,
-              ytitle=title_order)
-
-    plt.figure('Method raw-PAS_v2 - Estimated terms')
-    plt.clf()
-    nb_col = 2*(nl_order_max+1)
-    shape = (nl_order_max, nb_col)
-    for n in range(1, nl_order_max+1):
-        for q in range(0, n+1):
-            pos = (n-1, nl_order_max - n + 2*q)
-            ax = plt.subplot2grid(shape, pos, colspan=2)
-            ax.plot(time_vec, np.real(term_est_PAS[(n, q)]), 'b')
-            ax.plot(time_vec, np.imag(term_est_PAS[(n, q)]), 'r')
-
     print('Done.')

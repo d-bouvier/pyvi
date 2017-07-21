@@ -15,6 +15,7 @@ Developed for Python 3.6.1
 # Importations
 #==============================================================================
 
+import argparse
 import numpy as np
 from pyvi.separation.tools import error_measure
 
@@ -28,14 +29,22 @@ if __name__ == '__main__':
     Main script for testing.
     """
 
-    print()
+    #####################
+    ## Parsing options ##
+    #####################
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-ind', '--indentation', type=int, default=0)
+    args = parser.parse_args()
+    indent = args.indentation
+    ss = ' ' * indent
+
 
     ##############################
     ## Function error_measure() ##
     ##############################
 
-    print('Testing error_measure()')
-    print('=======================')
+    print(ss + 'Testing error_measure()...', end=' ')
 
     N = 3
     L = 1000
@@ -47,7 +56,9 @@ if __name__ == '__main__':
 
         error = error_measure(sig, sig_est, db=False)
         error_db = error_measure(sig, sig_est)
-        print('Added noise factor:', sigma)
-        print('Relative error     :', error)
-        print('Relative error (dB):', error_db)
-        print()
+
+        assert len(error) == size[0], \
+            'Error in length of returned error measure.'
+        assert len(error_db) == size[0], \
+            'Error in length of returned error measure.'
+    print('Done.')
