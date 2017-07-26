@@ -23,7 +23,6 @@ import pyvi.separation.methods as sep
 from pyvi.identification.tools import error_measure
 from pyvi.system.dict import create_nl_damping
 from pyvi.simulation.simu import SimulationObject
-from pyvi.utilities.plotbox import plot_kernel_time
 from pyvi.utilities.mathbox import binomial
 
 

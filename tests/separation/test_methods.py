@@ -21,7 +21,6 @@ import matplotlib.pyplot as plt
 import pyvi.separation.methods as sep
 from pyvi.system.dict import create_nl_damping
 from pyvi.simulation.simu import SimulationObject
-from pyvi.utilities.plotbox import plot_sig, plot_coll
 
 
 #==============================================================================
