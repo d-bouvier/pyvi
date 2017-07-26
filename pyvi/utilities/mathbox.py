@@ -20,7 +20,7 @@ Notes
 @author: bouvier (bouvier@ircam.fr)
          Damien Bouvier, IRCAM, Paris
 
-Last modified on 19 July 2017
+Last modified on 26 July 2017
 Developed for Python 3.6.1
 """
 
@@ -29,8 +29,8 @@ Developed for Python 3.6.1
 #==============================================================================
 
 import math
-import numpy as np
 import itertools as itr
+import numpy as np
 import scipy.special as sc_sp
 
 

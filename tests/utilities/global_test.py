@@ -47,7 +47,7 @@ if __name__ == '__main__':
     test_base_path = os.path.abspath(os.path.dirname(__file__))
     os.chdir(test_base_path)
     command = 'python test_{}.py --indentation ' + str(3 + indent)
-    list_files = ['mathbox', 'plotbox', 'savebox']
+    list_files = ['mathbox']
     for file_name in list_files:
         print(ss + 'File:', file_name + '.py')
         os.system(command.format(file_name))
