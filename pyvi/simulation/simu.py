@@ -28,6 +28,7 @@ Developed for Python 3.6.1
 import itertools as itr
 import numpy as np
 import scipy as sc
+import scipy.signal as sc_sig
 from .combinatorics import make_pq_combinatorics
 from ..system.statespace import NumericalStateSpace
 from ..utilities.mathbox import array_symmetrization
@@ -215,8 +216,8 @@ class SimulationObject:
 
         # Upsampling (if wanted)
         if self.resampling:
-            input_sig = sc.signal.resample_poly(input_sig, self.nl_order_max,
-                                                1, axis=1)
+            input_sig = sc_sig.resample_poly(input_sig, self.nl_order_max,
+                                             1, axis=1)
         sig_len = input_sig.shape[1]
 
         # By-order state and output initialization
@@ -297,12 +298,12 @@ class SimulationObject:
 
         # Downsampling(if necessary)
         if self.resampling:
-            state_by_order = sc.signal.resample_poly(state_by_order, 1,
-                                                     self.nl_order_max,
-                                                     axis=2)
-            output_by_order = sc.signal.resample_poly(output_by_order, 1,
-                                                      self.nl_order_max,
-                                                      axis=2)
+            state_by_order = sc_sig.resample_poly(state_by_order, 1,
+                                                  self.nl_order_max,
+                                                  axis=2)
+            output_by_order = sc_sig.resample_poly(output_by_order, 1,
+                                                   self.nl_order_max,
+                                                   axis=2)
 
         # Reshaping state (if necessary)
         if self.dim['state'] == 1:

@@ -21,8 +21,6 @@ import numpy as np
 from pyvi.system.dict import (create_test, create_loudspeaker_sica,
                               create_nl_damping)
 from pyvi.simulation.simu import SimulationObject as SimuObj
-from pyvi.utilities.plotbox import (plot_sig_io, plot_sig, plot_kernel_time,
-                                    plot_kernel_freq, plot_spectrogram)
 
 
 #==============================================================================
