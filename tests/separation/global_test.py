@@ -7,7 +7,7 @@ Notes
 @author: bouvier (bouvier@ircam.fr)
          Damien Bouvier, IRCAM, Paris
 
-Last modified on 21 July 2017
+Last modified on 27 July 2017
 Developed for Python 3.6.1
 """
 
@@ -15,8 +15,8 @@ Developed for Python 3.6.1
 # Importations
 #==============================================================================
 
-import os
-import argparse
+from mytoolbox.utilities.misc import (my_parse_arg_for_tests,
+                                      submodule_test_calls)
 
 
 #==============================================================================
@@ -28,27 +28,5 @@ if __name__ == '__main__':
     Main script for testing.
     """
 
-    #####################
-    ## Parsing options ##
-    #####################
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument('-ind', '--indentation', type=int, default=0)
-    args = parser.parse_args()
-    indent = args.indentation
-    ss = ' ' * indent
-
-
-    #######################
-    ## Call test scripts ##
-    #######################
-
-    default_path = os.getcwd()
-    test_base_path = os.path.abspath(os.path.dirname(__file__))
-    os.chdir(test_base_path)
-    command = 'python test_{}.py --indentation ' + str(3 + indent)
-    list_files = ['tools', 'methods']
-    for file_name in list_files:
-        print(ss + 'File:', file_name + '.py')
-        os.system(command.format(file_name))
-    os.chdir(default_path)
+    indent = my_parse_arg_for_tests()
+    submodule_test_calls(['tools', 'methods'], __file__, indent)

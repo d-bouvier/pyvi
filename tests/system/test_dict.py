@@ -7,7 +7,7 @@ Notes
 @author: bouvier (bouvier@ircam.fr)
          Damien Bouvier, IRCAM, Paris
 
-Last modified on 21 July 2017
+Last modified on 27 July 2017
 Developed for Python 3.6.1
 """
 
@@ -15,8 +15,8 @@ Developed for Python 3.6.1
 # Importations
 #==============================================================================
 
-import argparse
 import pyvi.system.dict as systems
+from mytoolbox.utilities.misc import my_parse_arg_for_tests
 
 
 #==============================================================================
@@ -28,22 +28,14 @@ if __name__ == '__main__':
     Main script for testing.
     """
 
-    #####################
-    ## Parsing options ##
-    #####################
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument('-ind', '--indentation', type=int, default=0)
-    args = parser.parse_args()
-    indent = args.indentation
-    ss = ' ' * indent
+    indent = my_parse_arg_for_tests()
 
 
     ########################
     ## Systems dictionary ##
     ########################
 
-    print(ss + 'Testing create_loudspeaker_sica()...', end=' ')
+    print(indent + 'Testing create_loudspeaker_sica()...', end=' ')
     loudspeaker_sica = systems.create_loudspeaker_sica()
     message = 'Error in create_loudspeaker_sica().'
     assert loudspeaker_sica.dim['input'] == 1, message
@@ -58,7 +50,7 @@ if __name__ == '__main__':
     print('Done')
 
 
-    print(ss + 'Testing create_moog()...', end=' ')
+    print(indent + 'Testing create_moog()...', end=' ')
     moog_1 = systems.create_moog(taylor_series_truncation=1)
     moog_2 = systems.create_moog(taylor_series_truncation=2)
     moog_3 = systems.create_moog(taylor_series_truncation=3)
@@ -94,7 +86,7 @@ if __name__ == '__main__':
     print('Done')
 
 
-    print(ss + 'Testing create_nl_damping()...', end=' ')
+    print(indent + 'Testing create_nl_damping()...', end=' ')
     second_order = systems.create_nl_damping()
     message = 'Error in create_nl_damping().'
     assert second_order.dim['input'] == 1, message
@@ -109,7 +101,7 @@ if __name__ == '__main__':
     print('Done')
 
 
-    print(ss + 'Testing create_test()...', end=' ')
+    print(indent + 'Testing create_test()...', end=' ')
     sys_num = systems.create_test(mode='numeric')
     sys_symb = systems.create_test(mode='symbolic')
     message = 'Error in create_test().'

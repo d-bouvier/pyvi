@@ -7,7 +7,7 @@ Notes
 @author: bouvier (bouvier@ircam.fr)
          Damien Bouvier, IRCAM, Paris
 
-Last modified on 20 July 2017
+Last modified on 27 July 2017
 Developed for Python 3.6.1
 """
 
@@ -15,9 +15,9 @@ Developed for Python 3.6.1
 # Importations
 #==============================================================================
 
-import argparse
 import numpy as np
 import pyvi.simulation.combinatorics as comb
+from mytoolbox.utilities.misc import my_parse_arg_for_tests
 
 
 #==============================================================================
@@ -29,15 +29,7 @@ if __name__ == '__main__':
     Main script for testing.
     """
 
-    #####################
-    ## Parsing options ##
-    #####################
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument('-ind', '--indentation', type=int, default=0)
-    args = parser.parse_args()
-    indent = args.indentation
-    ss = ' ' * indent
+    indent = my_parse_arg_for_tests()
 
 
     ##########
@@ -84,17 +76,17 @@ if __name__ == '__main__':
     ## Functions of pyvi.simulation.combinatorics ##
     ################################################
 
-    print(ss + 'Testing make_list_pq()...', end=' ')
+    print(indent + 'Testing make_list_pq()...', end=' ')
     list_pq_computed = comb.make_list_pq(N)
     list_pq_2_computed = comb.elimination(pq_dict, list_pq_computed)
     assert np.all(list_pq == list_pq_computed), 'Error in make_list_pq().'
     print('Done.')
 
-    print(ss + 'Testing elimination()...', end=' ')
+    print(indent + 'Testing elimination()...', end=' ')
     assert np.all(list_pq_2 == list_pq_2_computed), 'Error in elimination().'
     print('Done.')
 
-    print(ss + 'Testing state_combinatorics()...', end=' ')
+    print(indent + 'Testing state_combinatorics()...', end=' ')
     pq_sets_computed = comb.state_combinatorics(list_pq_computed, N, True)
     pq_sets_2_computed = comb.state_combinatorics(list_pq_2_computed, N, True)
     assert np.all(pq_sets == pq_sets_computed), \

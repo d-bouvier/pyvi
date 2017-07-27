@@ -7,7 +7,7 @@ Notes
 @author: bouvier (bouvier@ircam.fr)
          Damien Bouvier, IRCAM, Paris
 
-Last modified on 21 July 2017
+Last modified on 27 July 2017
 Developed for Python 3.6.1
 """
 
@@ -17,7 +17,6 @@ Developed for Python 3.6.1
 
 import string
 import time
-import argparse
 import itertools as itr
 import numpy as np
 from pyvi.identification.tools import (error_measure, nb_coeff_in_kernel,
@@ -28,6 +27,7 @@ from pyvi.identification.tools import (error_measure, nb_coeff_in_kernel,
                                        volterra_basis_by_order,
                                        volterra_basis_by_term)
 from pyvi.utilities.mathbox import binomial
+from mytoolbox.utilities.misc import my_parse_arg_for_tests
 
 
 #==============================================================================
@@ -39,22 +39,14 @@ if __name__ == '__main__':
     Main script for testing.
     """
 
-    #####################
-    ## Parsing options ##
-    #####################
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument('-ind', '--indentation', type=int, default=0)
-    args = parser.parse_args()
-    indent = args.indentation
-    ss = ' ' * indent
+    indent = my_parse_arg_for_tests()
 
 
     ##############################
     ## Function error_measure() ##
     ##############################
 
-    print(ss + 'Testing error_measure()...', end=' ')
+    print(indent + 'Testing error_measure()...', end=' ')
     N = 3
     M = 20
 
@@ -82,7 +74,7 @@ if __name__ == '__main__':
     N = 5
     M = 20
 
-    print(ss + 'Testing nb_coeff_in_kernel()...', end=' ')
+    print(indent + 'Testing nb_coeff_in_kernel()...', end=' ')
     for n in range(1, N+1):
         for M in range(1, M+1):
             nb_coeff_1 = binomial(M + n - 1, n)
@@ -105,7 +97,7 @@ if __name__ == '__main__':
 
     Nmax = 5
 
-    print(ss + 'Testing nb_coeff_in_all_kernels()...', end=' ')
+    print(indent + 'Testing nb_coeff_in_all_kernels()...', end=' ')
     for N in range(1, Nmax+1):
         for M in range(1, M+1):
             nb_coeff_1 = binomial(M + N, N) - 1
@@ -126,7 +118,7 @@ if __name__ == '__main__':
     ## Function assert_enough_data_samples() ##
     ###########################################
 
-    print(ss + 'Testing assert_enough_data_samples()...', end=' ')
+    print(indent + 'Testing assert_enough_data_samples()...', end=' ')
     max_nb_coeff = 9
     for nb_data in [8, 9, 10]:
         should_error_be_raised = nb_data < max_nb_coeff
@@ -145,7 +137,7 @@ if __name__ == '__main__':
     ## Function vector_to_kernel() ##
     #################################
 
-    print(ss + 'Testing vector_to_kernel()...', end=' ')
+    print(indent + 'Testing vector_to_kernel()...', end=' ')
     M = 4
 
     # Order 2
@@ -238,7 +230,7 @@ if __name__ == '__main__':
     ## Function vector_to_all_kernels() ##
     ######################################
 
-    print(ss + 'Testing vector_to_all_kernels()...', end=' ')
+    print(indent + 'Testing vector_to_all_kernels()...', end=' ')
     N = 3
     h1s = np.array(list(string.digits[:M]))
     f = np.concatenate((h1s, h2s, h3s), axis=0)
@@ -263,12 +255,12 @@ if __name__ == '__main__':
     sig = np.arange(length)
     sig_cplx = np.arange(length) + 2j * np.arange(length)
 
-    print(ss + 'Testing volterra_basis_by_order()...', end=' ')
+    print(indent + 'Testing volterra_basis_by_order()...', end=' ')
     order_r = volterra_basis_by_order(sig, M, N)
     order_c = volterra_basis_by_order(sig_cplx, M, N)
     print('Done.')
 
-    print(ss + 'Testing volterra_basis_by_term()...', end=' ')
+    print(indent + 'Testing volterra_basis_by_term()...', end=' ')
     term_r = volterra_basis_by_term(sig, M, N)
     term_c = volterra_basis_by_term(sig_cplx, M, N)
     for n in range(1, N+1):

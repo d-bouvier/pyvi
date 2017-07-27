@@ -7,7 +7,7 @@ Notes
 @author: bouvier (bouvier@ircam.fr)
          Damien Bouvier, IRCAM, Paris
 
-Last modified on 21 July 2017
+Last modified on 27 July 2017
 Developed for Python 3.6.1
 """
 
@@ -15,12 +15,12 @@ Developed for Python 3.6.1
 # Importations
 #==============================================================================
 
-import argparse
 import warnings
 import numpy as np
 from pyvi.system.statespace import (StateSpace, NumericalStateSpace,
                                     SymbolicStateSpace)
 import pyvi.system.dict as systems
+from mytoolbox.utilities.misc import my_parse_arg_for_tests
 
 
 #==============================================================================
@@ -32,22 +32,14 @@ if __name__ == '__main__':
     Main script for testing.
     """
 
-    #####################
-    ## Parsing options ##
-    #####################
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument('-ind', '--indentation', type=int, default=0)
-    args = parser.parse_args()
-    indent = args.indentation
-    ss = ' ' * indent
+    indent = my_parse_arg_for_tests()
 
 
     #######################
     ## Matrix dimensions ##
     #######################
 
-    print(ss + 'Testing StateSpace class...', end=' ')
+    print(indent + 'Testing StateSpace class...', end=' ')
     def dim_check(text, shapeA, shapeB, shapeC, shapeD,
                   mpq=dict(), npq=dict()):
         try:
@@ -191,7 +183,7 @@ if __name__ == '__main__':
     ## Attribute 'nl_colinear' ##
     #############################
 
-    print(ss + 'Testing NumericalStateSpace class...', end=' ')
+    print(indent + 'Testing NumericalStateSpace class...', end=' ')
     A = np.empty((3, 3))
     B = np.zeros((3, 1))
     C = np.empty((1, 3))
@@ -223,7 +215,7 @@ if __name__ == '__main__':
     ## Equality between Numerical and Symbolic StateSpace objects ##
     ################################################################
 
-    print(ss + 'Testing SymbolicalStateSpace class...', end=' ')
+    print(indent + 'Testing SymbolicalStateSpace class...', end=' ')
     sys_symb = systems.create_test(mode='symbolic')
     message = "Similar Numerical and Symbolic StateSpace objects have " + \
               "different attribute '{}'."
