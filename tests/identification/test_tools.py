@@ -16,7 +16,6 @@ Developed for Python 3.6.1
 #==============================================================================
 
 import string
-import time
 import itertools as itr
 import numpy as np
 from pyvi.identification.tools import (error_measure, nb_coeff_in_kernel,

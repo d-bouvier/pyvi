@@ -15,7 +15,6 @@ Developed for Python 3.6.1
 # Importations
 #==============================================================================
 
-import time
 import numpy as np
 from pyvi.system.dict import (create_test, create_loudspeaker_sica,
                               create_nl_damping)
