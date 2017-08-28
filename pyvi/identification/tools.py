@@ -267,15 +267,7 @@ def volterra_basis_by_order(signal, M, N):
         Dictionnary of Volterra basis matrix for each order.
     """
 
-    phi = dict()
-    phi[1] = sc_lin.toeplitz(signal, np.zeros((1, M)))
-
-    for n in range(2, N+1):
-        size = phi[n-1].shape[1]
-        temp = phi[n-1][:, :, np.newaxis] * phi[1][:, np.newaxis, :]
-        phi[n] = _reshape_and_eliminate_redudancy(temp, M, n, size)
-
-    return phi
+    return _volterra_basis(signal.copy(), M, N, mode='order')
 
 
 def volterra_basis_by_term(signal, M, N):
@@ -297,55 +289,93 @@ def volterra_basis_by_term(signal, M, N):
         Dictionnary of Volterra basis matrix for each combinatorial term.
     """
 
-    phi = volterra_basis_by_order(signal, M, N)
-    for n in range(1, N+1):
-        phi[(n, 0)] = phi.pop(n)
-
-    for n in range(2, N+1):
-        size = phi[(n-1, 0)].shape[1]
-
-        # Terms 1 <= k < (n+1)//2
-        for k in range(1, (n+1)//2):
-            temp = (phi[(n-1, k-1)][:, :, np.newaxis] * \
-                    phi[(1, 0)][:, np.newaxis, :].conj() ) + \
-                   (phi[(n-1, k)][:, :, np.newaxis] * \
-                    phi[(1, 0)][:, np.newaxis, :] )
-            phi[(n, k)] = _reshape_and_eliminate_redudancy(temp, M, n, size)
-        # Terms k = n//2
-        if not n%2:
-            temp = 2* np.real(phi[(n-1, n//2-1)][:, :, np.newaxis] * \
-                              phi[(1, 0)][:, np.newaxis, :].conj())
-            phi[(n, n//2)] = _reshape_and_eliminate_redudancy(temp, M, n, size)
+    phi = _volterra_basis(signal.copy(), M, N, mode='term')
 
     for (n, k) in phi.keys():
-        phi[(n, k)] /= binomial(n, k)
+        phi[(n, k)] = phi[(n, k)] / binomial(n, k)
 
     return phi
 
 
-def _reshape_and_eliminate_redudancy(array, M, n, size):
+def _volterra_basis(signal, M, N, mode):
     """
-    Returns only non-redundant terms of the Volterra basis in matrix form.
+    Base function for creating dictionnary of Volterra basis matrix.
 
     Parameters
     ----------
-    array : numpy.ndarray
-        3D-array regrouping all terms of the Volterra basis.
+    signal : array_like
+        Input signal from which to construct the Volterras basis.
     M : int
         Memory length of kernels (in samples).
-    n : int
-        Current order.
-    size : int
-        Length of the second dimension of ``array``.
+    N : int
+        Highest kernel order.
+    mode : {'order', 'term'}
+        Choose if matrices are computed for each order or combinatorial term.
 
     Returns
     -------
-    kernels : numpy.ndarray
-        Volterra basis matrix containing only non-dedundant terms.
+    kernels : dict(int or (int, int): numpy.ndarray)
+        Dictionnary of Volterra basis matrix order or combinaorial term.
     """
 
-    temp_tuple = ()
-    for ind in range(M):
-        idx = int(binomial(n+M-ind-2, n-1))
-        temp_tuple += (array[:, size-idx:, ind],)
-    return np.concatenate(temp_tuple, axis=1)
+    # Parameters
+    if mode == 'order':
+        key = 1
+    elif mode == 'term':
+        key = (1, 0)
+
+    phi = dict()
+    phi[key] = sc_lin.toeplitz(signal, np.zeros((1, M)))
+    len_sig, nb_coeff = phi[key].shape
+    signal.shape = (len_sig, 1)
+
+    max_delay = dict()
+    for n in range(1, N+1):
+        max_delay[n] = dict()
+    max_delay[1][0] = np.arange(M)
+
+    # Loop on nonlinear orders
+    for n in range(2, N+1):
+        dec = nb_coeff
+        nb_coeff = nb_coeff_in_kernel(M, n, form='sym')
+        max_delay[n][0] = np.concatenate(tuple(max_delay[n-1].values()))
+
+        # Initialization
+        if mode == 'order':
+            phi[n] = np.zeros((len_sig, nb_coeff), dtype=signal.dtype)
+        elif mode == 'term':
+            for k in range(1 + n//2):
+                phi[n, k] = np.zeros((len_sig, nb_coeff), dtype=signal.dtype)
+
+        # Computation
+        if mode == 'order':
+            phi[n][:, :dec] = signal * phi[n-1]
+        elif mode == 'term':
+            # Term k = 0
+            phi[(n, 0)][:, :dec] = signal * phi[n-1, 0]
+            # Terms 1 <= k < (n+1)//2
+            for k in range(1, (n+1)//2):
+                phi[(n, k)][:, :dec] = signal.conj() * phi[n-1, k-1] + \
+                                       signal * phi[n-1, k]
+            # Term k = n//2
+            if not n%2:
+                phi[(n, n//2)][:, :dec] = \
+                    2 * np.real(signal.conj() * phi[n-1, n//2-1])
+
+        # Copy of identic values
+        for offset in range(1, M):
+            tmp = max_delay[n][0] + offset
+            ind = np.where(tmp < M)
+            nb_ind = len(ind[0])
+            max_delay[n][offset] = tmp[ind]
+
+            if mode == 'order':
+                phi[n][offset:, dec:dec+nb_ind] = phi[n][:-offset, ind[0]]
+            elif mode == 'term':
+                for k in range(1 + n//2):
+                    phi[(n, k)][offset:, dec:dec+nb_ind] = \
+                        phi[(n, k)][:-offset, ind[0]]
+
+            dec += nb_ind
+
+    return phi
