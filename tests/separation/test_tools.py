@@ -7,7 +7,7 @@ Notes
 @author: bouvier (bouvier@ircam.fr)
          Damien Bouvier, IRCAM, Paris
 
-Last modified on 20 July 2017
+Last modified on 27 July 2017
 Developed for Python 3.6.1
 """
 
@@ -15,9 +15,9 @@ Developed for Python 3.6.1
 # Importations
 #==============================================================================
 
-import argparse
 import numpy as np
 from pyvi.separation.tools import error_measure
+from mytoolbox.utilities.misc import my_parse_arg_for_tests
 
 
 #==============================================================================
@@ -29,22 +29,14 @@ if __name__ == '__main__':
     Main script for testing.
     """
 
-    #####################
-    ## Parsing options ##
-    #####################
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument('-ind', '--indentation', type=int, default=0)
-    args = parser.parse_args()
-    indent = args.indentation
-    ss = ' ' * indent
+    indent = my_parse_arg_for_tests()
 
 
     ##############################
     ## Function error_measure() ##
     ##############################
 
-    print(ss + 'Testing error_measure()...', end=' ')
+    print(indent + 'Testing error_measure()...', end=' ')
 
     N = 3
     L = 1000

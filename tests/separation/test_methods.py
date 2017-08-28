@@ -7,7 +7,7 @@ Notes
 @author: bouvier (bouvier@ircam.fr)
          Damien Bouvier, IRCAM, Paris
 
-Last modified on 21 July 2017
+Last modified on 27 July 2017
 Developed for Python 3.6.1
 """
 
@@ -15,33 +15,24 @@ Developed for Python 3.6.1
 # Importations
 #==============================================================================
 
-import argparse
 import numpy as np
 import matplotlib.pyplot as plt
 import pyvi.separation.methods as sep
 from pyvi.system.dict import create_nl_damping
 from pyvi.simulation.simu import SimulationObject
+from mytoolbox.utilities.misc import my_parse_arg_for_tests
 
 
 #==============================================================================
 # Main script
 #==============================================================================
 
-
 if __name__ == '__main__':
     """
     Main script for testing.
     """
 
-    #####################
-    ## Parsing options ##
-    #####################
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument('-ind', '--indentation', type=int, default=0)
-    args = parser.parse_args()
-    indent = args.indentation
-    ss = ' ' * indent
+    indent = my_parse_arg_for_tests()
 
 
     ################
@@ -76,7 +67,7 @@ if __name__ == '__main__':
     order_cplx = system.simulation(input_cplx, out_opt='output_by_order')
     order = system.simulation(input_real, out_opt='output_by_order')
 
-    print(ss + 'Testing _PS method...', end=' ')
+    print(indent + 'Testing _PS method...', end=' ')
     _PS = sep._PS(N=nl_order_max)
     input_coll = _PS.gen_inputs(input_cplx)
     output_coll = np.zeros(input_coll.shape, dtype='complex128')
@@ -87,7 +78,7 @@ if __name__ == '__main__':
         'Separation error in _PS method.'
     print('Done.')
 
-    print(ss + 'Testing AS method...', end=' ')
+    print(indent + 'Testing AS method...', end=' ')
     AS = sep.AS(N=nl_order_max)
     input_coll = AS.gen_inputs(input_real)
     output_coll = np.zeros(input_coll.shape)
@@ -97,7 +88,7 @@ if __name__ == '__main__':
     assert np.allclose(order, order_est_AS), 'Separation error in AS method.'
     print('Done.')
 
-    print(ss + 'Testing PS method...', end=' ')
+    print(indent + 'Testing PS method...', end=' ')
     PS = sep.PS(N=nl_order_max)
     input_coll = PS.gen_inputs(input_cplx)
     output_coll = np.zeros(input_coll.shape)
@@ -109,7 +100,7 @@ if __name__ == '__main__':
         'Separation error in PS method.'
     print('Done.')
 
-    print(ss + 'Testing PAS method...', end=' ')
+    print(indent + 'Testing PAS method...', end=' ')
     PAS = sep.PAS(N=nl_order_max)
     input_coll = PAS.gen_inputs(input_cplx)
     output_coll = np.zeros(input_coll.shape)
@@ -120,7 +111,7 @@ if __name__ == '__main__':
     assert np.allclose(order, order_est_PAS), 'Separation error in PAS method.'
     print('Done.')
 
-    print(ss + 'Testing PAS_v2 method...', end=' ')
+    print(indent + 'Testing PAS_v2 method...', end=' ')
     PAS_v2 = sep.PAS_v2(N=nl_order_max)
     input_coll = PAS_v2.gen_inputs(input_cplx)
     output_coll = np.zeros(input_coll.shape)

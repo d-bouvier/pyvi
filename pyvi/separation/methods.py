@@ -453,7 +453,7 @@ class PAS(PS, AS):
         if np.iscomplexobj(output_by_order):
             output_by_order = np.real(output_by_order)
             message = '\nEstimated orders have non-negligible imaginary ' + \
-                      'parts. Only real parts have been retruned, but ' + \
+                      'parts. Only real parts have been returned, but ' + \
                       'this indicates a probable malfunction in PAS method.\n'
             warn.showwarning(message, UserWarning, __file__, 458, line='')
 

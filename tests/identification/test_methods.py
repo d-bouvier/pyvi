@@ -7,7 +7,7 @@ Notes
 @author: bouvier (bouvier@ircam.fr)
          Damien Bouvier, IRCAM, Paris
 
-Last modified on 20 July 2017
+Last modified on 27 July 2017
 Developed for Python 3.6.1
 """
 
@@ -16,7 +16,6 @@ Developed for Python 3.6.1
 #==============================================================================
 
 import sys
-import argparse
 import numpy as np
 import pyvi.identification.methods as identif
 import pyvi.separation.methods as sep
@@ -24,6 +23,7 @@ from pyvi.identification.tools import error_measure
 from pyvi.system.dict import create_nl_damping
 from pyvi.simulation.simu import SimulationObject
 from pyvi.utilities.mathbox import binomial
+from mytoolbox.utilities.misc import my_parse_arg_for_tests
 
 
 #==============================================================================
@@ -35,15 +35,7 @@ if __name__ == '__main__':
     Main script for testing.
     """
 
-    #####################
-    ## Parsing options ##
-    #####################
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument('-ind', '--indentation', type=int, default=0)
-    args = parser.parse_args()
-    indent = args.indentation
-    ss = ' ' * indent
+    indent = my_parse_arg_for_tests()
 
 
     ###############################
@@ -117,31 +109,31 @@ if __name__ == '__main__':
 
     # Testing KLS
     message = ''
-    print(ss + 'Testing KLS()...', end=' ')
+    print(indent + 'Testing KLS()...', end=' ')
     try:
         kernels['direct'] = identif.KLS(input_sig, out_order_true.sum(axis=0),
                                         M, N, phi=phi_orders)
     except:
-        message += ss + (' ' * 3) + 'KLS() returned an error: ' + \
+        message += indent + (' ' * 3) + 'KLS() returned an error: ' + \
                    str(sys.exc_info()[1]) + '\n'
     print('Done.')
     print(message, end='')
 
     # Testing orderKLS
     message = ''
-    print(ss + 'Testing orderKLS()...', end=' ')
+    print(indent + 'Testing orderKLS()...', end=' ')
     try:
         kernels['order'] = identif.orderKLS(input_sig, out_order_true,
                                             M, N, phi=phi_orders)
     except:
-        message += ss + (' ' * 3) + 'orderKLS() returned an error: ' + \
+        message += indent + (' ' * 3) + 'orderKLS() returned an error: ' + \
                    str(sys.exc_info()[1]) + '\n'
     print('Done.')
     print(message, end='')
 
     # Testing termKLS
     message = ''
-    print(ss + 'Testing termKLS()...', end=' ')
+    print(indent + 'Testing termKLS()...', end=' ')
     try:
         for cast_mode in ['real', 'real-imag']:
             for mode in ['mean', 'mmse']:
@@ -150,7 +142,7 @@ if __name__ == '__main__':
                                                 phi=phi_terms, mode=mode,
                                                 cast_mode=cast_mode)
     except:
-        message += ss + (" " * 3) + "termKLS() returned an error " + \
+        message += indent + (" " * 3) + "termKLS() returned an error " + \
                    "(with 'cast_mode' == " + cast_mode + "and " + \
                    "'mode' == " + mode +"): " + str(sys.exc_info()[1]) + '\n'
     print('Done.')
@@ -158,7 +150,7 @@ if __name__ == '__main__':
 
     # Testing phaseKLS
     message = ''
-    print(ss + 'Testing phaseKLS()...', end=' ')
+    print(indent + 'Testing phaseKLS()...', end=' ')
     try:
         for cast_mode in ['real', 'real-imag']:
             name = 'phase' + ('_R' if cast_mode == 'real' else '')
@@ -166,7 +158,7 @@ if __name__ == '__main__':
                                              phi=phi_terms,
                                              cast_mode=cast_mode)
     except:
-        message += ss + (" " * 3) + "phaseKLS() returned an error " + \
+        message += indent + (" " * 3) + "phaseKLS() returned an error " + \
                    "(with 'cast_mode' == " + cast_mode + "): " + \
                    str(sys.exc_info()[1]) + '\n'
     print('Done.')
@@ -174,7 +166,7 @@ if __name__ == '__main__':
 
     # Testing iterKLS
     message = ''
-    print(ss + 'Testing iterKLS()...', end=' ')
+    print(indent + 'Testing iterKLS()...', end=' ')
     try:
         for cast_mode in ['real', 'real-imag']:
             name = 'iter' + ('_R' if cast_mode == 'real' else '')
@@ -182,7 +174,7 @@ if __name__ == '__main__':
                                              phi=phi_terms,
                                              cast_mode=cast_mode)
     except:
-        message += ss + (" " * 3) + "iterKLS() returned an error " + \
+        message += indent + (" " * 3) + "iterKLS() returned an error " + \
                    "(with 'cast_mode' == " + cast_mode + "): " + \
                    str(sys.exc_info()[1]) + '\n'
     print('Done.')

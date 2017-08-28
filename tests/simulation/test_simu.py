@@ -7,7 +7,7 @@ Notes
 @author: bouvier (bouvier@ircam.fr)
          Damien Bouvier, IRCAM, Paris
 
-Last modified on 21 July 2017
+Last modified on 27 July 2017
 Developed for Python 3.6.1
 """
 
@@ -15,12 +15,11 @@ Developed for Python 3.6.1
 # Importations
 #==============================================================================
 
-import time
-import argparse
 import numpy as np
 from pyvi.system.dict import (create_test, create_loudspeaker_sica,
                               create_nl_damping)
 from pyvi.simulation.simu import SimulationObject as SimuObj
+from mytoolbox.utilities.misc import my_parse_arg_for_tests
 
 
 #==============================================================================
@@ -32,15 +31,7 @@ if __name__ == '__main__':
     Main script for testing.
     """
 
-    #####################
-    ## Parsing options ##
-    #####################
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument('-ind', '--indentation', type=int, default=0)
-    args = parser.parse_args()
-    indent = args.indentation
-    ss = ' ' * indent
+    indent = my_parse_arg_for_tests()
 
 
     #########################
@@ -50,7 +41,7 @@ if __name__ == '__main__':
     sig = np.ones((10000,))
     system = create_test(mode='numeric')
 
-    print(ss + 'Testing SimulationObject.simulation()...', end=' ')
+    print(indent + 'Testing SimulationObject.simulation()...', end=' ')
 
     out1 = SimuObj(system, holder_order=0, resampling=False).simulation(sig)
     out2 = SimuObj(system, holder_order=1, resampling=False).simulation(sig)
@@ -90,7 +81,7 @@ if __name__ == '__main__':
     T = 0.03
 
     # Test system
-    print(ss + 'Testing SimulationObject.compute_kernels()...', end=' ')
+    print(indent + 'Testing SimulationObject.compute_kernels()...', end=' ')
     sys_simu = SimuObj(create_test(mode='numeric'), **options)
     t_kernels = sys_simu.compute_kernels(T, which='time')
     t_kernels, f_kernels = sys_simu.compute_kernels(T, which='both')
