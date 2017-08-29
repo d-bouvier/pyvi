@@ -14,6 +14,8 @@ assert_enough_data_samples :
     Assert that there is enough data samples for the identification.
 vector_to_kernel :
     Rearranges vector of order n Volterra kernel coefficients into tensor.
+kernel_to_vector :
+    Rearranges a Volterra kernel in vector form.
 vector_to_all_kernels :
     Rearranges vector of Volterra kernels coefficients into N tensors.
 volterra_basis_by_order :
@@ -37,7 +39,8 @@ Developed for Python 3.6.1
 import itertools as itr
 import numpy as np
 import scipy.linalg as sc_lin
-from ..utilities.mathbox import rms, safe_db, binomial, array_symmetrization
+from ..utilities.mathbox import (rms, safe_db, binomial, multinomial,
+                                 array_symmetrization)
 
 
 #==============================================================================
@@ -205,6 +208,46 @@ def vector_to_kernel(vec_kernel, M, n, form='sym'):
         return array_symmetrization(kernel)
     elif form in {'tri', 'triangular'}:
         return kernel
+
+
+def kernel_to_vector(kernel, form='sym'):
+    """
+    Rearranges a Volterra kernel in vector form.
+
+    Parameters
+    ----------
+    form : {'sym', 'tri', 'symmetric', 'triangular'}, optional (default='sym')
+        Form of the given Volterra kernel (symmetric or triangular).
+
+    Returns
+    -------
+    vec_kernel : numpy.ndarray
+        The corresponding Volterra kernel in vector form.
+    """
+
+    # Check dimension
+    n = kernel.ndim
+    M = kernel.shape[0]
+    length = nb_coeff_in_kernel(M, n)
+
+    # Initialization
+    vec_kernel = np.zeros((length), dtype=kernel.dtype)
+    current_ind = 0
+
+    # Applying a factor if kernel is in symmetric form
+    if form in {'sym', 'symmetric'}:
+        factor = np.zeros(kernel.shape)
+        for indexes in itr.combinations_with_replacement(range(M), n):
+            k = [indexes.count(x) for x in set(indexes)]
+            factor[indexes] = multinomial(len(indexes), k)
+        kernel = kernel * factor
+
+    # Loop on all combinations for
+    for indexes in itr.combinations_with_replacement(range(M), n):
+        vec_kernel[current_ind] = kernel[indexes]
+        current_ind += 1
+
+    return vec_kernel
 
 
 def vector_to_all_kernels(f, M, N, form='sym'):
