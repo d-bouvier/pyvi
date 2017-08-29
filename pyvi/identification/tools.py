@@ -14,6 +14,8 @@ assert_enough_data_samples :
     Assert that there is enough data samples for the identification.
 vector_to_kernel :
     Rearranges vector of order n Volterra kernel coefficients into tensor.
+kernel_to_vector :
+    Rearranges a Volterra kernel in vector form.
 vector_to_all_kernels :
     Rearranges vector of Volterra kernels coefficients into N tensors.
 volterra_basis_by_order :
@@ -205,6 +207,33 @@ def vector_to_kernel(vec_kernel, M, n, form='sym'):
         return array_symmetrization(kernel)
     elif form in {'tri', 'triangular'}:
         return kernel
+
+
+def kernel_to_vector(kernel):
+    """
+    Rearranges a Volterra kernel in vector form.
+
+    Returns
+    -------
+    vec_kernel : numpy.ndarray
+        The corresponding Volterra kernel in vector form.
+    """
+
+    # Check dimension
+    n = kernel.ndim
+    M = kernel.shape[0]
+    length = nb_coeff_in_kernel(M, n)
+
+    # Initialization
+    vec_kernel = np.zeros((length), dtype=kernel.dtype)
+    current_ind = 0
+
+    # Loop on all combinations for order n
+    for indexes in itr.combinations_with_replacement(range(M), n):
+        vec_kernel[current_ind] = kernel[indexes]
+        current_ind += 1
+
+    return vec_kernel
 
 
 def vector_to_all_kernels(f, M, N, form='sym'):

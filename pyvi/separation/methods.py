@@ -149,7 +149,7 @@ class AS(_SeparationMethod):
         self.gain = gain
         self.negative_gain = negative_gain
         _SeparationMethod.__init__(self, N, nb_test,
-                                  self._gen_amp_factors(nb_test))
+                                   self._gen_amp_factors(nb_test))
 
     def _gen_amp_factors(self, nb_test):
         """
