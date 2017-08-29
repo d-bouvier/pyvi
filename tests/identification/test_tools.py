@@ -21,7 +21,7 @@ import numpy as np
 from pyvi.identification.tools import (error_measure, nb_coeff_in_kernel,
                                        nb_coeff_in_all_kernels,
                                        assert_enough_data_samples,
-                                       vector_to_kernel,
+                                       vector_to_kernel, kernel_to_vector,
                                        vector_to_all_kernels,
                                        volterra_basis_by_order,
                                        volterra_basis_by_term)
@@ -221,6 +221,27 @@ if __name__ == '__main__':
     assert np.all(vector_to_kernel(h2s, M, 2, form='tri') == h2s_tri), \
         'Error of computation in kernel under its triangular form.'
     assert np.all(vector_to_kernel(h3s, M, 3, form='tri') == h3s_tri), \
+        'Error of computation in kernel under its triangular form.'
+    print('Done.')
+
+
+    #################################
+    ## Function kernel_to_vector() ##
+    #################################
+
+    print(indent + 'Testing kernel_to_vector()...', end=' ')
+
+    assert np.all(kernel_to_vector(h2tri, form='tri') == h2), \
+        'Error of computation in kernel under its triangular form.'
+    assert np.all(kernel_to_vector(h2sym, form='sym') == h2), \
+        'Error of computation in kernel under its symmetric form.'
+    assert np.all(kernel_to_vector(h3tri, form='tri') == h3), \
+        'Error of computation in kernel under its triangular form.'
+    assert np.all(kernel_to_vector(h3sym, form='sym') == h3), \
+        'Error of computation in kernel under its symmetric form.'
+    assert np.all(kernel_to_vector(h2s_tri, form='tri') == h2s), \
+        'Error of computation in kernel under its triangular form.'
+    assert np.all(kernel_to_vector(h3s_tri, form='tri') == h3s), \
         'Error of computation in kernel under its triangular form.'
     print('Done.')
 
