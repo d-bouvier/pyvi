@@ -29,6 +29,7 @@ Developed for Python 3.6.1
 #==============================================================================
 
 import math
+import functools
 import itertools as itr
 import numpy as np
 import scipy.special as sc_sp
@@ -151,7 +152,28 @@ def binomial(n, k):
          Binomial coefficient.
     """
 
-    return int(sc_sp.binom(n, k))
+    return sc_sp.comb(n, k, exact=True, repetition=False)
+
+
+def multinomial(n, k):
+    """
+    Multinomial coefficient returning an integer.
+
+    Parameters
+    ----------
+    n : int
+    k : list of int
+
+    Returns
+    -------
+    result : int
+         Multinomial coefficient.
+    """
+
+    ret = sc_sp.factorial(n)
+    for i in k:
+        ret //= sc_sp.factorial(i)
+    return ret
 
 
 def array_symmetrization(array):

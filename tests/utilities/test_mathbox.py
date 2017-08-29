@@ -49,6 +49,15 @@ if __name__ == '__main__':
     print('Done.')
 
 
+    ############################
+    ## Function multinomial() ##
+    ############################
+
+    print(indent + 'Testing multinomial()...', end=' ')
+    #TODO
+    print('Done.')
+
+
     #####################################
     ## Function array_symmetrization() ##
     #####################################
