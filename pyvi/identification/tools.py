@@ -39,7 +39,8 @@ Developed for Python 3.6.1
 import itertools as itr
 import numpy as np
 import scipy.linalg as sc_lin
-from ..utilities.mathbox import rms, safe_db, binomial, array_symmetrization
+from ..utilities.mathbox import (rms, safe_db, binomial, multinomial,
+                                 array_symmetrization)
 
 
 #==============================================================================
@@ -209,9 +210,14 @@ def vector_to_kernel(vec_kernel, M, n, form='sym'):
         return kernel
 
 
-def kernel_to_vector(kernel):
+def kernel_to_vector(kernel, form='sym'):
     """
     Rearranges a Volterra kernel in vector form.
+
+    Parameters
+    ----------
+    form : {'sym', 'tri', 'symmetric', 'triangular'}, optional (default='sym')
+        Form of the given Volterra kernel (symmetric or triangular).
 
     Returns
     -------
@@ -228,7 +234,15 @@ def kernel_to_vector(kernel):
     vec_kernel = np.zeros((length), dtype=kernel.dtype)
     current_ind = 0
 
-    # Loop on all combinations for order n
+    # Applying a factor if kernel is in symmetric form
+    if form in {'sym', 'symmetric'}:
+        factor = np.zeros(kernel.shape)
+        for indexes in itr.combinations_with_replacement(range(M), n):
+            k = [indexes.count(x) for x in set(indexes)]
+            factor[indexes] = multinomial(len(indexes), k)
+        kernel = kernel * factor
+
+    # Loop on all combinations for
     for indexes in itr.combinations_with_replacement(range(M), n):
         vec_kernel[current_ind] = kernel[indexes]
         current_ind += 1
