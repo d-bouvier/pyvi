@@ -491,7 +491,7 @@ class SimulationObject:
                                                          self.npq[(p, q)])
             for ind in range(self.dim['output']):
                 kernels_in2out[n][ind] = \
-                    array_symmetrization(kernels_in2state[n][ind])
+                    array_symmetrization(kernels_in2out[n][ind])
 
         ######################
         ## Function outputs ##
@@ -616,7 +616,7 @@ class SimulationObject:
                                                          self.npq[(p, q)])
             for ind in range(self.dim['output']):
                 kernels_in2out[n][ind] = \
-                    array_symmetrization(kernels_in2state[n][ind])
+                    array_symmetrization(kernels_in2out[n][ind])
 
         ######################
         ## Function outputs ##

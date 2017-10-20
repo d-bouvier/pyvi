@@ -75,6 +75,8 @@ def error_measure(kernels_ref, kernels_est, db=True):
         if order in kernels_ref:
             rms_error = rms(kernel_est - kernels_ref[order])
             rms_ref = rms(kernels_ref[order])
+            if rms_ref == 0:
+                rms_ref = 1
         else:
             rms_error = rms(kernel_est)
             rms_ref = 1

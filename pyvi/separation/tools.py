@@ -49,6 +49,7 @@ def error_measure(signals_ref, signals_est, db=True):
 
     rms_error = rms(signals_ref - signals_est, axis=1)
     rms_ref = rms(signals_ref, axis=1)
+    rms_ref[rms_ref==0] = 1
     if db:
         return safe_db(rms_error, rms_ref)
     else:
