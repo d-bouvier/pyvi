@@ -114,9 +114,9 @@ def safe_db(num, den):
 
     if _num.shape == ():
         if _num == 0:
-            result = np.Inf
-        elif _den == 0:
             result = - np.Inf
+        elif _den == 0:
+            result = np.Inf
         else:
             result = db(_num, _den)
     else:
