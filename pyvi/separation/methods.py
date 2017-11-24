@@ -25,7 +25,7 @@ Notes
 @author: bouvier (bouvier@ircam.fr)
          Damien Bouvier, IRCAM, Paris
 
-Last modified on 25 Oct. 2017
+Last modified on 24 Nov. 2017
 Developed for Python 3.6.1
 """
 
@@ -55,6 +55,8 @@ class _SeparationMethod:
         Number of tests signals needed for the method.
     factors : array_like (with length K)
         Factors applied to the base signal in order to create the test signals.
+    condition_numbers : list(float)
+        List of condition numbers of all matrix inverted during separation.
 
     Attributes
     ----------
@@ -74,7 +76,7 @@ class _SeparationMethod:
         self.N = N
         self.K = K
         self.factors = factors
-        self.condition_number = []
+        self.condition_numbers = []
 
     def gen_inputs(self, signal):
         """
@@ -183,7 +185,7 @@ class AS(_SeparationMethod):
         Resolves the vandermonde system via inverse or pseudo-inverse.
         """
 
-        self.condition_number.append(np.linalg.cond(mixing_mat))
+        self.condition_numbers.append(np.linalg.cond(mixing_mat))
         is_square = mixing_mat.shape[0] == mixing_mat.shape[1]
         if is_square: # Square matrix
             return np.dot(np.linalg.inv(mixing_mat), output_coll)
@@ -262,7 +264,7 @@ class _PS(_SeparationMethod):
         Invert Discrete Fourier Transform using the FFT algorithm.
         """
 
-        self.condition_number.append(1)
+        self.condition_numbers.append(1)
         return sc_fft.ifft(output_coll, n=N, axis=0)
 
 
