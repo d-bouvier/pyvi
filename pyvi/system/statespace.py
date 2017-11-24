@@ -20,7 +20,7 @@ Notes
 @author: bouvier (bouvier@ircam.fr)
          Damien Bouvier, IRCAM, Paris
 
-Last modified on 19 July 2017
+Last modified on 25 Oct. 2017
 Developed for Python 3.6.1
 """
 
@@ -82,7 +82,7 @@ class StateSpace:
     state_eqn_linear_analytic : boolean
         True if the system is linear-analytic (q<2 for every Mpq and Npq).
     dynamical_nl_only_on_state : boolean
-        True if there is no nonlinearity on the input in the dynamical equation.
+        True if the dynamical equation's nonlinearities are only on the state.
     _dim_ok : boolean
         True if dimensions all array and tensor dimensions corresponds.
     _type : {'SISO', 'SIMO', 'MISO', 'MIMO'}
@@ -135,7 +135,7 @@ class StateSpace:
 
         print_str = Style.UNDERLINE + Style.CYAN + Style.BRIGHT + \
                     'State-space representation :' + Style.RESET + '\n'
-        for name, desc, mat in [ \
+        for name, desc, mat in [
                     ('State {} A', 'state-to-state', self.A_m),
                     ('Input {} B', 'input-to-state', self.B_m),
                     ('Output {} C', 'state-to-output', self.C_m),
@@ -191,30 +191,30 @@ class StateSpace:
 
         # Dimension of output
         C_shape = self.C_m.shape
-        assert len(self.C_m.shape) in [1, 2], \
+        assert len(C_shape) in [1, 2], \
             "State-to-output matrix 'C_m' is not a 1D or 2D-array " + \
-            "(it has {} dimensions).".format(len(self.C_m.shape))
-        assert self.C_m.shape[-1] == self.dim['state'], "Shape of state-to" + \
-            "output matrix 'C_m' {} is not ".format(self.C_m.shape) + \
+            "(it has {} dimensions).".format(len(C_shape))
+        assert C_shape[-1] == self.dim['state'], "Shape of state-to" + \
+            "output matrix 'C_m' {} is not ".format(C_shape) + \
             "consistent with the state's dimension " + \
             "{}.".format(self.dim['state'])
-        if len(self.C_m.shape) == 1:
-            self.C_m.shape = (1, self.dim['state'])
-        self.dim['output'] = self.C_m.shape[0]
+        if len(C_shape) == 1:
+            C_shape = (1, self.dim['state'])
+        self.dim['output'] = C_shape[0]
 
         if self.D_m.shape != (self.dim['output'], self.dim['input']):
             try:
                 self.D_m.shape = (self.dim['output'], self.dim['input'])
             except ValueError:
                 assert False, "Shape of input-to-output matrix 'D_m' " + \
-                "{} is not consistent with the ".format(self.D_m.shape) + \
-                "input and/or output's dimension (respectively " + \
-                "{} and {})".format(self.dim['input'], self.dim['output'])
+                    "{} is not consistent with the ".format(self.D_m.shape) + \
+                    "input and/or output's dimension (respectively " + \
+                    "{} and {})".format(self.dim['input'], self.dim['output'])
             except AttributeError:
                 assert False, "Shape of input-to-output matrix 'D_m' " + \
-                "{} cannot be casted to ".format(self.D_m.shape) + \
-                "({}, {})".format(self.dim['input'], self.dim['output']) + \
-                "because shape's of sympy Matrix are not alterable."
+                    "{} cannot be casted to ".format(self.D_m.shape) + \
+                    "({}, {}".format(self.dim['input'], self.dim['output']) + \
+                    ") because shape's of sympy Matrix are not alterable."
 
     def _check_dim(self):
         """Verify that input, state and output dimensions are respected."""

@@ -12,7 +12,7 @@ Notes
 @author: bouvier (bouvier@ircam.fr)
          Damien Bouvier, IRCAM, Paris
 
-Last modified on 27 June 2017
+Last modified on 25 Oct. 2017
 Developed for Python 3.6.1
 """
 
@@ -32,7 +32,7 @@ def error_measure(signals_ref, signals_est, db=True):
     Returns the relative error between orders and their estimates.
 
     This error is computed as the RMS value of the error estimation divided by
-    the RMS values of the trus orders, for each order.
+    the RMS values of the true orders, for each order.
 
     Parameters
     ----------
@@ -49,7 +49,7 @@ def error_measure(signals_ref, signals_est, db=True):
 
     rms_error = rms(signals_ref - signals_est, axis=1)
     rms_ref = rms(signals_ref, axis=1)
-    rms_ref[rms_ref==0] = 1
+    rms_ref[rms_ref == 0] = 1
     if db:
         return safe_db(rms_error, rms_ref)
     else:

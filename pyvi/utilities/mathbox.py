@@ -20,7 +20,7 @@ Notes
 @author: bouvier (bouvier@ircam.fr)
          Damien Bouvier, IRCAM, Paris
 
-Last modified on 26 July 2017
+Last modified on 25 Oct. 2017
 Developed for Python 3.6.1
 """
 
@@ -29,7 +29,6 @@ Developed for Python 3.6.1
 #==============================================================================
 
 import math
-import functools
 import itertools as itr
 import numpy as np
 import scipy.special as sc_sp
@@ -57,7 +56,7 @@ def rms(sig, axis=None):
          Root-mean-square value alogn given ``axis``.
     """
 
-    return np.sqrt( np.mean(np.abs(sig)**2, axis=axis) )
+    return np.sqrt(np.mean(np.abs(sig)**2, axis=axis))
 
 
 def db(val, ref=1.):
