@@ -28,7 +28,7 @@ Notes
 @author: bouvier (bouvier@ircam.fr)
          Damien Bouvier, IRCAM, Paris
 
-Last modified on 21 July 2017
+Last modified on 25 Oct. 2017
 Developed for Python 3.6.1
 """
 
@@ -136,7 +136,7 @@ def nb_coeff_in_all_kernels(M, N, form='sym'):
     if form in {'sym', 'symmetric', 'tri', 'triangular'}:
         return binomial(M + N, N) - 1
     else:
-        return sum([nb_coeff_in_kernel(M, n, form=form) for n in range(1, N+1)])
+        return sum([nb_coeff_in_kernel(M, n+1, form=form) for n in range(N)])
 
 
 def assert_enough_data_samples(nb_data, max_nb_est, M, N, name):
@@ -163,10 +163,10 @@ def assert_enough_data_samples(nb_data, max_nb_est, M, N, name):
     """
 
     if nb_data < max_nb_est:
-        raise ValueError('Input signal has {} data samples'.format(nb_data) + \
-                         ', it should have at least {} '.format(max_nb_est) + \
-                         'for a truncation to order {} '.format(N) + \
-                         'and a {}-samples memory length'.format(M) + \
+        raise ValueError('Input signal has {} data samples'.format(nb_data) +
+                         ', it should have at least {} '.format(max_nb_est) +
+                         'for a truncation to order {} '.format(N) +
+                         'and a {}-samples memory length'.format(M) +
                          'using {} method.'.format(name))
 
 
@@ -403,7 +403,7 @@ def _volterra_basis(signal, M, N, mode):
                 phi[(n, k)][:, :dec] = signal.conj() * phi[n-1, k-1] + \
                                        signal * phi[n-1, k]
             # Term k = n//2
-            if not n%2:
+            if not n % 2:
                 phi[(n, n//2)][:, :dec] = \
                     2 * np.real(signal.conj() * phi[n-1, n//2-1])
 

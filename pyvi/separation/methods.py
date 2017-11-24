@@ -25,7 +25,7 @@ Notes
 @author: bouvier (bouvier@ircam.fr)
          Damien Bouvier, IRCAM, Paris
 
-Last modified on 19 July 2017
+Last modified on 25 Oct. 2017
 Developed for Python 3.6.1
 """
 
@@ -176,7 +176,7 @@ class AS(_SeparationMethod):
         """
 
         mixing_mat = \
-            np.vander(self.factors, N=self.N+1, increasing=True)[:,1::]
+            np.vander(self.factors, N=self.N+1, increasing=True)[:, 1::]
         return self._inverse_mixing_mat(output_coll, mixing_mat)
 
     @staticmethod
@@ -422,7 +422,7 @@ class PAS(PS, AS):
             combinatorial_terms = dict()
 
         mixing_mat = \
-            np.vander(self.amp_vec, N=self.N+1, increasing=True)[:,1::]
+            np.vander(self.amp_vec, N=self.N+1, increasing=True)[:, 1::]
 
         # Inverse DFT for each set with same amplitude
         for idx in range(self.nb_amp):
@@ -529,8 +529,8 @@ class PAS_v2(PAS):
 
         factors = []
         for ii, nb_phase in enumerate(self.nb_phase_vec):
-            factors.append(self.amp_vec[ii] * \
-                           self._gen_phase_factors(nb_phase))
+            factors.append(
+                self.amp_vec[ii] * self._gen_phase_factors(nb_phase))
 
         _SeparationMethod.__init__(self, N, np.sum(self.nb_phase_vec),
                                    np.concatenate(factors))
