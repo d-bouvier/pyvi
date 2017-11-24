@@ -310,7 +310,7 @@ class StateSpace:
         self._output_equation_category()
         self.linear = self.dyn_eqn_linear & self.out_eqn_linear
 
-    def _dynamical_equation_type(self):
+    def _dynamical_equation_category(self):
         """Check the category of the dynamical equation."""
         pq_list = list(self.mpq.keys())
         if len(pq_list) == 0:
@@ -327,7 +327,7 @@ class StateSpace:
         self.dyn_eqn_bilinear = \
             self.dyn_eqn_input_affine & self.dyn_eqn_state_affine
 
-    def _output_equation_type(self):
+    def _output_equation_category(self):
         """Check the category of the output equation."""
         pq_list = list(self.mpq.keys())
         if len(pq_list) == 0:
