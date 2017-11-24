@@ -20,7 +20,7 @@ Notes
 @author: bouvier (bouvier@ircam.fr)
          Damien Bouvier, IRCAM, Paris
 
-Last modified on 25 Oct. 2017
+Last modified on 24 Nov. 2017
 Developed for Python 3.6.1
 """
 
@@ -30,6 +30,7 @@ Developed for Python 3.6.1
 
 import warnings
 from abc import abstractmethod
+from operator import itemgetter
 import sympy as sp
 import numpy as np
 import scipy.linalg as sc_lin
@@ -287,7 +288,7 @@ class StateSpace:
             message = '\nInput dimension is not equal to 1' + \
                       ' (it is {}).\n'.format(self.dim['input']) + \
                       'Simulation, kernel computation, order separation ' + \
-                      'and system  identification may not work as intended.'
+                      'and system identification may not work as intended.'
             warnings.warn(message, UserWarning)
 
     def _is_single_output(self):
@@ -298,39 +299,50 @@ class StateSpace:
             message = '\nOutput dimension is not equal to 1' + \
                       ' (it is {}).\n'.format(self.dim['output']) + \
                       'Simulation, kernel computation, order separation ' + \
-                      'and system  identification may not work as intended.'
+                      'and system identification may not work as intended.'
             warnings.warn(message, UserWarning)
 
     #=============================================#
 
     def _ckeck_categories(self):
         """Check in which categories the system belongs."""
-        self._is_linear()
-        self._is_state_eqn_linear_analytic()
-        self._are_dynamical_nl_only_on_state()
+        self._dynamical_equation_category()
+        self._output_equation_category()
+        self.linear = self.dyn_eqn_linear & self.out_eqn_linear
 
-    def _is_linear(self):
-        """Check if the system is linear."""
-        self._state_eqn_linear = not bool(self.mpq)
-        self._output_eqn_linear = not bool(self.npq)
-        self.linear = self._state_eqn_linear and self._output_eqn_linear
+    def _dynamical_equation_type(self):
+        """Check the category of the dynamical equation."""
+        pq_list = list(self.mpq.keys())
+        if len(pq_list) == 0:
+            p_max = 0
+            q_max = 0
+        else:
+            p_max = max(pq_list, key=itemgetter(0))[0]
+            q_max = max(pq_list, key=itemgetter(1))[1]
+        self.dyn_eqn_input_affine = q_max < 2
+        self.dyn_eqn_state_affine = p_max < 2
+        self.dyn_nl_only_on_input = p_max == 0
+        self.dyn_nl_only_on_state = q_max == 0
+        self.dyn_eqn_linear = (p_max == 0) & (q_max == 0)
+        self.dyn_eqn_bilinear = \
+            self.dyn_eqn_input_affine & self.dyn_eqn_state_affine
 
-    def _is_state_eqn_linear_analytic(self):
-        """Check if the system input-to-state equation is linear-analytic."""
-        self.state_eqn_linear_analytic = True
-        for p, q in self.mpq.keys():
-            if q > 1:
-                self.state_eqn_linear_analytic = False
-                break
-
-    def _are_dynamical_nl_only_on_state(self):
-        """Check if the dynamical nonlinearities are only on the state."""
-        self.dynamical_nl_only_on_state = self.state_eqn_linear_analytic
-        if self.dynamical_nl_only_on_state:
-            for p, q in self.mpq.keys():
-                if q > 0:
-                    self.dynamical_nl_only_on_state = False
-                    break
+    def _output_equation_type(self):
+        """Check the category of the output equation."""
+        pq_list = list(self.mpq.keys())
+        if len(pq_list) == 0:
+            p_max = 0
+            q_max = 0
+        else:
+            p_max = max(pq_list, key=itemgetter(0))[0]
+            q_max = max(pq_list, key=itemgetter(1))[1]
+        self.out_eqn_input_affine = q_max < 2
+        self.out_eqn_state_affine = p_max < 2
+        self.out_nl_only_on_input = p_max == 0
+        self.out_nl_only_on_state = q_max == 0
+        self.out_eqn_linear = (p_max == 0) & (q_max == 0)
+        self.out_eqn_bilinear = \
+            self.out_eqn_input_affine & self.out_eqn_state_affine
 
 
 class NumericalStateSpace(StateSpace):
@@ -372,10 +384,8 @@ class NumericalStateSpace(StateSpace):
 
     def _ckeck_categories(self):
         """Check in which categories the system belongs."""
-        self._is_linear()
-        self._is_state_eqn_linear_analytic()
-        self._are_dynamical_nl_only_on_state()
-        self._are_nl_colinear()
+        StateSpace._check_categories()
+        self._are_dyn_nl_colinear()
 
     def _are_nl_colinear(self):
         """Check colinearity of dynamical nonlinearities and input-to-state."""
