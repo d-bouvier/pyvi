@@ -7,7 +7,7 @@ Notes
 @author: bouvier (bouvier@ircam.fr)
          Damien Bouvier, IRCAM, Paris
 
-Last modified on 27 July 2017
+Last modified on 24 Nov. 2017
 Developed for Python 3.6.1
 """
 
@@ -15,9 +15,75 @@ Developed for Python 3.6.1
 # Importations
 #==============================================================================
 
+import unittest
 import numpy as np
 import pyvi.simulation.combinatorics as comb
-from mytoolbox.utilities.misc import my_parse_arg_for_tests
+
+
+#==============================================================================
+# Test Class
+#==============================================================================
+
+class MakeListPqTestCase(unittest.TestCase):
+
+    def test_output(self):
+        N = 4
+        computed_list = comb.make_list_pq(N)
+        true_list = np.array([[2, 2, 0], [2, 1, 1], [2, 0, 2], [3, 2, 0],
+                              [3, 1, 1], [3, 3, 0], [3, 2, 1], [3, 1, 2],
+                              [3, 0, 3], [4, 2, 0], [4, 1, 1], [4, 3, 0],
+                              [4, 2, 1], [4, 1, 2], [4, 4, 0], [4, 3, 1],
+                              [4, 2, 2], [4, 1, 3], [4, 0, 4]])
+        self.assertTrue(np.all(computed_list == true_list))
+
+
+class EliminationCase(unittest.TestCase):
+
+    def test_output(self):
+        N = 4
+        pq_dict = {(2, 0): 1, (1, 1): 1}
+        computed_list = comb.elimination(pq_dict, comb.make_list_pq(N))
+        true_list = np.array([[2, 2, 0], [2, 1, 1], [3, 2, 0], [3, 1, 1],
+                              [4, 2, 0], [4, 1, 1]])
+        self.assertTrue(np.all(computed_list == true_list))
+
+
+class StateCombinatoricsCase(unittest.TestCase):
+
+    def test_output_without_elimination(self):
+        N = 4
+        computed_list = comb.make_list_pq(N)
+        true_pq_sets = {2: [(2, 0, (1, 1), 1), (1, 1, (1,), 1), (0, 2, (), 1)],
+                        3: [(2, 0, (1, 2), 2),
+                            (1, 1, (2,), 1),
+                            (3, 0, (1, 1, 1), 1),
+                            (2, 1, (1, 1), 1),
+                            (1, 2, (1,), 1),
+                            (0, 3, (), 1)],
+                        4: [(2, 0, (1, 3), 2),
+                            (2, 0, (2, 2), 1),
+                            (1, 1, (3,), 1),
+                            (3, 0, (1, 1, 2), 3),
+                            (2, 1, (1, 2), 2),
+                            (1, 2, (2,), 1),
+                            (4, 0, (1, 1, 1, 1), 1),
+                            (3, 1, (1, 1, 1), 1),
+                            (2, 2, (1, 1), 1),
+                            (1, 3, (1,), 1),
+                            (0, 4, (), 1)]}
+        computed_pq_sets = comb.state_combinatorics(computed_list, N, True)
+        self.assertDictEqual(computed_pq_sets, true_pq_sets)
+
+    def test_output_with_elimination(self):
+        N = 4
+        pq_dict = {(2, 0): 1, (1, 1): 1}
+        computed_list = comb.elimination(pq_dict, comb.make_list_pq(N))
+        true_pq_sets = {2: [(2, 0, (1, 1), 1), (1, 1, (1,), 1)],
+                        3: [(2, 0, (1, 2), 2), (1, 1, (2,), 1)],
+                        4: [(2, 0, (1, 3), 2), (2, 0, (2, 2), 1),
+                            (1, 1, (3,), 1)]}
+        computed_pq_sets = comb.state_combinatorics(computed_list, N, True)
+        self.assertDictEqual(computed_pq_sets, true_pq_sets)
 
 
 #==============================================================================
@@ -29,68 +95,4 @@ if __name__ == '__main__':
     Main script for testing.
     """
 
-    indent = my_parse_arg_for_tests()
-
-
-    ##########
-    ## Data ##
-    ##########
-
-    N = 4
-    pq_dict = {(2, 0): 1,
-               (1, 1): 1}
-
-    list_pq = np.array([[2, 2, 0], [2, 1, 1], [2, 0, 2],
-                        [3, 2, 0], [3, 1, 1],
-                        [3, 3, 0], [3, 2, 1], [3, 1, 2], [3, 0, 3],
-                        [4, 2, 0], [4, 1, 1],
-                        [4, 3, 0], [4, 2, 1], [4, 1, 2],
-                        [4, 4, 0], [4, 3, 1], [4, 2, 2], [4, 1, 3], [4, 0, 4]])
-    list_pq_2 = np.array([[2, 2, 0], [2, 1, 1],
-                          [3, 2, 0], [3, 1, 1],
-                          [4, 2, 0], [4, 1, 1]])
-    pq_sets = {2: [(2, 0, (1, 1), 1), (1, 1, (1,), 1), (0, 2, (), 1)],
-               3: [(2, 0, (1, 2), 2),
-                   (1, 1, (2,), 1),
-                   (3, 0, (1, 1, 1), 1),
-                   (2, 1, (1, 1), 1),
-                   (1, 2, (1,), 1),
-                   (0, 3, (), 1)],
-               4: [(2, 0, (1, 3), 2),
-                   (2, 0, (2, 2), 1),
-                   (1, 1, (3,), 1),
-                   (3, 0, (1, 1, 2), 3),
-                   (2, 1, (1, 2), 2),
-                   (1, 2, (2,), 1),
-                   (4, 0, (1, 1, 1, 1), 1),
-                   (3, 1, (1, 1, 1), 1),
-                   (2, 2, (1, 1), 1),
-                   (1, 3, (1,), 1),
-                   (0, 4, (), 1)]}
-    pq_sets_2 = {2: [(2, 0, (1, 1), 1), (1, 1, (1,), 1)],
-                 3: [(2, 0, (1, 2), 2), (1, 1, (2,), 1)],
-                 4: [(2, 0, (1, 3), 2), (2, 0, (2, 2), 1), (1, 1, (3,), 1)]}
-
-
-    ################################################
-    ## Functions of pyvi.simulation.combinatorics ##
-    ################################################
-
-    print(indent + 'Testing make_list_pq()...', end=' ')
-    list_pq_computed = comb.make_list_pq(N)
-    list_pq_2_computed = comb.elimination(pq_dict, list_pq_computed)
-    assert np.all(list_pq == list_pq_computed), 'Error in make_list_pq().'
-    print('Done.')
-
-    print(indent + 'Testing elimination()...', end=' ')
-    assert np.all(list_pq_2 == list_pq_2_computed), 'Error in elimination().'
-    print('Done.')
-
-    print(indent + 'Testing state_combinatorics()...', end=' ')
-    pq_sets_computed = comb.state_combinatorics(list_pq_computed, N, True)
-    pq_sets_2_computed = comb.state_combinatorics(list_pq_2_computed, N, True)
-    assert np.all(pq_sets == pq_sets_computed), \
-        'Error in state_combinatorics().'
-    assert np.all(pq_sets_2 == pq_sets_2_computed), \
-        'Error in state_combinatorics().'
-    print('Done.')
+    unittest.main()
