@@ -308,7 +308,7 @@ class StateSpace:
         """Check in which categories the system belongs."""
         self._dynamical_equation_category()
         self._output_equation_category()
-        self.linear = self.dyn_eqn_linear & self.out_eqn_linear
+        self.linear = self._dyn_eqn_linear & self._out_eqn_linear
 
     def _dynamical_equation_category(self):
         """Check the category of the dynamical equation."""
@@ -319,30 +319,30 @@ class StateSpace:
         else:
             p_max = max(pq_list, key=itemgetter(0))[0]
             q_max = max(pq_list, key=itemgetter(1))[1]
-        self.dyn_eqn_input_affine = q_max < 2
-        self.dyn_eqn_state_affine = p_max < 2
-        self.dyn_nl_only_on_input = p_max == 0
-        self.dyn_nl_only_on_state = q_max == 0
-        self.dyn_eqn_linear = (p_max == 0) & (q_max == 0)
-        self.dyn_eqn_bilinear = \
-            self.dyn_eqn_input_affine & self.dyn_eqn_state_affine
+        self._dyn_eqn_input_affine = q_max < 2
+        self._dyn_eqn_state_affine = p_max < 2
+        self._dyn_nl_only_on_input = p_max == 0
+        self._dyn_nl_only_on_state = q_max == 0
+        self._dyn_eqn_linear = (p_max == 0) & (q_max == 0)
+        self._dyn_eqn_bilinear = \
+            self._dyn_eqn_input_affine & self._dyn_eqn_state_affine
 
     def _output_equation_category(self):
         """Check the category of the output equation."""
-        pq_list = list(self.mpq.keys())
+        pq_list = list(self.npq.keys())
         if len(pq_list) == 0:
             p_max = 0
             q_max = 0
         else:
             p_max = max(pq_list, key=itemgetter(0))[0]
             q_max = max(pq_list, key=itemgetter(1))[1]
-        self.out_eqn_input_affine = q_max < 2
-        self.out_eqn_state_affine = p_max < 2
-        self.out_nl_only_on_input = p_max == 0
-        self.out_nl_only_on_state = q_max == 0
-        self.out_eqn_linear = (p_max == 0) & (q_max == 0)
-        self.out_eqn_bilinear = \
-            self.out_eqn_input_affine & self.out_eqn_state_affine
+        self._out_eqn_input_affine = q_max < 2
+        self._out_eqn_state_affine = p_max < 2
+        self._out_nl_only_on_input = p_max == 0
+        self._out_nl_only_on_state = q_max == 0
+        self._out_eqn_linear = (p_max == 0) & (q_max == 0)
+        self._out_eqn_bilinear = \
+            self._out_eqn_input_affine & self._out_eqn_state_affine
 
 
 class NumericalStateSpace(StateSpace):
@@ -384,18 +384,18 @@ class NumericalStateSpace(StateSpace):
 
     def _ckeck_categories(self):
         """Check in which categories the system belongs."""
-        StateSpace._check_categories()
+        StateSpace._ckeck_categories(self)
         self._are_dyn_nl_colinear()
 
-    def _are_nl_colinear(self):
+    def _are_dyn_nl_colinear(self):
         """Check colinearity of dynamical nonlinearities and input-to-state."""
-        self.nl_colinear = True
+        self._nl_colinear = True
         norm_B = sc_lin.norm(self.B_m, ord=2)
         for (p, q), mpq in self.mpq.items():
             temp = np.tensordot(self.B_m.transpose(), mpq, 1).squeeze()
             norm_mpq = sc_lin.norm(mpq, ord=2, axis=0).squeeze()
             if not np.allclose(temp, norm_B*norm_mpq):
-                self.nl_colinear = False
+                self._nl_colinear = False
                 break
 
     @abstractmethod
