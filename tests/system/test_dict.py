@@ -7,7 +7,7 @@ Notes
 @author: bouvier (bouvier@ircam.fr)
          Damien Bouvier, IRCAM, Paris
 
-Last modified on 27 July 2017
+Last modified on 24 nov. 2017
 Developed for Python 3.6.1
 """
 
@@ -15,8 +15,103 @@ Developed for Python 3.6.1
 # Importations
 #==============================================================================
 
+import unittest
 import pyvi.system.dict as systems
-from mytoolbox.utilities.misc import my_parse_arg_for_tests
+
+
+#==============================================================================
+# Test Class
+#==============================================================================
+
+class CreateLoudspeakerTestCase(unittest.TestCase):
+
+    def setUp(self):
+        self.system = systems.create_loudspeaker_sica()
+
+    def test_dim_input(self):
+        self.assertEqual(self.system.dim['input'], 1)
+
+    def test_dim_state(self):
+        self.assertEqual(self.system.dim['state'], 3)
+
+    def test_dim_output(self):
+        self.assertEqual(self.system.dim['output'], 1)
+
+    def test_siso(self):
+        self.assertEqual(self.system._type, 'SISO')
+
+    def test_not_linear(self):
+        self.assertFalse(self.system.linear)
+
+    def test_output_eqn_linear(self):
+        self.assertTrue(self.system._out_eqn_linear)
+
+    def test_dyn_nl_only_on_state(self):
+        self.assertTrue(self.system._dyn_nl_only_on_state)
+
+    def test_not_nl_colinear(self):
+        self.assertFalse(self.system._nl_colinear)
+
+
+class CreateNlDampingTestCase(unittest.TestCase):
+
+    def setUp(self):
+        self.system = systems.create_nl_damping()
+
+    def test_dim_input(self):
+        self.assertEqual(self.system.dim['input'], 1)
+
+    def test_dim_state(self):
+        self.assertEqual(self.system.dim['state'], 2)
+
+    def test_dim_output(self):
+        self.assertEqual(self.system.dim['output'], 1)
+
+    def test_attribute_siso(self):
+        self.assertEqual(self.system._type, 'SISO')
+
+    def test_not_linear(self):
+        self.assertFalse(self.system.linear)
+
+    def test_out_eqn_linear(self):
+        self.assertTrue(self.system._out_eqn_linear)
+
+    def test_dyn_nl_only_on_state(self):
+        self.assertTrue(self.system._dyn_nl_only_on_state)
+
+    def test_nl_colinear(self):
+        self.assertTrue(self.system._nl_colinear)
+
+
+class CreateMoogTestCase(unittest.TestCase):
+
+    def setUp(self):
+        self.system = systems.create_moog(taylor_series_truncation=3)
+        self.mpq = {(3, 0): 0, (2, 1): 0, (1, 2): 0, (0, 3): 0}
+
+    def test_dim_input(self):
+        self.assertEqual(self.system.dim['input'], 1)
+
+    def test_dim_state(self):
+        self.assertEqual(self.system.dim['state'], 4)
+
+    def test_dim_output(self):
+        self.assertEqual(self.system.dim['output'], 1)
+
+    def test_siso(self):
+        self.assertEqual(self.system._type, 'SISO')
+
+    def test_not_linear(self):
+        self.assertFalse(self.system.linear)
+
+    def test_out_eqn_linear(self):
+        self.assertTrue(self.system._out_eqn_linear)
+
+    def test_not_nl_colinear(self):
+        self.assertFalse(self.system._nl_colinear)
+
+    def test_right_mpqs(self):
+        self.assertSequenceEqual(self.system.mpq.keys(), self.mpq.keys())
 
 
 #==============================================================================
@@ -28,83 +123,5 @@ if __name__ == '__main__':
     Main script for testing.
     """
 
-    indent = my_parse_arg_for_tests()
+    unittest.main()
 
-
-    ########################
-    ## Systems dictionary ##
-    ########################
-
-    print(indent + 'Testing create_loudspeaker_sica()...', end=' ')
-    loudspeaker_sica = systems.create_loudspeaker_sica()
-    message = 'Error in create_loudspeaker_sica().'
-    assert loudspeaker_sica.dim['input'] == 1, message
-    assert loudspeaker_sica.dim['state'] == 3, message
-    assert loudspeaker_sica.dim['output'] == 1, message
-    assert loudspeaker_sica._type == 'SISO', message
-    assert not loudspeaker_sica.linear, message
-    assert loudspeaker_sica._output_eqn_linear, message
-    assert loudspeaker_sica.state_eqn_linear_analytic, message
-    assert loudspeaker_sica.dynamical_nl_only_on_state, message
-    assert not loudspeaker_sica.nl_colinear, message
-    print('Done')
-
-
-    print(indent + 'Testing create_moog()...', end=' ')
-    moog_1 = systems.create_moog(taylor_series_truncation=1)
-    moog_2 = systems.create_moog(taylor_series_truncation=2)
-    moog_3 = systems.create_moog(taylor_series_truncation=3)
-    tmp_3 = {(3, 0): 0, (2, 1): 0, (1, 2): 0, (0, 3): 0}
-    moog_5 = systems.create_moog(taylor_series_truncation=5)
-    tmp_5 = {(5, 0): 0, (4, 1): 0, (3, 2): 0, (2, 3): 0, (1, 4): 0, (0, 5): 0,
-             (3, 0): 0, (2, 1): 0, (1, 2): 0, (0, 3): 0}
-    message = 'Error in create_moog().'
-    assert moog_1.dim['input'] == 1, message
-    assert moog_1.dim['state'] == 4, message
-    assert moog_1.dim['output'] == 1, message
-    assert moog_1._type == 'SISO', message
-    assert moog_1.linear, message
-    for key, val_1 in moog_1.__dict__.items():
-        if (key in ['A_m', 'B_m', 'C_m', 'D_m']) and (key in moog_2.__dict__):
-            assert (val_1 == moog_2.__dict__[key]).all(), message
-        elif key in moog_2.__dict__:
-            assert val_1 == moog_2.__dict__[key], message
-        else:
-            assert False, message
-    assert not moog_3.linear, message
-    assert moog_3._output_eqn_linear, message
-    assert not moog_3.state_eqn_linear_analytic, message
-    assert not moog_3.dynamical_nl_only_on_state, message
-    assert not moog_3.nl_colinear, message
-    assert moog_3.mpq.keys() == tmp_3.keys(), message
-    assert not moog_5.linear, message
-    assert moog_5._output_eqn_linear, message
-    assert not moog_5.state_eqn_linear_analytic, message
-    assert not moog_5.dynamical_nl_only_on_state, message
-    assert not moog_5.nl_colinear, message
-    assert moog_5.mpq.keys() == tmp_5.keys(), message
-    print('Done')
-
-
-    print(indent + 'Testing create_nl_damping()...', end=' ')
-    second_order = systems.create_nl_damping()
-    message = 'Error in create_nl_damping().'
-    assert second_order.dim['input'] == 1, message
-    assert second_order.dim['state'] == 2, message
-    assert second_order.dim['output'] == 1, message
-    assert second_order._type == 'SISO', message
-    assert not second_order.linear, message
-    assert second_order._output_eqn_linear, message
-    assert second_order.state_eqn_linear_analytic, message
-    assert second_order.dynamical_nl_only_on_state, message
-    assert second_order.nl_colinear, message
-    print('Done')
-
-
-    print(indent + 'Testing create_test()...', end=' ')
-    sys_num = systems.create_test(mode='numeric')
-    sys_symb = systems.create_test(mode='symbolic')
-    message = 'Error in create_test().'
-    assert not sys_num.linear, message
-    assert not sys_symb.linear, message
-    print('Done')
