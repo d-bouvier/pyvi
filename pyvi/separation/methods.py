@@ -33,7 +33,7 @@ Developed for Python 3.6.1
 # Importations
 #==============================================================================
 
-import warnings as warn
+import warnings
 import numpy as np
 import scipy.fftpack as sc_fft
 from ..utilities.mathbox import binomial
@@ -449,20 +449,31 @@ class PAS(PS, AS):
                     q = ((n - phase_idx) % self.nb_phase) // 2
                     combinatorial_terms[(n, q)] = tmp[ind] / binomial(n, q)
 
-        # Checking that estimated orders are real signals
-        output_by_order = np.real_if_close(output_by_order)
-        if np.iscomplexobj(output_by_order):
-            output_by_order = np.real(output_by_order)
-            message = '\nEstimated orders have non-negligible imaginary ' + \
-                      'parts. Only real parts have been returned, but ' + \
-                      'this indicates a probable malfunction in PAS method.\n'
-            warn.showwarning(message, UserWarning, __file__, 458, line='')
+        output = self._checking_realness_of_signals(output_by_order)
 
         # Function output
         if raw_mode:
-            return output_by_order, combinatorial_terms
+            return output, combinatorial_terms
         else:
-            return output_by_order
+            return output
+
+    def _checking_realness_of_signals(self, output_by_order):
+        """
+        Checking that estimated orders are real signals, and act accordingly.
+        """
+        output_by_order = np.real_if_close(output_by_order)
+        if np.iscomplexobj(output_by_order):
+            imaginary_part_max = np.max(np.imag(output_by_order), axis=1)
+            values = ['{:3.0e}'.format(d) for d in imaginary_part_max]
+            output_by_order = np.real(output_by_order)
+            method_name = self.__class__.__name__
+            message = 'Estimated orders have non-negligible imaginary ' + \
+                      'parts (their max for each order are respectively ' + \
+                      '{}). Only real parts have been '.format(values) + \
+                      'returned, but this indicates a probable ' + \
+                      'malfunction in the {} method.'.format(method_name)
+            warnings.warn(message, UserWarning)
+        return output_by_order
 
 
 class PAS_v2(PAS):
@@ -611,17 +622,10 @@ class PAS_v2(PAS):
                 if raw_mode:
                     combinatorial_terms[(n, q)] = tmp[ind] / binomial(n, q)
 
-        # Checking that estimated orders are real signals
-        output_by_order = np.real_if_close(output_by_order)
-        if np.iscomplexobj(output_by_order):
-            output_by_order = np.real(output_by_order)
-            message = '\nEstimated orders have non-negligible imaginary ' + \
-                      'parts. Only real parts have been returned, but this' + \
-                      ' indicates a probable malfunction in PAS_v2 method.\n'
-            warn.showwarning(message, UserWarning, __file__, 619, line='')
+        output = self._checking_realness_of_signals(output_by_order)
 
         # Function output
         if raw_mode:
-            return output_by_order, combinatorial_terms
+            return output, combinatorial_terms
         else:
-            return output_by_order
+            return output
