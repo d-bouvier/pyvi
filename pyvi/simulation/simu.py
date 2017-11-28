@@ -17,7 +17,7 @@ Notes
 @author: bouvier (bouvier@ircam.fr)
          Damien Bouvier, IRCAM, Paris
 
-Last modified on 19 July 2017
+Last modified on 25 Oct. 2017
 Developed for Python 3.6.1
 """
 
@@ -244,23 +244,26 @@ class SimulationObject:
         # Correction of bias due to ADC converter (with holder of order 0 or 1)
         if self.holder_order == 0:
             bias_1sample_lag = self.holder_bias_mat[0]
+
             def holder_bias(mpq_output, n):
-                state_by_order[n-1,:,1::] += np.dot(bias_1sample_lag,
-                                                    mpq_output[:,0:-1])
+                state_by_order[n-1, :, 1::] += np.dot(bias_1sample_lag,
+                                                      mpq_output[:, 0:-1])
         elif self.holder_order == 1:
             bias_0sample_lag = self.holder_bias_mat[0] - \
                                self.holder_bias_mat[1]
             bias_1sample_lag = self.holder_bias_mat[1]
+
             def holder_bias(mpq_output, n):
-                state_by_order[n-1,:,:] += np.dot(bias_0sample_lag, mpq_output)
-                state_by_order[n-1,:,1::] += np.dot(bias_1sample_lag,
-                                                    mpq_output[:,0:-1])
+                state_by_order[n-1, :, :] += np.dot(bias_0sample_lag,
+                                                    mpq_output)
+                state_by_order[n-1, :, 1::] += np.dot(bias_1sample_lag,
+                                                      mpq_output[:, 0:-1])
 
         # Filter function (simply a matrix product by 'filter_mat')
         def filtering(n):
             for k in np.arange(sig_len-1):
-                state_by_order[n-1,:,k+1] += np.dot(self.filter_mat,
-                                                    state_by_order[n-1,:,k])
+                state_by_order[n-1, :, k+1] += \
+                    np.dot(self.filter_mat, state_by_order[n-1, :, k])
 
         ##########################
         ## Numerical simulation ##
@@ -288,9 +291,9 @@ class SimulationObject:
         # Other nonlinear output terms (due to Npq functions)
         for n, elt in sorted(self.npq_combinatoric.items()):
             for p, q, order_set, nb in elt:
-                output_by_order[n-1,:,:] += nb * \
-                pq_computation(p, q, [m-1 for m in order_set],
-                               self.npq[(p, q)])
+                output_by_order[n-1, :, :] += nb * \
+                    pq_computation(p, q, [m-1 for m in order_set],
+                                   self.npq[(p, q)])
 
         ######################
         ## Function outputs ##
@@ -430,6 +433,7 @@ class SimulationObject:
         # Correction of bias due to ADC converter (with holder of order 0 or 1)
         if self.holder_order == 0:
             bias_1sample_lag = self.holder_bias_mat_orig[0]
+
             def holder_bias(mpq_output, n):
                 idx_in = [slice(None)] + [slice(len_ker-1)] * n
                 idx_out = [slice(None)] + [slice(1, len_ker)] * n
@@ -439,6 +443,7 @@ class SimulationObject:
             bias_0sample_lag = self.holder_bias_mat_orig[0] - \
                                self.holder_bias_mat_orig[1]
             bias_1sample_lag = self.holder_bias_mat_orig[1]
+
             def holder_bias(mpq_output, n):
                 kernels_in2state[n] += np.tensordot(bias_0sample_lag,
                                                     mpq_output, 1)
@@ -449,7 +454,7 @@ class SimulationObject:
 
         # Filter function
         def filtering(n):
-            for ind in range(n,n*(len_ker-1)+1):
+            for ind in range(n, n*(len_ker-1)+1):
                 for indexes in itr.filterfalse(lambda x: sum(x)-ind,
                                                itr.product(range(1, len_ker),
                                                            repeat=n)):
@@ -551,7 +556,7 @@ class SimulationObject:
             input_freq = np.sinc(freq_vec/self.fs_orig)**2
         input_freq = np.reshape(input_freq, (self.dim['input'], len_ker))
 
-       ##################################################
+        ##################################################
         ## Creation of functions for kernel computation ##
         ##################################################
 
@@ -582,7 +587,7 @@ class SimulationObject:
             filter_values = np.linalg.inv(s * identity - self.A_m)
             return np.einsum('...ij,j...->i...', filter_values,
                              kernels_in2state[n])
-            return np.tensordot(filter_values,  kernels_in2state[n], 1)
+            return np.tensordot(filter_values, kernels_in2state[n], 1)
 
         ########################
         ## Kernel computation ##

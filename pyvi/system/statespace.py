@@ -20,7 +20,7 @@ Notes
 @author: bouvier (bouvier@ircam.fr)
          Damien Bouvier, IRCAM, Paris
 
-Last modified on 19 July 2017
+Last modified on 24 Nov. 2017
 Developed for Python 3.6.1
 """
 
@@ -30,6 +30,7 @@ Developed for Python 3.6.1
 
 import warnings
 from abc import abstractmethod
+from operator import itemgetter
 import sympy as sp
 import numpy as np
 import scipy.linalg as sc_lin
@@ -82,7 +83,7 @@ class StateSpace:
     state_eqn_linear_analytic : boolean
         True if the system is linear-analytic (q<2 for every Mpq and Npq).
     dynamical_nl_only_on_state : boolean
-        True if there is no nonlinearity on the input in the dynamical equation.
+        True if the dynamical equation's nonlinearities are only on the state.
     _dim_ok : boolean
         True if dimensions all array and tensor dimensions corresponds.
     _type : {'SISO', 'SIMO', 'MISO', 'MIMO'}
@@ -135,7 +136,7 @@ class StateSpace:
 
         print_str = Style.UNDERLINE + Style.CYAN + Style.BRIGHT + \
                     'State-space representation :' + Style.RESET + '\n'
-        for name, desc, mat in [ \
+        for name, desc, mat in [
                     ('State {} A', 'state-to-state', self.A_m),
                     ('Input {} B', 'input-to-state', self.B_m),
                     ('Output {} C', 'state-to-output', self.C_m),
@@ -169,52 +170,58 @@ class StateSpace:
         self.dim = dict()
 
         # Dimension of state
-        assert len(self.A_m.shape) == 2, \
-            "State-to-state matrix 'A_m' is not a 2D-array " + \
-            "(it has {} dimensions).".format(len(self.A_m.shape))
-        assert self.A_m.shape[0] == self.A_m.shape[1], \
-            "State-to-state matrix 'A_m' is not square " + \
-            "(it has shape {}).".format(self.A_m.shape)
+        if len(self.A_m.shape) != 2:
+            raise ValueError("State-to-state matrix 'A_m' is not a 2D-array " +
+                             "(it has", len(self.A_m.shape), "dimensions).")
+        if self.A_m.shape[0] != self.A_m.shape[1]:
+            raise ValueError("State-to-state matrix 'A_m' is not square " +
+                             "(it has shape {}).".format(self.A_m.shape))
         self.dim['state'] = self.A_m.shape[0]
 
         # Dimension of input
-        assert len(self.B_m.shape) in [1, 2], \
-            "Input-to-state matrix 'B_m' is not a 1D or 2D-array " + \
-            "(it has {} dimensions).".format(len(self.B_m.shape))
-        assert self.B_m.shape[0] == self.dim['state'], "Shape of input-to-" + \
-            "state matrix 'B_m' {} is not ".format(self.B_m.shape) + \
-            "consistent with the state's dimension " + \
-            "{}.".format(self.dim['state'])
+        if not len(self.B_m.shape) in [1, 2]:
+            raise ValueError("Input-to-state matrix 'B_m' is not a 1D or " +
+                             "2D-array (it has", len(self.B_m.shape),
+                             "dimensions).")
+        if self.B_m.shape[0] != self.dim['state']:
+            raise ValueError("Shape of input-to-state matrix 'B_m'",
+                             self.B_m.shape, "is not consistent with the " +
+                             "state's dimension {}.".format(self.dim['state']))
         if len(self.B_m.shape) == 1:
             self.B_m.shape = (self.dim['state'], 1)
         self.dim['input'] = self.B_m.shape[1]
 
         # Dimension of output
         C_shape = self.C_m.shape
-        assert len(self.C_m.shape) in [1, 2], \
-            "State-to-output matrix 'C_m' is not a 1D or 2D-array " + \
-            "(it has {} dimensions).".format(len(self.C_m.shape))
-        assert self.C_m.shape[-1] == self.dim['state'], "Shape of state-to" + \
-            "output matrix 'C_m' {} is not ".format(self.C_m.shape) + \
-            "consistent with the state's dimension " + \
-            "{}.".format(self.dim['state'])
-        if len(self.C_m.shape) == 1:
-            self.C_m.shape = (1, self.dim['state'])
-        self.dim['output'] = self.C_m.shape[0]
+
+        if not len(C_shape) in [1, 2]:
+            raise ValueError("State-to-output matrix 'C_m' is not a 1D or " +
+                             "2D-array (it has", len(self.B_m.shape),
+                             "dimensions).")
+        if C_shape[-1] != self.dim['state']:
+            raise ValueError("Shape of state-to-output matrix 'C_m'",
+                             C_shape, "is not consistent with the state's" +
+                             "dimension {}.".format(self.dim['state']))
+        if len(C_shape) == 1:
+            C_shape = (1, self.dim['state'])
+        self.dim['output'] = C_shape[0]
 
         if self.D_m.shape != (self.dim['output'], self.dim['input']):
             try:
                 self.D_m.shape = (self.dim['output'], self.dim['input'])
             except ValueError:
-                assert False, "Shape of input-to-output matrix 'D_m' " + \
-                "{} is not consistent with the ".format(self.D_m.shape) + \
-                "input and/or output's dimension (respectively " + \
-                "{} and {})".format(self.dim['input'], self.dim['output'])
+                raise ValueError("Shape of input-to-output matrix 'D_m'",
+                                 self.D_m.shape, "is not consistent with the" +
+                                 " input and/or output's dimension " +
+                                 "(respectively", self.dim['input'], "and",
+                                 self.dim['output'])
             except AttributeError:
-                assert False, "Shape of input-to-output matrix 'D_m' " + \
-                "{} cannot be casted to ".format(self.D_m.shape) + \
-                "({}, {})".format(self.dim['input'], self.dim['output']) + \
-                "because shape's of sympy Matrix are not alterable."
+                raise AttributeError("Shape of input-to-output matrix 'D_m'",
+                                     self.D_m.shape, "cannot be casted to",
+                                     "({},".format(self.dim['input']),
+                                     "{}) because".format(self.dim['output']),
+                                     "shape's of sympy Matrix are not " +
+                                     "alterable.")
 
     def _check_dim(self):
         """Verify that input, state and output dimensions are respected."""
@@ -251,33 +258,36 @@ class StateSpace:
                           self.B_m.shape[0], self.C_m.shape[1]]
         list_dim_input = [self.B_m.shape[1], self.D_m.shape[1]]
         list_dim_output = [self.C_m.shape[0], self.D_m.shape[0]]
-        assert check_equal(list_dim_state, self.dim['state']), \
-            'State dimension not consistent'
-        assert check_equal(list_dim_input, self.dim['input']), \
-            'Input dimension not consistent'
-        assert check_equal(list_dim_output, self.dim['output']), \
-            'Output dimension not consistent'
+        if not check_equal(list_dim_state, self.dim['state']):
+            raise ValueError('State dimension not consistent')
+        if not check_equal(list_dim_input, self.dim['input']):
+            raise ValueError('Input dimension not consistent')
+        if not check_equal(list_dim_output, self.dim['output']):
+            raise ValueError('Output dimension not consistent')
 
     def _check_dim_nl_tensor(self, p, q, tensor, name, dim_result):
         """Verify shape of the multilinear tensors."""
         str_tensor = '{}_{}{} tensor: '.format(name, p, q)
         shape = tensor.shape
-        assert len(shape) == p + q + 1, \
-            str_tensor + 'wrong number of dimension ' + \
-            '(got {}, expected {}).'.format(len(shape), p + q + 1)
-        assert shape[0] == dim_result, \
-            str_tensor + 'wrong size for dimension 1 ' + \
-            '(got {}, expected {}).'.format(dim_result, shape[0])
+
+        if len(shape) != p + q + 1:
+            raise ValueError(str_tensor + 'wrong number of dimension',
+                             '(got {},'.format(len(shape)),
+                             'expected {}).'.format(p + q + 1))
+        if shape[0] != dim_result:
+            raise ValueError(str_tensor + 'wrong size for dimension 1',
+                             '(got {},'.format(dim_result),
+                             'expected {}).'.format(shape[0]))
         for ind in range(p):
-            assert shape[1+ind] == self.dim['state'], \
-                str_tensor + 'wrong size for dimension ' + \
-                '{} (got {}, expected {}).'.format(1+ind, shape[1+ind],
-                                                   self.dim['state'])
+            if shape[1+ind] != self.dim['state']:
+                raise ValueError(str_tensor + 'wrong size for dimension',
+                                 '{} (got {},'.format(1+ind, shape[1+ind]),
+                                 'expected {}).'.format(self.dim['state']))
         for ind in range(q):
-            assert shape[1+p+ind] == self.dim['input'], \
-                str_tensor + 'wrong size for dimension ' + \
-                '{} (got {}, expected {}).'.format(1+p+ind, shape[1+p+ind],
-                                                   self.dim['input'])
+            if shape[1+p+ind] != self.dim['input']:
+                raise ValueError(str_tensor + 'wrong size for dimension',
+                                 '{} (got {},'.format(1+p+ind, shape[1+p+ind]),
+                                 'expected {}).'.format(self.dim['input']))
 
     def _is_single_input(self):
         """Check if the input dimension is one."""
@@ -287,7 +297,7 @@ class StateSpace:
             message = '\nInput dimension is not equal to 1' + \
                       ' (it is {}).\n'.format(self.dim['input']) + \
                       'Simulation, kernel computation, order separation ' + \
-                      'and system  identification may not work as intended.'
+                      'and system identification may not work as intended.'
             warnings.warn(message, UserWarning)
 
     def _is_single_output(self):
@@ -298,39 +308,50 @@ class StateSpace:
             message = '\nOutput dimension is not equal to 1' + \
                       ' (it is {}).\n'.format(self.dim['output']) + \
                       'Simulation, kernel computation, order separation ' + \
-                      'and system  identification may not work as intended.'
+                      'and system identification may not work as intended.'
             warnings.warn(message, UserWarning)
 
     #=============================================#
 
     def _ckeck_categories(self):
         """Check in which categories the system belongs."""
-        self._is_linear()
-        self._is_state_eqn_linear_analytic()
-        self._are_dynamical_nl_only_on_state()
+        self._dynamical_equation_category()
+        self._output_equation_category()
+        self.linear = self._dyn_eqn_linear & self._out_eqn_linear
 
-    def _is_linear(self):
-        """Check if the system is linear."""
-        self._state_eqn_linear = not bool(self.mpq)
-        self._output_eqn_linear = not bool(self.npq)
-        self.linear = self._state_eqn_linear and self._output_eqn_linear
+    def _dynamical_equation_category(self):
+        """Check the category of the dynamical equation."""
+        pq_list = list(self.mpq.keys())
+        if len(pq_list) == 0:
+            p_max = 0
+            q_max = 0
+        else:
+            p_max = max(pq_list, key=itemgetter(0))[0]
+            q_max = max(pq_list, key=itemgetter(1))[1]
+        self._dyn_eqn_input_affine = q_max < 2
+        self._dyn_eqn_state_affine = p_max < 2
+        self._dyn_nl_only_on_input = p_max == 0
+        self._dyn_nl_only_on_state = q_max == 0
+        self._dyn_eqn_linear = (p_max == 0) & (q_max == 0)
+        self._dyn_eqn_bilinear = \
+            self._dyn_eqn_input_affine & self._dyn_eqn_state_affine
 
-    def _is_state_eqn_linear_analytic(self):
-        """Check if the system input-to-state equation is linear-analytic."""
-        self.state_eqn_linear_analytic = True
-        for p, q in self.mpq.keys():
-            if q > 1:
-                self.state_eqn_linear_analytic = False
-                break
-
-    def _are_dynamical_nl_only_on_state(self):
-        """Check if the dynamical nonlinearities are only on the state."""
-        self.dynamical_nl_only_on_state = self.state_eqn_linear_analytic
-        if self.dynamical_nl_only_on_state:
-            for p, q in self.mpq.keys():
-                if q > 0:
-                    self.dynamical_nl_only_on_state = False
-                    break
+    def _output_equation_category(self):
+        """Check the category of the output equation."""
+        pq_list = list(self.npq.keys())
+        if len(pq_list) == 0:
+            p_max = 0
+            q_max = 0
+        else:
+            p_max = max(pq_list, key=itemgetter(0))[0]
+            q_max = max(pq_list, key=itemgetter(1))[1]
+        self._out_eqn_input_affine = q_max < 2
+        self._out_eqn_state_affine = p_max < 2
+        self._out_nl_only_on_input = p_max == 0
+        self._out_nl_only_on_state = q_max == 0
+        self._out_eqn_linear = (p_max == 0) & (q_max == 0)
+        self._out_eqn_bilinear = \
+            self._out_eqn_input_affine & self._out_eqn_state_affine
 
 
 class NumericalStateSpace(StateSpace):
@@ -372,20 +393,18 @@ class NumericalStateSpace(StateSpace):
 
     def _ckeck_categories(self):
         """Check in which categories the system belongs."""
-        self._is_linear()
-        self._is_state_eqn_linear_analytic()
-        self._are_dynamical_nl_only_on_state()
-        self._are_nl_colinear()
+        StateSpace._ckeck_categories(self)
+        self._are_dyn_nl_colinear()
 
-    def _are_nl_colinear(self):
+    def _are_dyn_nl_colinear(self):
         """Check colinearity of dynamical nonlinearities and input-to-state."""
-        self.nl_colinear = True
+        self._nl_colinear = True
         norm_B = sc_lin.norm(self.B_m, ord=2)
         for (p, q), mpq in self.mpq.items():
             temp = np.tensordot(self.B_m.transpose(), mpq, 1).squeeze()
             norm_mpq = sc_lin.norm(mpq, ord=2, axis=0).squeeze()
             if not np.allclose(temp, norm_B*norm_mpq):
-                self.nl_colinear = False
+                self._nl_colinear = False
                 break
 
     @abstractmethod

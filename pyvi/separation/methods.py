@@ -25,7 +25,7 @@ Notes
 @author: bouvier (bouvier@ircam.fr)
          Damien Bouvier, IRCAM, Paris
 
-Last modified on 19 July 2017
+Last modified on 24 Nov. 2017
 Developed for Python 3.6.1
 """
 
@@ -33,7 +33,7 @@ Developed for Python 3.6.1
 # Importations
 #==============================================================================
 
-import warnings as warn
+import warnings
 import numpy as np
 import scipy.fftpack as sc_fft
 from ..utilities.mathbox import binomial
@@ -42,8 +42,6 @@ from ..utilities.mathbox import binomial
 #==============================================================================
 # Class
 #==============================================================================
-
-#TODO add condition number
 
 class _SeparationMethod:
     """
@@ -57,6 +55,8 @@ class _SeparationMethod:
         Number of tests signals needed for the method.
     factors : array_like (with length K)
         Factors applied to the base signal in order to create the test signals.
+    condition_numbers : list(float)
+        List of condition numbers of all matrix inverted during separation.
 
     Attributes
     ----------
@@ -76,6 +76,7 @@ class _SeparationMethod:
         self.N = N
         self.K = K
         self.factors = factors
+        self.condition_numbers = []
 
     def gen_inputs(self, signal):
         """
@@ -176,15 +177,15 @@ class AS(_SeparationMethod):
         """
 
         mixing_mat = \
-            np.vander(self.factors, N=self.N+1, increasing=True)[:,1::]
+            np.vander(self.factors, N=self.N+1, increasing=True)[:, 1::]
         return self._inverse_mixing_mat(output_coll, mixing_mat)
 
-    @staticmethod
-    def _inverse_mixing_mat(output_coll, mixing_mat):
+    def _inverse_mixing_mat(self, output_coll, mixing_mat):
         """
         Resolves the vandermonde system via inverse or pseudo-inverse.
         """
 
+        self.condition_numbers.append(np.linalg.cond(mixing_mat))
         is_square = mixing_mat.shape[0] == mixing_mat.shape[1]
         if is_square: # Square matrix
             return np.dot(np.linalg.inv(mixing_mat), output_coll)
@@ -258,12 +259,12 @@ class _PS(_SeparationMethod):
             demixing_vec = np.vander([1/self.rho], N=self.N, increasing=True)
             return demixing_vec.T * np.roll(estimation, -1, axis=0)
 
-    @staticmethod
-    def _inverse_fft(output_coll, N):
+    def _inverse_fft(self, output_coll, N):
         """
         Invert Discrete Fourier Transform using the FFT algorithm.
         """
 
+        self.condition_numbers.append(1)
         return sc_fft.ifft(output_coll, n=N, axis=0)
 
 
@@ -330,7 +331,7 @@ class PS(_PS):
         return 2 * np.real(_SeparationMethod.gen_inputs(self, signal))
 
     def process_outputs(self, output_coll):
-        return _PS._inverse_fft(output_coll, self.nb_phase)
+        return _PS._inverse_fft(self, output_coll, self.nb_phase)
 
 
 class PAS(PS, AS):
@@ -422,13 +423,13 @@ class PAS(PS, AS):
             combinatorial_terms = dict()
 
         mixing_mat = \
-            np.vander(self.amp_vec, N=self.N+1, increasing=True)[:,1::]
+            np.vander(self.amp_vec, N=self.N+1, increasing=True)[:, 1::]
 
         # Inverse DFT for each set with same amplitude
         for idx in range(self.nb_amp):
             start = idx * self.nb_phase
             end = start + self.nb_phase
-            out_per_phase[idx] = PS._inverse_fft(output_coll[start:end],
+            out_per_phase[idx] = PS._inverse_fft(self, output_coll[start:end],
                                                  self.nb_phase)
 
         # Computation of indexes and necessary vector
@@ -438,7 +439,7 @@ class PAS(PS, AS):
         # Inverse Vandermonde matrix for each set with same phase
         for phase_idx in range(self.nb_phase):
             col_idx = np.arange(first_nl_order[phase_idx], self.N+1, 2) - 1
-            tmp = AS._inverse_mixing_mat(out_per_phase[:, phase_idx],
+            tmp = AS._inverse_mixing_mat(self, out_per_phase[:, phase_idx],
                                          mixing_mat[:, col_idx])
 
             for ind in range(tmp.shape[0]):
@@ -448,20 +449,31 @@ class PAS(PS, AS):
                     q = ((n - phase_idx) % self.nb_phase) // 2
                     combinatorial_terms[(n, q)] = tmp[ind] / binomial(n, q)
 
-        # Checking that estimated orders are real signals
-        output_by_order = np.real_if_close(output_by_order)
-        if np.iscomplexobj(output_by_order):
-            output_by_order = np.real(output_by_order)
-            message = '\nEstimated orders have non-negligible imaginary ' + \
-                      'parts. Only real parts have been returned, but ' + \
-                      'this indicates a probable malfunction in PAS method.\n'
-            warn.showwarning(message, UserWarning, __file__, 458, line='')
+        output = self._checking_realness_of_signals(output_by_order)
 
         # Function output
         if raw_mode:
-            return output_by_order, combinatorial_terms
+            return output, combinatorial_terms
         else:
-            return output_by_order
+            return output
+
+    def _checking_realness_of_signals(self, output_by_order):
+        """
+        Checking that estimated orders are real signals, and act accordingly.
+        """
+        output_by_order = np.real_if_close(output_by_order)
+        if np.iscomplexobj(output_by_order):
+            imaginary_part_max = np.max(np.imag(output_by_order), axis=1)
+            values = ['{:3.0e}'.format(d) for d in imaginary_part_max]
+            output_by_order = np.real(output_by_order)
+            method_name = self.__class__.__name__
+            message = 'Estimated orders have non-negligible imaginary ' + \
+                      'parts (their max for each order are respectively ' + \
+                      '{}). Only real parts have been '.format(values) + \
+                      'returned, but this indicates a probable ' + \
+                      'malfunction in the {} method.'.format(method_name)
+            warnings.warn(message, UserWarning)
+        return output_by_order
 
 
 class PAS_v2(PAS):
@@ -529,7 +541,7 @@ class PAS_v2(PAS):
 
         factors = []
         for ii, nb_phase in enumerate(self.nb_phase_vec):
-            factors.append(self.amp_vec[ii] * \
+            factors.append(self.amp_vec[ii] *
                            self._gen_phase_factors(nb_phase))
 
         _SeparationMethod.__init__(self, N, np.sum(self.nb_phase_vec),
@@ -590,7 +602,8 @@ class PAS_v2(PAS):
         start = 0
         for nb_phase in self.nb_phase_vec:
             end = start + nb_phase
-            out_per_phase[start:end] = PS._inverse_fft(output_coll[start:end],
+            out_per_phase[start:end] = PS._inverse_fft(self,
+                                                       output_coll[start:end],
                                                        nb_phase)
             start += nb_phase
 
@@ -600,7 +613,7 @@ class PAS_v2(PAS):
             idx2 = list(idx)
             if (self.N % 2) and ((self.K - 3) in idx):
                 idx2.remove(self.K - 3)
-            tmp = AS._inverse_mixing_mat(out_per_phase[idx],
+            tmp = AS._inverse_mixing_mat(self, out_per_phase[idx],
                                          self.mat[idx, :][:, idx2])
 
             for (n, q) in self.list_nq[ind_test]:
@@ -609,17 +622,10 @@ class PAS_v2(PAS):
                 if raw_mode:
                     combinatorial_terms[(n, q)] = tmp[ind] / binomial(n, q)
 
-        # Checking that estimated orders are real signals
-        output_by_order = np.real_if_close(output_by_order)
-        if np.iscomplexobj(output_by_order):
-            output_by_order = np.real(output_by_order)
-            message = '\nEstimated orders have non-negligible imaginary ' + \
-                      'parts. Only real parts have been returned, but this' + \
-                      ' indicates a probable malfunction in PAS_v2 method.\n'
-            warn.showwarning(message, UserWarning, __file__, 619, line='')
+        output = self._checking_realness_of_signals(output_by_order)
 
         # Function output
         if raw_mode:
-            return output_by_order, combinatorial_terms
+            return output, combinatorial_terms
         else:
-            return output_by_order
+            return output

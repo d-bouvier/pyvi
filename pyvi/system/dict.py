@@ -22,9 +22,10 @@ Notes
 @author: bouvier (bouvier@ircam.fr)
          Damien Bouvier, IRCAM, Paris
 
-Last modified on 21 July 2017
+Last modified on 25 Oct. 2017
 Developed for Python 3.6.1
 """
+
 
 #==============================================================================
 # Importations
@@ -74,17 +75,17 @@ def create_loudspeaker_sica(version='tristan', output='pos'):
         Rms = 0.406 # Mechanical damping and drag force [kg.s-1]
         k = [912.2789, 611.4570, 8e07] # Suspension stiffness [N.m-1]
     elif version == 'CFA':
-        Cms = 544e-6; # Mechanical compliance [m.N-1]
-        Qms = 4.6;
+        Cms = 544e-6 # Mechanical compliance [m.N-1]
+        Qms = 4.6
         k = [1/Cms, -554420.0, 989026000] # Suspension stiffness [N.m-1]
         # Mechanical damping and drag force [kg.s-1]
-        Rms = np.sqrt(k[0] * Mms)/Qms;
+        Rms = np.sqrt(k[0] * Mms)/Qms
 
     # State-space matrices
     A_m = np.array([[-Re/Le, 0, -Bl/Le],
                     [0, 0, 1],
                     [Bl/Mms, -k[0]/Mms, -Rms/Mms]]) # State-to-state matrix
-    B_m = np.array([[1/Le], [0], [0]]); # Input-to-state matrix
+    B_m = np.array([[1/Le], [0], [0]]) # Input-to-state matrix
     # State-to-output matrix
     if output == 'pos':
         C_m = np.array([[0, 1, 0]])
@@ -131,7 +132,7 @@ def create_nl_damping(gain=1., f0=100., damping=0.2, nl_coeff=[0., 1e-6]):
     # State-space matrices
     A_m = np.array([[0, 1],
                     [- w0**2, - 2 * damping * w0]]) # State-to-state matrix
-    B_m = np.array([[0], [gain * w0**2]]); # Input-to-state matrix
+    B_m = np.array([[0], [gain * w0**2]]) # Input-to-state matrix
     C_m = np.array([[1, 0]]) # State-to-output matrix
     D_m = np.zeros((1, 1)) # Input-to-output matrix
 
@@ -150,7 +151,7 @@ def create_nl_damping(gain=1., f0=100., damping=0.2, nl_coeff=[0., 1e-6]):
                                pq_symmetry=True)
 
 
-def create_moog(f0=1000., r=0., taylor_series_truncation=3):
+def create_moog(f0=1000., r=0., taylor_series_truncation=3, normalized=True):
     """
     Function that create and returns the StateSpace object corresponding to a
     Moog Ladder Filter.
@@ -163,6 +164,8 @@ def create_moog(f0=1000., r=0., taylor_series_truncation=3):
         Feedback gain.
     taylor_series_truncation : int
         Truncation order for the Taylor series of tanh.
+    normalized : boolean, optional (default='normalized')
+        Chooses whether the I/O signals are true or normalized voltages.
 
     Returns
     -------
@@ -170,7 +173,8 @@ def create_moog(f0=1000., r=0., taylor_series_truncation=3):
     """
 
     # System parameters
-    Vt = 25.85 * 1e-3 # Thermal voltage
+    if not normalized:
+        Vt = 25.85 * 1e-3 # Thermal voltage
     w = 2 * np.pi * f0 # Cut-off angular frequency
 
     # Bernoulli number
@@ -184,7 +188,7 @@ def create_moog(f0=1000., r=0., taylor_series_truncation=3):
             bernoulli[n] -= binomial(n, k) * bernoulli[k] / (n-k+1)
 
     # Taylor series of tanh
-    t = np.zeros((taylor_series_truncation+1,1))
+    t = np.zeros((taylor_series_truncation+1, 1))
     for n in range(1, taylor_series_truncation+1, 2):
         m = n + 1
         t[n] = bernoulli[m] * 2**m * (2**m - 1) / (math.factorial(m))
@@ -194,9 +198,12 @@ def create_moog(f0=1000., r=0., taylor_series_truncation=3):
                                [1, -1, 0, 0],
                                [0, 1, -1, 0],
                                [0, 0, 1, -1]]) # State-to-state matrix
-    B_m = w * t[1] * np.array([[1.], [0], [0], [0]]); # Input-to-state matrix
-    C_m = np.array([[0, 0, 0, 1]]) # State-to-output matrix
+    B_m = w * t[1] * np.array([[1.], [0], [0], [0]]) # Input-to-state matrix
+    C_m = np.array([[0, 0, 0, 1.]]) # State-to-output matrix
     D_m = np.zeros((1, 1)) # Input-to-output matrix
+    if not normalized:
+        B_m /= 2 * Vt
+        C_m *= 2 * Vt
 
     # Dictionnaries of Mpq & Npq tensors
     mpq_dict = dict()
@@ -220,6 +227,8 @@ def create_moog(f0=1000., r=0., taylor_series_truncation=3):
             temp = np.zeros((4,) + (4,)*(p-k) + (1,)*k)
             ind = (0,) + (3,)*(p-k) + (0,)*k
             temp[ind] = w * t[p] * binomial(p, k) * (-4*r)**(p-k)
+            if not normalized:
+                temp[ind] /= (2 * Vt)**k
             mpq_dict[(p-k, k)] = temp.copy()
 
     return NumericalStateSpace(A_m, B_m, C_m, D_m, mpq_dict, npq_dict,
@@ -246,7 +255,7 @@ def create_test(mode='numeric'):
         # State-space matrices
         A_m = np.array([[0, 1],
                         [- 10000, - 40]]) # State-to-state matrix
-        B_m = np.array([[0], [1]]); # Input-to-state matrix
+        B_m = np.array([[0], [1]]) # Input-to-state matrix
         C_m = np.array([[1, 0]]) # State-to-output matrix
         D_m = np.array([[1]]) # Input-to-output matrix
 
@@ -272,7 +281,7 @@ def create_test(mode='numeric'):
         # State-space matrices
         A_m = Matrix([[0, a],
                       [b, c]]) # State-to-state matrix
-        B_m = Matrix([[0], [d]]); # Input-to-state matrix
+        B_m = Matrix([[0], [d]]) # Input-to-state matrix
         C_m = Matrix([[e, 0]]) # State-to-output matrix
         D_m = Matrix([[f]]) # Input-to-output matrix
 
@@ -301,4 +310,4 @@ def create_test(mode='numeric'):
                                    pq_symmetry=True)
     elif mode in ['symbolic', 'symb']:
         return SymbolicStateSpace(A_m, B_m, C_m, D_m, mpq_dict, npq_dict,
-                                   pq_symmetry=True)
+                                  pq_symmetry=True)

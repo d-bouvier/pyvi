@@ -7,7 +7,7 @@ Notes
 @author: bouvier (bouvier@ircam.fr)
          Damien Bouvier, IRCAM, Paris
 
-Last modified on 27 July 2017
+Last modified on 24 Nov. 2017
 Developed for Python 3.6.1
 """
 
@@ -15,11 +15,68 @@ Developed for Python 3.6.1
 # Importations
 #==============================================================================
 
+import unittest
+import itertools
 import numpy as np
-from pyvi.system.dict import (create_test, create_loudspeaker_sica,
-                              create_nl_damping)
-from pyvi.simulation.simu import SimulationObject as SimuObj
-from mytoolbox.utilities.misc import my_parse_arg_for_tests
+from pyvi.system.dict import create_test
+from pyvi.simulation.simu import SimulationObject
+
+
+#==============================================================================
+# Test Class
+#==============================================================================
+
+class SimulationTestCase(unittest.TestCase):
+
+    def setUp(self):
+        self.len = 2000
+        self.fs = 100
+        self.sig = np.ones((self.len,))
+        self.system = create_test(mode='numeric')
+        self.n_state = self.system.dim['state']
+        self.n_out = self.system.dim['output']
+        self.list_order = [1, 2, 3, 4]
+        self.list_out_opt = ['output', 'output_by_order', 'state',
+                             'state_by_order']
+        self.list_holder_order = [0, 1]
+        self.list_resampling = [True, False]
+
+    def test_output_shape(self):
+        loop = itertools.product(self.list_order, self.list_out_opt,
+                                 self.list_holder_order, self.list_resampling)
+        for i, (N, out_opt, holder_order, resampling) in enumerate(loop):
+            with self.subTest(i=i):
+                simuObj = SimulationObject(self.system, fs=self.fs,
+                                           nl_order_max=N,
+                                           holder_order=holder_order,
+                                           resampling=resampling)
+                out = simuObj.simulation(self.sig, out_opt=out_opt)
+                correct_out_shape = (self.len,)
+                if ('output' in out_opt) & (self.n_out != 1):
+                    correct_out_shape = (self.n_out,) + correct_out_shape
+                elif 'state' in out_opt:
+                    correct_out_shape = (self.n_state,) + correct_out_shape
+                if 'by_order' in out_opt:
+                    correct_out_shape = (N,) + correct_out_shape
+                self.assertEqual(out.shape, correct_out_shape)
+
+
+class ComputeKernelsTestCase(unittest.TestCase):
+
+    def setUp(self):
+        options = {'fs': 2000,
+                   'nl_order_max': 2,
+                   'holder_order': 1}
+        self.sys_simu = SimulationObject(create_test(mode='numeric'),
+                                         **options)
+        self.T = 0.03
+        self.which_options = ['time', 'freq', 'both']
+
+    def test_compute_kernels(self):
+        for opt in self.which_options:
+            with self.subTest(i=opt):
+                output = self.sys_simu.compute_kernels(self.T, which=opt)
+            self.assertIsNotNone(output)
 
 
 #==============================================================================
@@ -31,59 +88,4 @@ if __name__ == '__main__':
     Main script for testing.
     """
 
-    indent = my_parse_arg_for_tests()
-
-
-    #########################
-    ## Method simulation() ##
-    #########################
-
-    sig = np.ones((10000,))
-    system = create_test(mode='numeric')
-
-    print(indent + 'Testing SimulationObject.simulation()...', end=' ')
-
-    out1 = SimuObj(system, holder_order=0, resampling=False).simulation(sig)
-    out2 = SimuObj(system, holder_order=1, resampling=False).simulation(sig)
-    out3 = SimuObj(system, holder_order=0, resampling=True).simulation(sig)
-    out4 = SimuObj(system, holder_order=1, resampling=True).simulation(sig)
-    assert out1.shape == sig.shape, 'Shape error in simulation output' + \
-        ' with holder of order 0 and without resampling.'
-    assert out2.shape == sig.shape, 'Shape error in simulation output' + \
-        ' with holder of order 1 and without resampling.'
-    assert out3.shape == sig.shape, 'Shape error in simulation output' + \
-        ' with holder of order 0 and with resampling.'
-    assert out4.shape == sig.shape, 'Shape error in simulation output' + \
-        ' with holder of order 1 and with resampling.'
-
-    simu = SimuObj(system, nl_order_max=3)
-    out5 = simu.simulation(sig, out_opt='output_by_order')
-    out6 = simu.simulation(sig, out_opt='state')
-    out7 = simu.simulation(sig, out_opt='state_by_order')
-    assert out5.shape == (3, ) + sig.shape, 'Shape error in simulation' + \
-        ' output when output_by_order is wanted.'
-    assert out6.shape == (system.dim['state'],) + sig.shape, \
-        'Shape error in simulation output when state is wanted.'
-    assert out7.shape == (3, system.dim['state']) + sig.shape, \
-        'Shape error in simulation output when state_by_order is wanted.'
-
-    print('Done.')
-
-
-    ##############################
-    ## Method compute_kernels() ##
-    ##############################
-
-    # Parameters
-    options = {'fs': 2000,
-               'nl_order_max': 2,
-               'holder_order': 1}
-    T = 0.03
-
-    # Test system
-    print(indent + 'Testing SimulationObject.compute_kernels()...', end=' ')
-    sys_simu = SimuObj(create_test(mode='numeric'), **options)
-    t_kernels = sys_simu.compute_kernels(T, which='time')
-    t_kernels, f_kernels = sys_simu.compute_kernels(T, which='both')
-    f_kernels = sys_simu.compute_kernels(T, which='freq')
-    print('Done.')
+    unittest.main()

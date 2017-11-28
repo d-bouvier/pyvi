@@ -12,6 +12,8 @@ safe_db :
     Returns the dB value, with safeguards if numerator or denominator is null.
 binomial :
     Binomial coefficient returning an integer.
+multinomial :
+    Multinomial coefficient returning an integer.
 array_symmetrization :
     Symmetrize a multidimensional square array.
 
@@ -20,7 +22,7 @@ Notes
 @author: bouvier (bouvier@ircam.fr)
          Damien Bouvier, IRCAM, Paris
 
-Last modified on 26 July 2017
+Last modified on 24 Nov. 2017
 Developed for Python 3.6.1
 """
 
@@ -29,7 +31,6 @@ Developed for Python 3.6.1
 #==============================================================================
 
 import math
-import functools
 import itertools as itr
 import numpy as np
 import scipy.special as sc_sp
@@ -57,7 +58,7 @@ def rms(sig, axis=None):
          Root-mean-square value alogn given ``axis``.
     """
 
-    return np.sqrt( np.mean(np.abs(sig)**2, axis=axis) )
+    return np.sqrt(np.mean(np.abs(sig)**2, axis=axis))
 
 
 def db(val, ref=1.):
@@ -108,9 +109,8 @@ def safe_db(num, den):
     else:
         _den = den
 
-    # Assert same shape
-    assert _num.shape == _den.shape, 'Dimensions of num and den not equal' + \
-        ' (they are respectively {} and {}).'.format(_num.shape, _den.shape)
+    # Broadcast arrays
+    _num, _den = np.broadcast_arrays(_num, _den)
 
     if _num.shape == ():
         if _num == 0:

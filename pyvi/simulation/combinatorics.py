@@ -19,7 +19,7 @@ Notes
 @author: bouvier (bouvier@ircam.fr)
          Damien Bouvier, IRCAM, Paris
 
-Last modified on 19 July 2017
+Last modified on 25 Oct. 2017
 Developed for Python 3.6.1
 """
 
@@ -61,8 +61,8 @@ def make_list_pq(nl_order_max):
     # Loop on order of nonlinearity
     for n in range(2, nl_order_max+1):
         # Report previous sets and change the corresponding order
-        list_pq = np.concatenate((list_pq, list_pq[-nb_set_2_report-1:-1,:]))
-        list_pq[-nb_set_2_report:,0] += 1
+        list_pq = np.concatenate((list_pq, list_pq[-nb_set_2_report-1:-1, :]))
+        list_pq[-nb_set_2_report:, 0] += 1
         # Loop on all new combination (p,q)
         for q in range(n+1):
             array_tmp = np.array([n, n-q, q])
@@ -101,7 +101,7 @@ def elimination(pq_dict, list_pq):
         # list_pq[idx,0] represents n
         # list_pq[idx,1] represents p
         # list_pq[idx,2] represents q
-        mask_pq[idx] = (list_pq[idx,1], list_pq[idx,2]) in pq_dict.keys()
+        mask_pq[idx] = (list_pq[idx, 1], list_pq[idx, 2]) in pq_dict.keys()
 
     return list_pq[mask_pq]
 

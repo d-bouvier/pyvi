@@ -7,7 +7,7 @@ Notes
 @author: bouvier (bouvier@ircam.fr)
          Damien Bouvier, IRCAM, Paris
 
-Last modified on 27 July 2017
+Last modified on 27 Nov. 2017
 Developed for Python 3.6.1
 """
 
@@ -15,8 +15,8 @@ Developed for Python 3.6.1
 # Importations
 #==============================================================================
 
-import string
-import itertools as itr
+import unittest
+import itertools
 import numpy as np
 from pyvi.identification.tools import (error_measure, nb_coeff_in_kernel,
                                        nb_coeff_in_all_kernels,
@@ -26,7 +26,270 @@ from pyvi.identification.tools import (error_measure, nb_coeff_in_kernel,
                                        volterra_basis_by_order,
                                        volterra_basis_by_term)
 from pyvi.utilities.mathbox import binomial
-from mytoolbox.utilities.misc import my_parse_arg_for_tests
+
+
+#==============================================================================
+# Test Class
+#==============================================================================
+
+class ErrorMeasureTest(unittest.TestCase):
+
+    def setUp(self):
+        self.N = 3
+        self.M = 20
+        self.kernels = dict()
+        for n in range(1, self.N+1):
+            self.kernels[n] = np.random.uniform(size=(self.M,)*n)
+        self.sigma_values = [0, 0.001, 0.01, 0.1, 1]
+
+    def test_output_len_with_db_mode_off(self):
+        for i, sigma in enumerate(self.sigma_values):
+            with self.subTest(i=i):
+                kernels_est = dict()
+                for n, h in self.kernels.items():
+                    kernels_est[n] = h + np.random.normal(scale=sigma,
+                                                          size=(self.M,)*n)
+                error = error_measure(self.kernels, kernels_est, db=False)
+                self.assertEqual(len(error), self.N)
+
+    def test_output_len_with_db_mode_on(self):
+        for i, sigma in enumerate(self.sigma_values):
+            with self.subTest(i=i):
+                kernels_est = dict()
+                for n, h in self.kernels.items():
+                    kernels_est[n] = h + np.random.normal(scale=sigma,
+                                                          size=(self.M,)*n)
+                error = error_measure(self.kernels, kernels_est, db=True)
+                self.assertEqual(len(error), self.N)
+
+
+class NbCoeffInKernelTest(unittest.TestCase):
+
+    def setUp(self):
+        self.Nmax = 5
+        self.Mmax = 20
+        self.iter_obj = itertools.product(range(1, self.Nmax+1),
+                                          range(1, self.Mmax+1))
+
+    def test_nb_coeff_symmetric_form(self):
+        for N, M in self.iter_obj:
+            with self.subTest(i=(N, M)):
+                nb_coeff = nb_coeff_in_kernel(M, N, form='sym')
+                self.assertEqual(nb_coeff, binomial(M + N - 1, N))
+
+
+    def test_nb_coeff_triangular_form(self):
+        for N, M in self.iter_obj:
+            with self.subTest(i=(N, M)):
+                nb_coeff = nb_coeff_in_kernel(M, N, form='tri')
+                self.assertEqual(nb_coeff, binomial(M + N - 1, N))
+
+    def test_nb_coeff_raw_form(self):
+        for N, M in self.iter_obj:
+            with self.subTest(i=(N, M)):
+                nb_coeff = nb_coeff_in_kernel(M, N, form=None)
+                self.assertEqual(nb_coeff, M**N)
+
+
+class NbCoeffInAllKernelsTest(unittest.TestCase):
+
+    def setUp(self):
+        self.Nmax = 5
+        self.Mmax = 5
+        self.iter_obj = itertools.product(range(1, self.Nmax+1),
+                                          range(1, self.Mmax+1))
+
+    def test_nb_coeff_symmetric_form(self):
+        for N, M in self.iter_obj:
+            with self.subTest(i=(N, M)):
+                nb_coeff = nb_coeff_in_all_kernels(M, N, form='sym')
+                self.assertEqual(nb_coeff, binomial(M + N, N) - 1)
+
+
+    def test_nb_coeff_triangular_form(self):
+        for N, M in self.iter_obj:
+            with self.subTest(i=(N, M)):
+                nb_coeff = nb_coeff_in_all_kernels(M, N, form='tri')
+                self.assertEqual(nb_coeff, binomial(M + N, N) - 1)
+
+    def test_nb_coeff_raw_form(self):
+        for N, M in self.iter_obj:
+            with self.subTest(i=(N, M)):
+                nb_coeff = nb_coeff_in_all_kernels(M, N, form=None)
+                self.assertEqual(nb_coeff, sum([M**N for N in range(1, N+1)]))
+
+
+class AssertEnoughDataSamplesTest(unittest.TestCase):
+
+    def test_error_raised(self):
+        self.assertRaises(ValueError, assert_enough_data_samples, 8, 9,
+                          3, 2, 'KLS')
+
+
+class VectorToKernelTest(unittest.TestCase):
+
+    def setUp(self):
+        self.M = 4
+        self.h_vec = {2: np.arange(1, binomial(self.M + 1, 2)+1),
+                      3: np.arange(1, binomial(self.M + 2, 3)+1)}
+        self.h_tri = {2: np.array([[1, 2, 3, 4],
+                                   [0, 5, 6, 7],
+                                   [0, 0, 8, 9],
+                                   [0, 0, 0, 10]]),
+                      3: np.array([[[1, 2, 3, 4],
+                                    [0, 5, 6, 7],
+                                    [0, 0, 8, 9],
+                                    [0, 0, 0, 10]],
+                                   [[0, 0, 0, 0],
+                                    [0, 11, 12, 13],
+                                    [0, 0, 14, 15],
+                                    [0, 0, 0, 16]],
+                                   [[0, 0, 0, 0],
+                                    [0, 0, 0, 0],
+                                    [0, 0, 17, 18],
+                                    [0, 0, 0, 19]],
+                                   [[0, 0, 0, 0],
+                                    [0, 0, 0, 0],
+                                    [0, 0, 0, 0],
+                                    [0, 0, 0, 20]]])}
+        self.h_sym = {2: np.array([[1, 1, 1.5, 2],
+                                   [1, 5, 3, 3.5],
+                                   [1.5, 3, 8, 4.5],
+                                   [2, 3.5, 4.5, 10]]),
+                      3: np.array([[[1., 2/3, 1, 4/3],
+                                    [2/3, 5/3, 1, 7/6],
+                                    [1, 1, 8/3, 1.5],
+                                    [4/3, 7/6, 1.5, 10/3]],
+                                   [[2/3, 5/3, 1, 7/6],
+                                    [5/3, 11, 4, 13/3],
+                                    [1, 4, 14/3, 2.5],
+                                    [7/6, 13/3, 2.5, 16/3]],
+                                   [[1, 1, 8/3, 1.5],
+                                    [1, 4, 14/3, 2.5],
+                                    [8/3, 14/3, 17, 6],
+                                    [1.5, 2.5, 6, 19/3]],
+                                   [[4/3, 7/6, 1.5, 10/3],
+                                    [7/6, 13/3, 2.5, 16/3],
+                                    [1.5, 2.5, 6, 19/3],
+                                    [10/3, 16/3, 19/3, 20]]])}
+
+    def test_triangular_form(self):
+        for n in [2, 3]:
+            with self.subTest(i=n):
+                result = vector_to_kernel(self.h_vec[n], self.M, n, form='tri')
+                self.assertTrue(np.all(result == self.h_tri[n]))
+
+    def test_symmetric_form(self):
+        for n in [2, 3]:
+            with self.subTest(i=n):
+                result = vector_to_kernel(self.h_vec[n], self.M, n, form='sym')
+                self.assertTrue(np.all(result == self.h_sym[n]))
+
+
+class KernelToVectorTest(VectorToKernelTest):
+
+    def test_triangular_form(self):
+        for n in [2, 3]:
+            with self.subTest(i=n):
+                result = kernel_to_vector(self.h_tri[n], form='tri')
+                self.assertTrue(np.all(result == self.h_vec[n]))
+
+    def test_symmetric_form(self):
+        for n in [2, 3]:
+            with self.subTest(i=n):
+                result = kernel_to_vector(self.h_sym[n], form='sym')
+                self.assertTrue(np.all(result == self.h_vec[n]))
+
+
+class VectorToAllKerrnelsTest(VectorToKernelTest):
+
+    def setUp(self):
+        VectorToKernelTest.setUp(self)
+        self.N = 3
+        self.h_vec[1] = np.arange(1, self.M+1)
+        self.f = np.concatenate((self.h_vec[1], self.h_vec[2], self.h_vec[3]),
+                                axis=0)
+        self.h_tri[1] = self.h_vec[1]
+        self.h_sym[1] = self.h_vec[1]
+
+
+    def test_triangular_form(self):
+        kernels = vector_to_all_kernels(self.f, self.M, self.N, form='tri')
+        result = [np.all(h == self.h_tri[n]) for n, h in kernels.items()]
+        self.assertTrue(all(result))
+
+    def test_symmetric_form(self):
+        kernels = vector_to_all_kernels(self.f, self.M, self.N, form='sym')
+        result = [np.all(h == self.h_sym[n]) for n, h in kernels.items()]
+        self.assertTrue(all(result))
+
+
+class VolterraBasisTest(unittest.TestCase):
+
+    def setUp(self):
+        self.L = 100
+        self.N = 4
+        self.M = 25
+        sig_real = np.arange(self.L)
+        sig_cplx = np.arange(self.L) + 2j * np.arange(self.L)
+        self.order_keys = {1: 0, 2: 0, 3: 0, 4: 0}
+        self.order_r = volterra_basis_by_order(sig_real, self.M, self.N)
+        self.order_c = volterra_basis_by_order(sig_cplx, self.M, self.N)
+        self.term_keys = {(1, 0): 0, (2, 0): 0, (2, 1): 0, (3, 0): 0,
+                          (3, 1): 0, (4, 0): 0, (4, 1): 0, (4, 2): 0}
+        self.term_r = volterra_basis_by_term(sig_real, self.M, self.N)
+        self.term_c = volterra_basis_by_term(sig_cplx, self.M, self.N)
+
+    def test_output_type_for_orders(self):
+        for i, value in enumerate([self.order_r, self.order_c]):
+            with self.subTest(i=i):
+                self.assertIsInstance(value, dict)
+
+    def test_output_type_for_terms(self):
+        for i, value in enumerate([self.term_r, self.term_c]):
+            with self.subTest(i=i):
+                self.assertIsInstance(value, dict)
+
+    def test_output_shape_for_orders(self):
+        for i, value in enumerate([self.order_r, self.order_c]):
+            with self.subTest(i=i):
+                self.assertEqual(value.keys(), self.order_keys.keys())
+
+    def test_output_shape_for_terms(self):
+        for i, value in enumerate([self.term_r, self.term_c]):
+            with self.subTest(i=i):
+                self.assertEqual(value.keys(), self.term_keys.keys())
+
+    def test_basis_shapes_for_orders(self):
+        for i, value in enumerate([self.order_r, self.order_c]):
+            for n, basis in value.items():
+                with self.subTest(i=(i, n)):
+                    nb_coeff = nb_coeff_in_kernel(self.M, n, form='sym')
+                    self.assertEqual(basis.shape, (self.L, nb_coeff))
+
+    def test_basis_shapes_for_terms(self):
+        for i, value in enumerate([self.term_r, self.term_c]):
+            for (n, q), basis in value.items():
+                with self.subTest(i=(i, (n, q))):
+                    nb_coeff = nb_coeff_in_kernel(self.M, n, form='sym')
+                    self.assertEqual(basis.shape, (self.L, nb_coeff))
+
+    def test_same_result_with_term_and_order_on_real_signals(self):
+        for n in range(1, self.N+1):
+            with self.subTest(i=n):
+                self.assertTrue(np.all(self.order_r[n] == self.term_r[(n, 0)]))
+
+    def test_same_result_with_term_and_order_on_complex_signals(self):
+        for n in range(1, self.N+1):
+            with self.subTest(i=n):
+                self.assertTrue(np.all(self.order_c[n] == self.term_c[(n, 0)]))
+
+    def test_same_result_between_all_terms_with_real_signals(self):
+        for n in range(1, self.N+1):
+            term = self.term_r[(n, 0)]
+            for q in range(1, 1+n//2):
+                with self.subTest(i=(n, q)):
+                    self.assertTrue(np.all(term == self.term_r[(n, q)]))
 
 
 #==============================================================================
@@ -38,257 +301,4 @@ if __name__ == '__main__':
     Main script for testing.
     """
 
-    indent = my_parse_arg_for_tests()
-
-
-    ##############################
-    ## Function error_measure() ##
-    ##############################
-
-    print(indent + 'Testing error_measure()...', end=' ')
-    N = 3
-    M = 20
-
-    kernels = dict()
-    for n in range(1, N+1):
-        kernels[n] = np.random.uniform(low=-1.0, high=1.0, size=(M,)*n)
-
-    for sigma in [0, 0.001, 0.01, 0.1, 1]:
-
-        kernels_est = dict()
-        for n, h in kernels.items():
-            kernels_est[n] = h + np.random.normal(scale=sigma, size=(M,)*n)
-
-        error = error_measure(kernels, kernels_est, db=False)
-        error_db = error_measure(kernels, kernels_est)
-        assert len(error) == N, 'Error in length of returned error measure.'
-        assert len(error_db) == N, 'Error in length of returned error measure.'
-    print('Done.')
-
-
-    ###################################
-    ## Function nb_coeff_in_kernel() ##
-    ###################################
-
-    N = 5
-    M = 20
-
-    print(indent + 'Testing nb_coeff_in_kernel()...', end=' ')
-    for n in range(1, N+1):
-        for M in range(1, M+1):
-            nb_coeff_1 = binomial(M + n - 1, n)
-            nb_coeff_2 = M**n
-            nb_coeff_sym = nb_coeff_in_kernel(M, n, form='sym')
-            nb_coeff_tri = nb_coeff_in_kernel(M, n, form='tri')
-            nb_coeff_raw = nb_coeff_in_kernel(M, n, form=None)
-            assert nb_coeff_sym == nb_coeff_1, \
-                'Returns wrong number of coefficient for symmetric form.'
-            assert nb_coeff_tri == nb_coeff_1, \
-                'Returns wrong number of coefficient for triangular form.'
-            assert nb_coeff_raw == nb_coeff_2, \
-                'Returns wrong number of coefficient for raw form.'
-    print('Done.')
-
-
-    ########################################
-    ## Function nb_coeff_in_all_kernels() ##
-    ########################################
-
-    Nmax = 5
-
-    print(indent + 'Testing nb_coeff_in_all_kernels()...', end=' ')
-    for N in range(1, Nmax+1):
-        for M in range(1, M+1):
-            nb_coeff_1 = binomial(M + N, N) - 1
-            nb_coeff_2 = sum([M**n for n in range(1, N+1)])
-            nb_coeff_sym = nb_coeff_in_all_kernels(M, N, form='sym')
-            nb_coeff_tri = nb_coeff_in_all_kernels(M, N, form='tri')
-            nb_coeff_raw = nb_coeff_in_all_kernels(M, N, form=None)
-            assert nb_coeff_sym == nb_coeff_1, \
-                'Returns wrong number of coefficient for symmetric form.'
-            assert nb_coeff_tri == nb_coeff_1, \
-                'Returns wrong number of coefficient for triangular form.'
-            assert nb_coeff_raw == nb_coeff_2, \
-                'Returns wrong number of coefficient for raw form.'
-    print('Done.')
-
-
-    ###########################################
-    ## Function assert_enough_data_samples() ##
-    ###########################################
-
-    print(indent + 'Testing assert_enough_data_samples()...', end=' ')
-    max_nb_coeff = 9
-    for nb_data in [8, 9, 10]:
-        should_error_be_raised = nb_data < max_nb_coeff
-        try:
-            assert_enough_data_samples(nb_data, max_nb_coeff, 3, 2, 'KLS')
-            error_raised = False
-        except ValueError as err:
-            error_raised = True
-        assert should_error_be_raised == error_raised, 'No error was ' + \
-            'raised by assert_enough_data_samples() when it should have ' + \
-            '(nb_data={} < max_nb_coeff={}).'.format(nb_data, max_nb_coeff)
-    print('Done.')
-
-
-    #################################
-    ## Function vector_to_kernel() ##
-    #################################
-
-    print(indent + 'Testing vector_to_kernel()...', end=' ')
-    M = 4
-
-    # Order 2
-    h2 = np.arange(1, binomial(M + 1, 2)+1)
-    h2tri = np.array([[1, 2, 3, 4],
-                      [0, 5, 6, 7],
-                      [0, 0, 8, 9],
-                      [0, 0, 0, 10]])
-    h2sym = np.array([[1, 1, 1.5, 2],
-                      [1, 5, 3, 3.5],
-                      [1.5, 3, 8, 4.5],
-                      [2, 3.5, 4.5, 10]])
-    h3 = np.arange(1, binomial(M + 2, 3)+1)
-    h3tri = np.array([[[1,  2,  3,  4],
-                       [0,  5,  6,  7],
-                       [0,  0,  8,  9],
-                       [0,  0,  0, 10]],
-                      [[0,  0,  0,  0],
-                       [0, 11, 12, 13],
-                       [0,  0, 14, 15],
-                       [0,  0,  0, 16]],
-                      [[0,  0,  0,  0],
-                       [0,  0,  0,  0],
-                       [0,  0, 17, 18],
-                       [0,  0,  0, 19]],
-                      [[0,  0,  0,  0],
-                       [0,  0,  0,  0],
-                       [0,  0,  0,  0],
-                       [0,  0,  0, 20]]])
-    h3sym = np.array([[[1., 2/3, 1, 4/3],
-                       [2/3, 5/3, 1, 7/6],
-                       [1, 1, 8/3, 1.5],
-                       [4/3, 7/6, 1.5, 10/3]],
-                      [[2/3, 5/3, 1, 7/6],
-                       [5/3, 11, 4, 13/3],
-                       [1, 4, 14/3, 2.5],
-                       [7/6, 13/3, 2.5, 16/3]],
-                      [[1, 1, 8/3, 1.5],
-                       [1, 4, 14/3, 2.5],
-                       [8/3, 14/3, 17, 6],
-                       [1.5, 2.5, 6, 19/3]],
-                      [[4/3, 7/6, 1.5, 10/3],
-                       [7/6, 13/3, 2.5, 16/3],
-                       [1.5, 2.5, 6, 19/3],
-                       [10/3, 16/3, 19/3, 20]]])
-    list_ind_2 = list()
-    list_ind_3 = list()
-    for idx in itr.combinations_with_replacement(string.digits[:M], 2):
-        list_ind_2.append(''.join(idx))
-    for idx in itr.combinations_with_replacement(string.digits[:M], 3):
-        list_ind_3.append(''.join(idx))
-    h2s = np.array(list_ind_2)
-    h3s = np.array(list_ind_3)
-    h2s_tri = np.array([['00', '01', '02', '03'],
-                        ['', '11', '12', '13'],
-                        ['', '', '22', '23'],
-                        ['', '', '', '33']])
-    h3s_tri = np.array([[['000', '001', '002' ,'003'],
-                         ['', '011', '012', '013'],
-                         ['', '', '022', '023'],
-                         ['', '', '', '033']],
-                        [['', '', '', ''],
-                         ['', '111', '112', '113'],
-                         ['', '', '122', '123'],
-                         ['', '', '', '133']],
-                        [['', '', '', ''],
-                         ['', '', '', ''],
-                         ['', '', '222', '223'],
-                         ['', '', '', '233']],
-                        [['', '', '', ''],
-                         ['', '', '', ''],
-                         ['', '', '', ''],
-                         ['', '', '', '333']]])
-    assert np.all(vector_to_kernel(h2, M, 2, form='tri') == h2tri), \
-        'Error of computation in kernel under its triangular form.'
-    assert np.all(vector_to_kernel(h2, M, 2, form='sym') == h2sym), \
-        'Error of computation in kernel under its symmetric form.'
-    assert np.all(vector_to_kernel(h3, M, 3, form='tri') == h3tri), \
-        'Error of computation in kernel under its triangular form.'
-    assert np.all(vector_to_kernel(h3, M, 3, form='sym') == h3sym), \
-        'Error of computation in kernel under its symmetric form.'
-    assert np.all(vector_to_kernel(h2s, M, 2, form='tri') == h2s_tri), \
-        'Error of computation in kernel under its triangular form.'
-    assert np.all(vector_to_kernel(h3s, M, 3, form='tri') == h3s_tri), \
-        'Error of computation in kernel under its triangular form.'
-    print('Done.')
-
-
-    #################################
-    ## Function kernel_to_vector() ##
-    #################################
-
-    print(indent + 'Testing kernel_to_vector()...', end=' ')
-
-    assert np.all(kernel_to_vector(h2tri, form='tri') == h2), \
-        'Error of computation in kernel under its triangular form.'
-    assert np.all(kernel_to_vector(h2sym, form='sym') == h2), \
-        'Error of computation in kernel under its symmetric form.'
-    assert np.all(kernel_to_vector(h3tri, form='tri') == h3), \
-        'Error of computation in kernel under its triangular form.'
-    assert np.all(kernel_to_vector(h3sym, form='sym') == h3), \
-        'Error of computation in kernel under its symmetric form.'
-    assert np.all(kernel_to_vector(h2s_tri, form='tri') == h2s), \
-        'Error of computation in kernel under its triangular form.'
-    assert np.all(kernel_to_vector(h3s_tri, form='tri') == h3s), \
-        'Error of computation in kernel under its triangular form.'
-    print('Done.')
-
-
-    ######################################
-    ## Function vector_to_all_kernels() ##
-    ######################################
-
-    print(indent + 'Testing vector_to_all_kernels()...', end=' ')
-    N = 3
-    h1s = np.array(list(string.digits[:M]))
-    f = np.concatenate((h1s, h2s, h3s), axis=0)
-    kernels = vector_to_all_kernels(f, M, N, form='tri')
-    h1s_tri = np.array(['0', '1', '2', '3'])
-    assert np.all(kernels[1] == h1s_tri), \
-        'Error of computation in vector_to_all_kernels().'
-    assert np.all(kernels[2] == h2s_tri), \
-        'Error of computation in vector_to_all_kernels().'
-    assert np.all(kernels[3] == h3s_tri), \
-        'Error of computation in vector_to_all_kernels().'
-    print('Done.')
-
-
-    #####################################
-    ## Functions volterra_basis_by_*() ##
-    #####################################
-
-    length = 100
-    N = 4
-    M = 25
-    sig = np.arange(length)
-    sig_cplx = np.arange(length) + 2j * np.arange(length)
-
-    print(indent + 'Testing volterra_basis_by_order()...', end=' ')
-    order_r = volterra_basis_by_order(sig, M, N)
-    order_c = volterra_basis_by_order(sig_cplx, M, N)
-    print('Done.')
-
-    print(indent + 'Testing volterra_basis_by_term()...', end=' ')
-    term_r = volterra_basis_by_term(sig, M, N)
-    term_c = volterra_basis_by_term(sig_cplx, M, N)
-    for n in range(1, N+1):
-        assert np.all(order_r[n] == term_r[(n, 0)]), \
-            "Divergence of results for 'order' and term' methods."
-        assert np.all(order_c[n] == term_c[(n, 0)]), \
-            "Divergence of results for 'order' and term' methods."
-        for q in range(0, 1+n//2):
-            assert np.all(term_r[(n, 0)] == term_r[(n, q)]), \
-                "Divergence of results for 'term' method on real signal."
-    print('Done.')
+    unittest.main()
