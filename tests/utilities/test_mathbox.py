@@ -134,9 +134,6 @@ class BinomialTestCase(unittest.TestCase):
                                      mathbox.binomial(n-1, k))
 
 
-#TODO: class MultinomialTestCase(unittest.TestCase):
-
-
 class ArraySymmetrizationTestCase(unittest.TestCase):
 
     def test_symmetrization(self):

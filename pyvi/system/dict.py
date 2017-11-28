@@ -199,7 +199,7 @@ def create_moog(f0=1000., r=0., taylor_series_truncation=3, normalized=True):
                                [0, 1, -1, 0],
                                [0, 0, 1, -1]]) # State-to-state matrix
     B_m = w * t[1] * np.array([[1.], [0], [0], [0]]) # Input-to-state matrix
-    C_m = np.array([[0, 0, 0, 1]]) # State-to-output matrix
+    C_m = np.array([[0, 0, 0, 1.]]) # State-to-output matrix
     D_m = np.zeros((1, 1)) # Input-to-output matrix
     if not normalized:
         B_m /= 2 * Vt

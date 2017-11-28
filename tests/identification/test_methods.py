@@ -87,6 +87,10 @@ class orderKLSTest(KLSTest):
 
 class termKLSTest(KLSTest):
 
+    def _init_parameters(self):
+        KLSTest._init_parameters(self)
+        self.atol = 1e-12
+
     def _create_input(self):
         self.input_sig = np.random.normal(size=(self.L,)) + \
                          1j * np.random.normal(size=(self.L,))
@@ -107,6 +111,10 @@ class termKLSTest(KLSTest):
 
 
 class phaseKLSTest(termKLSTest):
+
+    def _init_parameters(self):
+        termKLSTest._init_parameters(self)
+        self.atol = 1e-12
 
     def _create_output(self):
         method = sep.PS(N=self.N)
