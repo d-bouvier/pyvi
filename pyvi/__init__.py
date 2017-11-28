@@ -13,3 +13,9 @@ Developed for Python 3.6.1
 
 from .__config__ import (__author__, __maintainer__, __version__,
                          __dependencies__)
+
+from . import utilities
+from . import system
+from . import simulation as simu
+from . import separation as sep
+from . import identification as identif

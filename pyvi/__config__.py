@@ -18,10 +18,3 @@ __dependencies__ = {'numpy': '1.13.1',
                     'scipy': '0.19.1',
                     'sympy': '1.0',
                     'matplotlib': '2.0.2'}
-
-
-from . import utilities
-from . import system
-from . import simulation as simu
-from . import separation as sep
-from . import identification as identif
