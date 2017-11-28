@@ -51,7 +51,7 @@ class _SeparationMethodGlobalTest():
         self.order_true = generate_output(input_sig, self.N, by_order=True)
 
     def test_shape(self):
-        self.assertTrue(self.order_est.shape == (self.N, self.L))
+        self.assertEqual(self.order_est.shape, (self.N, self.L))
 
     def test_correct_output(self):
         self.assertTrue(np.allclose(self.order_est, self.order_true,
@@ -106,7 +106,7 @@ class PASMethodTestCase(_SeparationMethodGlobalTest, unittest.TestCase):
         for n in range(1, self.N+1):
             for k in range(n+1):
                 keys[(n, k)] = ()
-        self.assertSequenceEqual(term_est.keys(), keys.keys())
+        self.assertEqual(term_est.keys(), keys.keys())
 
 
 class PASv2MethodTestCase(PASMethodTestCase, unittest.TestCase):

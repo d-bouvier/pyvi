@@ -58,7 +58,7 @@ class SimulationTestCase(unittest.TestCase):
                     correct_out_shape = (self.n_state,) + correct_out_shape
                 if 'by_order' in out_opt:
                     correct_out_shape = (N,) + correct_out_shape
-                self.assertTupleEqual(out.shape, correct_out_shape)
+                self.assertEqual(out.shape, correct_out_shape)
 
 
 class ComputeKernelsTestCase(unittest.TestCase):

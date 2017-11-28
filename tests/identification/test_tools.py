@@ -253,12 +253,12 @@ class VolterraBasisTest(unittest.TestCase):
     def test_output_shape_for_orders(self):
         for i, value in enumerate([self.order_r, self.order_c]):
             with self.subTest(i=i):
-                self.assertSequenceEqual(value.keys(), self.order_keys.keys())
+                self.assertEqual(value.keys(), self.order_keys.keys())
 
     def test_output_shape_for_terms(self):
         for i, value in enumerate([self.term_r, self.term_c]):
             with self.subTest(i=i):
-                self.assertSequenceEqual(value.keys(), self.term_keys.keys())
+                self.assertEqual(value.keys(), self.term_keys.keys())
 
     def test_basis_shapes_for_orders(self):
         for i, value in enumerate([self.order_r, self.order_c]):

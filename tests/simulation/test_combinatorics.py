@@ -72,7 +72,7 @@ class StateCombinatoricsCase(unittest.TestCase):
                             (1, 3, (1,), 1),
                             (0, 4, (), 1)]}
         computed_pq_sets = comb.state_combinatorics(computed_list, N, True)
-        self.assertDictEqual(computed_pq_sets, true_pq_sets)
+        self.assertEqual(computed_pq_sets, true_pq_sets)
 
     def test_output_with_elimination(self):
         N = 4
@@ -83,7 +83,7 @@ class StateCombinatoricsCase(unittest.TestCase):
                         4: [(2, 0, (1, 3), 2), (2, 0, (2, 2), 1),
                             (1, 1, (3,), 1)]}
         computed_pq_sets = comb.state_combinatorics(computed_list, N, True)
-        self.assertDictEqual(computed_pq_sets, true_pq_sets)
+        self.assertEqual(computed_pq_sets, true_pq_sets)
 
 
 #==============================================================================

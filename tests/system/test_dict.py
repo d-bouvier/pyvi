@@ -111,7 +111,7 @@ class CreateMoogTestCase(unittest.TestCase):
         self.assertFalse(self.system._nl_colinear)
 
     def test_right_mpqs(self):
-        self.assertSequenceEqual(self.system.mpq.keys(), self.mpq.keys())
+        self.assertEqual(self.system.mpq.keys(), self.mpq.keys())
 
 
 #==============================================================================
