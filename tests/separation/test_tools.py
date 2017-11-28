@@ -7,7 +7,7 @@ Notes
 @author: bouvier (bouvier@ircam.fr)
          Damien Bouvier, IRCAM, Paris
 
-Last modified on 27 July 2017
+Last modified on 27 Nov. 2017
 Developed for Python 3.6.1
 """
 
@@ -15,9 +15,39 @@ Developed for Python 3.6.1
 # Importations
 #==============================================================================
 
+import unittest
 import numpy as np
 from pyvi.separation.tools import error_measure
-from mytoolbox.utilities.misc import my_parse_arg_for_tests
+
+
+#==============================================================================
+# Test Class
+#==============================================================================
+
+class ErrorMeasureTestCase(unittest.TestCase):
+
+    def setUp(self):
+        self.N = 3
+        self.L = 1000
+        self.size = (self.N, self.L)
+        self.sig = np.random.uniform(low=-1.0, high=1.0, size=self.size)
+        self.sigma_values = [0, 0.001, 0.01, 0.1, 1]
+
+    def test_output_len_with_db_mode_off(self):
+        for i, sigma in enumerate(self.sigma_values):
+            with self.subTest(i=i):
+                sig_est = self.sig + np.random.normal(scale=sigma,
+                                                      size=self.size)
+                error = error_measure(self.sig, sig_est, db=False)
+                self.assertEqual(len(error), self.N)
+
+    def test_output_len_with_db_mode_on(self):
+        for i, sigma in enumerate(self.sigma_values):
+            with self.subTest(i=i):
+                sig_est = self.sig + np.random.normal(scale=sigma,
+                                                      size=self.size)
+                error = error_measure(self.sig, sig_est, db=True)
+                self.assertEqual(len(error), self.N)
 
 
 #==============================================================================
@@ -29,28 +59,4 @@ if __name__ == '__main__':
     Main script for testing.
     """
 
-    indent = my_parse_arg_for_tests()
-
-
-    ##############################
-    ## Function error_measure() ##
-    ##############################
-
-    print(indent + 'Testing error_measure()...', end=' ')
-
-    N = 3
-    L = 1000
-    size=(N, L)
-
-    sig = np.random.uniform(low=-1.0, high=1.0, size=size)
-    for sigma in [0, 0.001, 0.01, 0.1, 1]:
-        sig_est = sig + np.random.normal(scale=sigma, size=size)
-
-        error = error_measure(sig, sig_est, db=False)
-        error_db = error_measure(sig, sig_est)
-
-        assert len(error) == size[0], \
-            'Error in length of returned error measure.'
-        assert len(error_db) == size[0], \
-            'Error in length of returned error measure.'
-    print('Done.')
+    unittest.main()
