@@ -42,7 +42,7 @@ class StateSpaceTestCase(unittest.TestCase):
                       [(3, 3), (3, 2), (2, 3), (2)]]
         for i, (shapeA, shapeB, shapeC, shapeD) in enumerate(mat_shapes):
             with self.subTest(i=i):
-                self.assertRaises(AssertionError, StateSpace,
+                self.assertRaises(ValueError, StateSpace,
                                   np.empty(shapeA), np.empty(shapeB),
                                   np.empty(shapeC), np.empty(shapeD))
 
@@ -67,7 +67,7 @@ class StateSpaceTestCase(unittest.TestCase):
                   [{}, {(0, 2): np.empty((3, 2, 2))}]]
         for i, (mpq, npq) in enumerate(pq_val):
             with self.subTest(i=i):
-                self.assertRaises(AssertionError, StateSpace,
+                self.assertRaises(ValueError, StateSpace,
                                   np.empty(shapeA), np.empty(shapeB),
                                   np.empty(shapeC), np.empty(shapeD),
                                   mpq=mpq, npq=npq)
