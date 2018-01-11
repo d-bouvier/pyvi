@@ -418,7 +418,7 @@ class PAS(PS, AS):
 
         out_per_phase = np.zeros((self.nb_amp, self.nb_phase) + sig_shape,
                                  dtype='complex128')
-        output_by_order = np.zeros((self.N,) + sig_shape, dtype='complex128')
+        output_by_order = np.zeros((self.N,) + sig_shape)
         if raw_mode:
             combinatorial_terms = dict()
 
@@ -435,42 +435,40 @@ class PAS(PS, AS):
         # Computation of indexes and necessary vector
         tmp = np.arange(1, self.N+1)
         first_nl_order = np.concatenate((tmp[1:2], tmp, tmp[::-1]))
+        conj_mat = np.array([[1., 0], [1., 0], [0, 1.], [0, -1.]])
 
-        # Inverse Vandermonde matrix for each set with same phase
-        for phase_idx in range(self.nb_phase):
+        # Inverse Vandermonde matrix for each set with same null phase
+        col_idx = np.arange(first_nl_order[0], self.N+1, 2) - 1
+        tmp = AS._inverse_mixing_mat(self, np.real(out_per_phase[:, 0]),
+                                     mixing_mat[:, col_idx])
+        for ind in range(tmp.shape[0]):
+            n = first_nl_order[0] + 2*ind
+            output_by_order[n-1] += tmp[ind]
+            if raw_mode:
+                q = ((n - 0) % self.nb_phase) // 2
+                combinatorial_terms[(n, q)] = tmp[ind] / binomial(n, q)
+
+        # Inverse Vandermonde matrix for each set with same non-null phase
+        for phase_idx in range(1, 1 + self.nb_phase // 2):
             col_idx = np.arange(first_nl_order[phase_idx], self.N+1, 2) - 1
-            tmp = AS._inverse_mixing_mat(self, out_per_phase[:, phase_idx],
-                                         mixing_mat[:, col_idx])
-
-            for ind in range(tmp.shape[0]):
+            phase_idx_conj = self.nb_phase - phase_idx
+            sigs = np.concatenate((np.real(out_per_phase[:, phase_idx]),
+                                   np.real(out_per_phase[:, phase_idx_conj]),
+                                   np.imag(out_per_phase[:, phase_idx]),
+                                   np.imag(out_per_phase[:, phase_idx_conj])))
+            mix_mat = np.kron(conj_mat, mixing_mat[:, col_idx])
+            tmp = AS._inverse_mixing_mat(self, sigs, mix_mat)
+            ind_dec = tmp.shape[0] // 2
+            for ind in range(ind_dec):
                 n = first_nl_order[phase_idx] + 2*ind
-                output_by_order[n-1] += tmp[ind]
+                output_by_order[n-1] += 2 * tmp[ind]
                 if raw_mode:
                     q = ((n - phase_idx) % self.nb_phase) // 2
-                    combinatorial_terms[(n, q)] = tmp[ind] / binomial(n, q)
-
-        output = self._checking_realness_of_signals(output_by_order)
+                    combinatorial_terms[(n, q)] = \
+                        (tmp[ind] + 1j*tmp[ind+ind_dec]) / binomial(n, q)
 
         # Function output
         if raw_mode:
-            return output, combinatorial_terms
+            return output_by_order, combinatorial_terms
         else:
-            return output
-
-    def _checking_realness_of_signals(self, output_by_order):
-        """
-        Checking that estimated orders are real signals, and act accordingly.
-        """
-        output_by_order = np.real_if_close(output_by_order)
-        if np.iscomplexobj(output_by_order):
-            imaginary_part_max = np.max(np.imag(output_by_order), axis=1)
-            values = ['{:3.0e}'.format(d) for d in imaginary_part_max]
-            output_by_order = np.real(output_by_order)
-            method_name = self.__class__.__name__
-            message = 'Estimated orders have non-negligible imaginary ' + \
-                      'parts (their max for each order are respectively ' + \
-                      '{}). Only real parts have been '.format(values) + \
-                      'returned, but this indicates a probable ' + \
-                      'malfunction in the {} method.'.format(method_name)
-            warnings.warn(message, UserWarning)
-        return output_by_order
+            return output_by_order
