@@ -36,6 +36,7 @@ Developed for Python 3.6.1
 import warnings
 import numpy as np
 import scipy.fftpack as sc_fft
+import scipy.signal as sc_sig
 from ..utilities.mathbox import binomial
 
 
@@ -322,13 +323,20 @@ class PS(_PS):
         input_coll : numpy.ndarray
             Collection of the K input test signals (each with the same shape as
             ``signal``).
+        signal_cplx : numpy.ndarray (only if ``signal`` is not a omplex object)
+            Complex version of ``signal`` obtained using Hilbert transform.
 
         See also
         --------
         _SeparationMethod.gen_inputs
         """
 
-        return 2 * np.real(_SeparationMethod.gen_inputs(self, signal))
+        if not np.iscomplexobj(signal):
+            signal_cplx = (1/2) * sc_sig.hilbert(signal)
+            return 2*np.real(_SeparationMethod.gen_inputs(self, signal_cplx)),\
+                signal_cplx
+        else:
+            return 2*np.real(_SeparationMethod.gen_inputs(self, signal))
 
     def process_outputs(self, output_coll):
         return _PS._inverse_fft(self, output_coll, self.nb_phase)
