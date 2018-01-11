@@ -20,11 +20,8 @@ iterKLS :
 
 Notes
 -----
-@author: bouvier (bouvier@ircam.fr)
-         Damien Bouvier, IRCAM, Paris
-
-Last modified on 25 Oct. 2017
 Developed for Python 3.6.1
+@author: Damien Bouvier (Damien.Bouvier@ircam.fr)
 """
 
 #==============================================================================
