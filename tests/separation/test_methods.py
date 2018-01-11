@@ -109,14 +109,6 @@ class PASMethodTestCase(_SeparationMethodGlobalTest, unittest.TestCase):
         self.assertEqual(term_est.keys(), keys.keys())
 
 
-class PASv2MethodTestCase(PASMethodTestCase, unittest.TestCase):
-
-    method_class = sep.PAS_v2
-    input_dtype = 'complex'
-    signal_dtype = 'float'
-    atol = 1e-10
-
-
 #==============================================================================
 # Functions
 #==============================================================================
