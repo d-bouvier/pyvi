@@ -323,7 +323,7 @@ class PS(_PS):
         input_coll : numpy.ndarray
             Collection of the K input test signals (each with the same shape as
             ``signal``).
-        signal_cplx : numpy.ndarray (only if ``signal`` is not a omplex object)
+        signal_cplx : numpy.ndarray (only if ``signal`` is not complex)
             Complex version of ``signal`` obtained using Hilbert transform.
 
         See also
