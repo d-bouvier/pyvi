@@ -383,15 +383,16 @@ class PAS(PS, AS):
 
     negative_gain = False
 
-    def __init__(self, N=3, gain=1.51):
+    def __init__(self, N=3, gain=1.51, multiplicity=1):
         self.gain = gain
         self.nb_amp = (N + 1) // 2
         self.amp_vec = self._gen_amp_factors(self.nb_amp)
 
         self.nb_phase = 2*N + 1
-        phase_vec = self._gen_phase_factors(self.nb_phase)
+        self.nb_phase_tot = multiplicity * self.nb_phase
+        phase_vec = self._gen_phase_factors(self.nb_phase_tot)
 
-        nb_test = self.nb_phase * self.nb_amp
+        nb_test = self.nb_phase_tot * self.nb_amp
         self.nb_term = (N * (N + 3)) // 2
         factors = np.tensordot(self.amp_vec, phase_vec, axes=0).flatten()
 
@@ -423,7 +424,7 @@ class PAS(PS, AS):
 
         out_per_phase = np.zeros((self.nb_amp, self.nb_phase) + sig_shape,
                                  dtype='complex128')
-        output_by_order = np.zeros((self.N,) + sig_shape, dtype='complex128')
+        output_by_order = np.zeros((self.N,) + sig_shape)
         if raw_mode:
             combinatorial_terms = dict()
 
@@ -432,205 +433,50 @@ class PAS(PS, AS):
 
         # Inverse DFT for each set with same amplitude
         for idx in range(self.nb_amp):
-            start = idx * self.nb_phase
-            end = start + self.nb_phase
-            out_per_phase[idx] = PS._inverse_fft(self, output_coll[start:end],
-                                                 self.nb_phase)
+            start = idx * self.nb_phase_tot
+            end = start + self.nb_phase_tot
+            temp = PS._inverse_fft(self, output_coll[start:end],
+                                   self.nb_phase_tot)
+            out_per_phase[idx] = np.concatenate((temp[0:self.N+1],
+                                                 temp[-self.N:]), axis=0)
 
         # Computation of indexes and necessary vector
         tmp = np.arange(1, self.N+1)
         first_nl_order = np.concatenate((tmp[1:2], tmp, tmp[::-1]))
+        conj_mat = np.array([[1., 0], [1., 0], [0, 1.], [0, -1.]])
 
-        # Inverse Vandermonde matrix for each set with same phase
-        for phase_idx in range(self.nb_phase):
+        # Inverse Vandermonde matrix for each set with same null phase
+        col_idx = np.arange(first_nl_order[0], self.N+1, 2) - 1
+        tmp = AS._inverse_mixing_mat(self, np.real(out_per_phase[:, 0]),
+                                     mixing_mat[:, col_idx])
+        for ind in range(tmp.shape[0]):
+            n = first_nl_order[0] + 2*ind
+            output_by_order[n-1] += tmp[ind]
+            if raw_mode:
+                q = ((n - 0) % self.nb_phase) // 2
+                combinatorial_terms[(n, q)] = tmp[ind] / binomial(n, q)
+
+        # Inverse Vandermonde matrix for each set with same non-null phase
+        for phase_idx in range(1, 1 + self.nb_phase // 2):
             col_idx = np.arange(first_nl_order[phase_idx], self.N+1, 2) - 1
-            tmp = AS._inverse_mixing_mat(self, out_per_phase[:, phase_idx],
-                                         mixing_mat[:, col_idx])
-
-            for ind in range(tmp.shape[0]):
+            phase_idx_conj = self.nb_phase - phase_idx
+            sigs = np.concatenate((np.real(out_per_phase[:, phase_idx]),
+                                   np.real(out_per_phase[:, phase_idx_conj]),
+                                   np.imag(out_per_phase[:, phase_idx]),
+                                   np.imag(out_per_phase[:, phase_idx_conj])))
+            mix_mat = np.kron(conj_mat, mixing_mat[:, col_idx])
+            tmp = AS._inverse_mixing_mat(self, sigs, mix_mat)
+            ind_dec = tmp.shape[0] // 2
+            for ind in range(ind_dec):
                 n = first_nl_order[phase_idx] + 2*ind
-                output_by_order[n-1] += tmp[ind]
+                output_by_order[n-1] += 2 * tmp[ind]
                 if raw_mode:
                     q = ((n - phase_idx) % self.nb_phase) // 2
-                    combinatorial_terms[(n, q)] = tmp[ind] / binomial(n, q)
-
-        output = self._checking_realness_of_signals(output_by_order)
-
-        # Function output
-        if raw_mode:
-            return output, combinatorial_terms
-        else:
-            return output
-
-    def _checking_realness_of_signals(self, output_by_order):
-        """
-        Checking that estimated orders are real signals, and act accordingly.
-        """
-        output_by_order = np.real_if_close(output_by_order)
-        if np.iscomplexobj(output_by_order):
-            imaginary_part_max = np.max(np.imag(output_by_order), axis=1)
-            values = ['{:3.0e}'.format(d) for d in imaginary_part_max]
-            output_by_order = np.real(output_by_order)
-            method_name = self.__class__.__name__
-            message = 'Estimated orders have non-negligible imaginary ' + \
-                      'parts (their max for each order are respectively ' + \
-                      '{}). Only real parts have been '.format(values) + \
-                      'returned, but this indicates a probable ' + \
-                      'malfunction in the {} method.'.format(method_name)
-            warnings.warn(message, UserWarning)
-        return output_by_order
-
-
-class PAS_v2(PAS):
-    """
-    Class for Phase-based Separation method using fewer signals.
-
-    Parameters
-    ----------
-    N : int, optional (default=3)
-        Number of orders to separate (truncation order of the Volterra series).
-    gain : float, optional (default=1.51)
-        Gain factor in amplitude between  the input test signals.
-
-    Attributes
-    ----------
-    N : int
-    K : int
-    factors : array_like (of length K)
-    gain : float
-    negative_gain : boolean (class Attribute, always False)
-    rho : float (class Attribute, always 1)
-    nb_amp : int
-        Number of different amplitudes used.
-    nb_phase_vec : list(int)
-        List of the number of different phases used.
-    nb_term : int
-        Total number of combinatorial terms.
-    amp_vec : array_like (of length nb_amp)
-        Vector regrouping all amplitudes used.
-    nb_inv : int
-        Number of matrix inversion required to do the full separation.
-    mat : 2D-array_like (of size (K, K))
-        Mixing matrix.
-    ind : dict((int, int): int)
-        Index where the corresponding (p, q) term is stored.
-    list_nq : dict(int: (int, int))
-        List of 'p, q) terms appearing in a given matrix inversion.
-    ind_coll : dict(int: (int, int))
-         Index of all output test signals appearing in a given matrix
-         inversion.
-
-    Methods
-    -------
-    gen_inputs(signal)
-        Returns the collection of input test signals.
-    process_output(output_coll, raw_mode=False)
-        Process outputs and returns estimated orders or combinatorial terms.
-
-    See also
-    --------
-    PAS: Parent class
-    _SeparationMethod, PS, AS
-    """
-
-    def __init__(self, N=3, gain=1.51):
-
-        self.gain = gain
-        self.nb_term = (N * (N + 3)) // 2
-
-        self.nb_amp = (N + 1) // 2
-        self.amp_vec = self._gen_amp_factors(self.nb_amp)
-
-        self.nb_phase_vec = (2*N + 1) - 4*np.arange(self.nb_amp)
-        self.nb_inv = self.nb_phase_vec[-1]
-
-        factors = []
-        for ii, nb_phase in enumerate(self.nb_phase_vec):
-            factors.append(self.amp_vec[ii] *
-                           self._gen_phase_factors(nb_phase))
-
-        _SeparationMethod.__init__(self, N, np.sum(self.nb_phase_vec),
-                                   np.concatenate(factors))
-
-        self.mat = np.zeros((self.K, self.K))
-        self.ind = dict()
-        self.list_nq = dict([(n, []) for n in range(self.nb_inv)])
-        self.ind_coll = dict([(n, set()) for n in range(self.nb_inv)])
-        offsets = np.cumsum(self.nb_phase_vec) - self.nb_phase_vec
-
-        for n in range(1, self.N+1):
-            for q in range(n+1):
-                if q == n/2:
-                    idx = q-1
-                elif q > n/2:
-                    idx = n-q
-                else:
-                    idx = q
-                phase = (n - 2*q)
-                ind_test = phase % self.nb_phase_vec[-1]
-                ind_coll = offsets + phase % self.nb_phase_vec
-                self.ind[(n, q)] = offsets[idx] + \
-                                   phase % self.nb_phase_vec[idx]
-                self.mat[ind_coll, self.ind[(n, q)]] = self.amp_vec**n
-                self.list_nq[ind_test].append((n, q))
-                self.ind_coll[ind_test].update(set(ind_coll))
-
-    def process_outputs(self, output_coll, raw_mode=False):
-        """
-        Process outputs and returns estimated orders or combinatorial terms.
-
-        Parameters
-        ----------
-        output_coll : (K, ...) array_like
-            Collection of the K output signals.
-        raw_mode : boolean, optional (default=False)
-            Option that defines what the function returns.
-
-        Returns
-        -------
-        output_by_order : numpy.ndarray
-            Estimation of the N first nonlinear homogeneous orders.
-        combinatorial_terms : dict((int, int): array_like)
-            Estimation of the N first nonlinear homogeneous orders.
-
-        This function always return ``output_by_order``; it also returns
-        ``combinatorial_terms`` if `raw_mode`` optionis set to True.
-        """
-
-        sig_shape = output_coll.shape[1:]
-        out_per_phase = np.zeros((self.K,)+sig_shape, dtype='complex128')
-        output_by_order = np.zeros((self.N,) + sig_shape, dtype='complex128')
-        if raw_mode:
-            combinatorial_terms = dict()
-
-        # Inverse DFT for each set with same amplitude
-        start = 0
-        for nb_phase in self.nb_phase_vec:
-            end = start + nb_phase
-            out_per_phase[start:end] = PS._inverse_fft(self,
-                                                       output_coll[start:end],
-                                                       nb_phase)
-            start += nb_phase
-
-        # Inverse Vandermonde matrix for each set with same phase
-        for ind_test in range(self.nb_inv):
-            idx = sorted(self.ind_coll[ind_test])
-            idx2 = list(idx)
-            if (self.N % 2) and ((self.K - 3) in idx):
-                idx2.remove(self.K - 3)
-            tmp = AS._inverse_mixing_mat(self, out_per_phase[idx],
-                                         self.mat[idx, :][:, idx2])
-
-            for (n, q) in self.list_nq[ind_test]:
-                ind = np.where(idx == self.ind[(n, q)])[0][0]
-                output_by_order[n-1] += tmp[ind]
-                if raw_mode:
-                    combinatorial_terms[(n, q)] = tmp[ind] / binomial(n, q)
-
-        output = self._checking_realness_of_signals(output_by_order)
+                    combinatorial_terms[(n, q)] = \
+                        (tmp[ind] + 1j*tmp[ind+ind_dec]) / binomial(n, q)
 
         # Function output
         if raw_mode:
-            return output, combinatorial_terms
+            return output_by_order, combinatorial_terms
         else:
-            return output
+            return output_by_order
