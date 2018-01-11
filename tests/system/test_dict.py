@@ -4,11 +4,8 @@ Test script for pyvi/system/dict.py
 
 Notes
 -----
-@author: bouvier (bouvier@ircam.fr)
-         Damien Bouvier, IRCAM, Paris
-
-Last modified on 24 nov. 2017
 Developed for Python 3.6.1
+@author: Damien Bouvier (Damien.Bouvier@ircam.fr)
 """
 
 #==============================================================================

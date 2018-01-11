@@ -4,11 +4,8 @@ Test script for pyvi/simulation/simu.py
 
 Notes
 -----
-@author: bouvier (bouvier@ircam.fr)
-         Damien Bouvier, IRCAM, Paris
-
-Last modified on 24 Nov. 2017
 Developed for Python 3.6.1
+@author: Damien Bouvier (Damien.Bouvier@ircam.fr)
 """
 
 #==============================================================================
