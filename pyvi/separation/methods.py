@@ -378,15 +378,16 @@ class PAS(PS, AS):
 
     negative_gain = False
 
-    def __init__(self, N=3, gain=1.51):
+    def __init__(self, N=3, gain=1.51, multiplicity=1):
         self.gain = gain
         self.nb_amp = (N + 1) // 2
         self.amp_vec = self._gen_amp_factors(self.nb_amp)
 
         self.nb_phase = 2*N + 1
-        phase_vec = self._gen_phase_factors(self.nb_phase)
+        self.nb_phase_tot = multiplicity * self.nb_phase
+        phase_vec = self._gen_phase_factors(self.nb_phase_tot)
 
-        nb_test = self.nb_phase * self.nb_amp
+        nb_test = self.nb_phase_tot * self.nb_amp
         self.nb_term = (N * (N + 3)) // 2
         factors = np.tensordot(self.amp_vec, phase_vec, axes=0).flatten()
 
@@ -427,10 +428,12 @@ class PAS(PS, AS):
 
         # Inverse DFT for each set with same amplitude
         for idx in range(self.nb_amp):
-            start = idx * self.nb_phase
-            end = start + self.nb_phase
-            out_per_phase[idx] = PS._inverse_fft(self, output_coll[start:end],
-                                                 self.nb_phase)
+            start = idx * self.nb_phase_tot
+            end = start + self.nb_phase_tot
+            temp = PS._inverse_fft(self, output_coll[start:end],
+                                   self.nb_phase_tot)
+            out_per_phase[idx] = np.concatenate((temp[0:self.N+1],
+                                                 temp[-self.N:]), axis=0)
 
         # Computation of indexes and necessary vector
         tmp = np.arange(1, self.N+1)
