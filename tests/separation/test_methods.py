@@ -81,6 +81,13 @@ class PSMethodTestCase(_SeparationMethodGlobalTest, unittest.TestCase):
                                    save[0] + save[2] + save[3]), axis=0)
         self.order_est = np.real(self.order_est)
 
+    def test_gen_inputs(self):
+        for dtype, out_type in (('float', tuple), ('complex', np.ndarray)):
+            with self.subTest(i=dtype):
+                input_sig = np.zeros((self.L,), dtype=dtype)
+                outputs = self.method.gen_inputs(input_sig)
+                self.assertIsInstance(outputs, out_type)
+
 
 class PASMethodTestCase(_SeparationMethodGlobalTest, unittest.TestCase):
 
