@@ -92,19 +92,12 @@ class PASMethodTestCase(_SeparationMethodGlobalTest, unittest.TestCase):
     signal_dtype = 'float'
     atol = 1e-10
 
-    def setUp(self):
-        with warnings.catch_warnings():
-            warnings.simplefilter(action='ignore', category=UserWarning)
-            _SeparationMethodGlobalTest.setUp(self)
-
     def test_shape_term(self):
-        with warnings.catch_warnings():
-            warnings.simplefilter(action='ignore', category=UserWarning)
-            _, term_est = self.method.process_outputs(self.output_coll,
-                                                      raw_mode=True)
+        _, term_est = self.method.process_outputs(self.output_coll,
+                                                  raw_mode=True)
         keys = dict()
         for n in range(1, self.N+1):
-            for k in range(n+1):
+            for k in range(n//2 + 1):
                 keys[(n, k)] = ()
         self.assertEqual(term_est.keys(), keys.keys())
 
