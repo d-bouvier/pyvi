@@ -300,9 +300,10 @@ class PS(_PS):
 
     rho = 1
 
-    def __init__(self, N=3):
+    def __init__(self, N=3, multiplicity=1):
         self.nb_phase = 2*N + 1
-        phase_vec = self._gen_phase_factors(self.nb_phase)
+        self.nb_phase_tot = multiplicity * self.nb_phase
+        phase_vec = self._gen_phase_factors(self.nb_phase_tot)
 
         _SeparationMethod.__init__(self, N, self.nb_phase, phase_vec)
 
@@ -336,7 +337,8 @@ class PS(_PS):
             return 2*np.real(_SeparationMethod.gen_inputs(self, signal))
 
     def process_outputs(self, output_coll):
-        return _PS._inverse_fft(self, output_coll, self.nb_phase)
+        temp = _PS._inverse_fft(self, output_coll, self.nb_phase_tot)
+        return np.concatenate((temp[0:self.N+1], temp[-self.N:]), axis=0)
 
 
 class PAS(PS, AS):
@@ -435,10 +437,8 @@ class PAS(PS, AS):
         for idx in range(self.nb_amp):
             start = idx * self.nb_phase_tot
             end = start + self.nb_phase_tot
-            temp = PS._inverse_fft(self, output_coll[start:end],
-                                   self.nb_phase_tot)
-            out_per_phase[idx] = np.concatenate((temp[0:self.N+1],
-                                                 temp[-self.N:]), axis=0)
+            out_per_phase[idx] = PS.process_outputs(self,
+                                                    output_coll[start:end])
 
         # Computation of indexes and necessary vector
         tmp = np.arange(1, self.N+1)
