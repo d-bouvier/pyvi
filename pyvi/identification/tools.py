@@ -41,6 +41,15 @@ from ..utilities.mathbox import (rms, safe_db, binomial, multinomial,
 
 
 #==============================================================================
+# Global variables
+#==============================================================================
+
+_triangular_strings_opt = {'tri', 'triangular'}
+_symmetric_strings_opt = {'sym', 'symmetric'}
+_tri_sym_strings_opt = _triangular_strings_opt | _symmetric_strings_opt
+
+
+#==============================================================================
 # Functions
 #==============================================================================
 
@@ -86,13 +95,13 @@ def error_measure(kernels_ref, kernels_est, db=True):
     return errors
 
 
-def nb_coeff_in_kernel(M, n, form='sym'):
+def nb_coeff_in_kernel(m, n, form='sym'):
     """
     Returns the number of coefficient in a kernel.
 
     Parameters
     ----------
-    M : int
+    m : int
         Memory length of the kernel (in samples).
     n : int
         Kernel order.
@@ -105,10 +114,10 @@ def nb_coeff_in_kernel(M, n, form='sym'):
         The corresponding number of coefficient.
     """
 
-    if form in {'sym', 'symmetric', 'tri', 'triangular'}:
-        return binomial(M + n - 1, n)
+    if form in _tri_sym_strings_opt:
+        return binomial(m + n - 1, n)
     else:
-        return M**n
+        return m**n
 
 
 def nb_coeff_in_all_kernels(M, N, form='sym'):
@@ -130,7 +139,7 @@ def nb_coeff_in_all_kernels(M, N, form='sym'):
         The corresponding number of coefficient.
     """
 
-    if form in {'sym', 'symmetric', 'tri', 'triangular'}:
+    if form in _tri_sym_strings_opt:
         return binomial(M + N, N) - 1
     else:
         return sum([nb_coeff_in_kernel(M, n+1, form=form) for n in range(N)])
