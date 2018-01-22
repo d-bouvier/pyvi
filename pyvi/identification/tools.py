@@ -120,7 +120,7 @@ def nb_coeff_in_all_kernels(M, N, form='sym'):
     M : int
         Memory length of the kernel (in samples).
     N : int
-        Highest kernel order.
+        Truncation order.
     form : {'sym', 'tri', 'symmetric', 'triangular'}, optional (default='sym')
         Form of the returned Volterra kernel (symmetric or triangular).
 
@@ -149,7 +149,7 @@ def assert_enough_data_samples(nb_data, max_nb_est, M, N, name):
     M : int
         Memory length of the kernel (in samples).
     N : int
-        Highest kernel order.
+        Truncation order.
     name : str
         Name of the identification method.
 
@@ -260,7 +260,7 @@ def vector_to_all_kernels(f, M, N, form='sym'):
     M : int
         Memory length of kernels (in samples).
     N : int
-        Highest kernel order.
+        Truncation order.
     form : {'sym', 'tri', 'symmetric', 'triangular'}, optional (default='sym')
         Form of the returned Volterra kernel (symmetric or triangular).
 
@@ -301,7 +301,7 @@ def volterra_basis_by_order(signal, M, N):
     M : int
         Memory length of kernels (in samples).
     N : int
-        Highest kernel order.
+        Truncation order.
 
     Returns
     -------
@@ -323,7 +323,7 @@ def volterra_basis_by_term(signal, M, N):
     M : int
         Memory length of kernels (in samples).
     N : int
-        Highest kernel order.
+        Truncation order.
 
     Returns
     -------
@@ -350,7 +350,7 @@ def _volterra_basis(signal, M, N, mode):
     M : int
         Memory length of kernels (in samples).
     N : int
-        Highest kernel order.
+        Truncation order.
     mode : {'order', 'term'}
         Choose if matrices are computed for each order or combinatorial term.
 

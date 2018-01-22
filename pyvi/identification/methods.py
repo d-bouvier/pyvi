@@ -55,7 +55,7 @@ def KLS(input_sig, output_sig, M, N, phi=None, form='sym'):
     M : int
         Memory length of kernels (in samples).
     N : int
-        Highest kernel order.
+        Truncation order.
     phi : {dict(int: numpy.ndarray), numpy.ndarray}, optional (default=None)
         If None, ``phi`` is computed from ``input_sig``; else, ``phi`` is used.
     form : {'sym', 'tri', 'symmetric', 'triangular'}, optional (default='sym')
@@ -129,7 +129,7 @@ def orderKLS(input_sig, output_by_order, M, N, phi=None, form='sym'):
     M : int
         Memory length of kernels (in samples).
     N : int
-        Highest kernel order.
+        Truncation order.
     phi : {None, dict(int: numpy.ndarray)}, optional (default=None)
         If None, ``phi`` is computed from ``input_sig``; else, ``phi`` is used.
     form : {'sym', 'tri', 'symmetric', 'triangular'}, optional (default='sym')
@@ -195,7 +195,7 @@ def termKLS(input_sig, output_by_term, M, N, phi=None, form='sym',
     M : int
         Memory length of kernels (in samples).
     N : int
-        Highest kernel order.
+        Truncation order.
     phi : {None, dict(int: numpy.ndarray)}, optional (default=None)
         If None, ``phi`` is computed from ``input_sig``; else, ``phi`` is used.
     form : {'sym', 'tri', 'symmetric', 'triangular'}, optional (default='sym')
@@ -299,7 +299,7 @@ def phaseKLS(input_sig, output_by_phase, M, N, phi=None, form='sym',
     M : int
         Memory length of kernels (in samples).
     N : int
-        Highest kernel order.
+        Truncation order.
     phi : {None, dict(int: numpy.ndarray)}, optional (default=None)
         If None, ``phi`` is computed from ``input_sig``; else, ``phi`` is used.
     form : {'sym', 'tri', 'symmetric', 'triangular'}, optional (default='sym')
@@ -398,7 +398,7 @@ def iterKLS(input_sig, output_by_phase, M, N, phi=None, form='sym',
     M : int
         Memory length of kernels (in samples).
     N : int
-        Highest kernel order.
+        Truncation order.
     phi : {None, dict(int: numpy.ndarray)}, optional (default=None)
         If None, ``phi`` is computed from ``input_sig``; else, ``phi`` is used.
     form : {'sym', 'tri', 'symmetric', 'triangular'}, optional (default='sym')
