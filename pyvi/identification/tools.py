@@ -156,8 +156,8 @@ def nb_coeff_in_all_kernels(M, N, form='sym'):
 
     Parameters
     ----------
-    M : int
-        Memory length of the kernel (in samples).
+    M : int or list(int)
+        Memory length for each kernels (in samples).
     N : int
         Truncation order.
     form : {'sym', 'tri', 'symmetric', 'triangular'}, optional (default='sym')
@@ -169,10 +169,12 @@ def nb_coeff_in_all_kernels(M, N, form='sym'):
         The corresponding number of coefficient.
     """
 
-    if form in _tri_sym_strings_opt:
+    if form in _tri_sym_strings_opt and isinstance(M, int):
         return binomial(M + N, N) - 1
     else:
-        return sum([nb_coeff_in_kernel(M, n+1, form=form) for n in range(N)])
+        M = _as_list(M, N)
+        return sum([nb_coeff_in_kernel(m, n+1, form=form)
+                    for n, m in enumerate(M)])
 
 
 def assert_enough_data_samples(nb_data, max_nb_est, M, N, name):
@@ -185,8 +187,8 @@ def assert_enough_data_samples(nb_data, max_nb_est, M, N, name):
         Number of data samples in the input signal used for identification.
     max_nb_est : int
         Maximum size of linear problem to solve.
-    M : int
-        Memory length of the kernel (in samples).
+    M : int or list(int)
+        Memory length for each kernels (in samples).
     N : int
         Truncation order.
     name : str
@@ -206,7 +208,7 @@ def assert_enough_data_samples(nb_data, max_nb_est, M, N, name):
                          'using {} method.'.format(name))
 
 
-def vector_to_kernel(vec_kernel, M, n, form='sym'):
+def vector_to_kernel(vec_kernel, m, n, form='sym'):
     """
     Rearranges vector of order n Volterra kernel coefficients into tensor.
 
@@ -214,7 +216,7 @@ def vector_to_kernel(vec_kernel, M, n, form='sym'):
     ----------
     vec_kernel : numpy.ndarray
         Vector regrouping all symmetric coefficients of a Volterra kernel.
-    M : int
+    m : int
         Memory length of the kernel (in samples).
     n : int
         Kernel order.
@@ -228,23 +230,23 @@ def vector_to_kernel(vec_kernel, M, n, form='sym'):
     """
 
     # Check dimension
-    length = nb_coeff_in_kernel(M, n, form=form)
+    length = nb_coeff_in_kernel(m, n, form=form)
     assert len(vec_kernel) == length, 'The vector of coefficients for ' + \
         'Volterra kernel of order {} has wrong length'.format(n) + \
         '(got {}, expected {}).'.format(vec_kernel.shape[0], length)
 
     # Initialization
-    kernel = np.zeros((M,)*n, dtype=vec_kernel.dtype)
+    kernel = np.zeros((m,)*n, dtype=vec_kernel.dtype)
     current_ind = 0
 
     # Loop on all combinations for order n
-    for indexes in itr.combinations_with_replacement(range(M), n):
+    for indexes in itr.combinations_with_replacement(range(m), n):
         kernel[indexes] = vec_kernel[current_ind]
         current_ind += 1
 
-    if form in {'sym', 'symmetric'}:
+    if form in _symmetric_strings_opt:
         return array_symmetrization(kernel)
-    elif form in {'tri', 'triangular'}:
+    elif form in _triangular_strings_opt:
         return kernel
 
 
@@ -273,7 +275,7 @@ def kernel_to_vector(kernel, form='sym'):
     current_ind = 0
 
     # Applying a factor if kernel is in symmetric form
-    if form in {'sym', 'symmetric'}:
+    if form in _symmetric_strings_opt:
         factor = np.zeros(kernel.shape)
         for indexes in itr.combinations_with_replacement(range(M), n):
             k = [indexes.count(x) for x in set(indexes)]
@@ -296,8 +298,8 @@ def vector_to_all_kernels(f, M, N, form='sym'):
     ----------
     f : numpy.ndarray
         Vector regrouping all symmetric coefficients of the Volterra kernels.
-    M : int
-        Memory length of kernels (in samples).
+    M : int or list(int)
+        Memory length for each kernels (in samples).
     N : int
         Truncation order.
     form : {'sym', 'tri', 'symmetric', 'triangular'}, optional (default='sym')
@@ -310,6 +312,7 @@ def vector_to_all_kernels(f, M, N, form='sym'):
     """
 
     # Check dimension
+    M = _as_list(M, N)
     length = nb_coeff_in_all_kernels(M, N, form=form)
     assert f.shape[0] == length, \
         'The vector of Volterra coefficients has wrong length ' + \
@@ -320,10 +323,10 @@ def vector_to_all_kernels(f, M, N, form='sym'):
     current_ind = 0
 
     # Loop on all orders of nonlinearity
-    for n in range(1, N+1):
-        nb_coeff = nb_coeff_in_kernel(M, n, form=form)
+    for m, n in itr.zip_longest(M, range(1, N+1)):
+        nb_coeff = nb_coeff_in_kernel(m, n, form=form)
         kernels[n] = vector_to_kernel(f[current_ind:current_ind+nb_coeff],
-                                      M, n, form=form)
+                                      m, n, form=form)
         current_ind += nb_coeff
 
     return kernels
