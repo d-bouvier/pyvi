@@ -53,6 +53,36 @@ _tri_sym_strings_opt = _triangular_strings_opt | _symmetric_strings_opt
 # Functions
 #==============================================================================
 
+def _as_list(M, N):
+    """
+    Check that M is a list, or if int returns a list of this length N .
+
+    Parameters
+    ----------
+    M : int or list(int)
+        Memory length for each kernels (in samples).
+    N : int
+        Truncation order.
+
+    Returns
+    -------
+    list : list(int)
+        List of memory length by order (in samples).
+    """
+
+    if isinstance(M, int):
+        return [M, ]*N
+    elif isinstance(M, list):
+        if len(M) != N:
+            raise ValueError('M has length {}, but '.format(len(M)) +
+                             'truncation order N is {}'.format(N))
+        else:
+            return M
+    else:
+        raise ValueError('M is of type {}, '.format(type(M)) +
+                         'should be an int or a list of int.')
+
+
 def error_measure(kernels_ref, kernels_est, db=True):
     """
     Returns the relative error between kernels and their estimates.

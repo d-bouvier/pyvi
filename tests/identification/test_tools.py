@@ -15,7 +15,8 @@ Developed for Python 3.6.1
 import unittest
 import itertools
 import numpy as np
-from pyvi.identification.tools import (error_measure, nb_coeff_in_kernel,
+from pyvi.identification.tools import (_as_list, error_measure,
+                                       nb_coeff_in_kernel,
                                        nb_coeff_in_all_kernels,
                                        assert_enough_data_samples,
                                        vector_to_kernel, kernel_to_vector,
@@ -28,6 +29,28 @@ from pyvi.utilities.mathbox import binomial
 #==============================================================================
 # Test Class
 #==============================================================================
+
+class AsListTest(unittest.TestCase):
+
+    def test_int_returns_list(self):
+        m = 0
+        for N in range(1, 4):
+            with self.subTest(i=N):
+                self.assertIsInstance(_as_list(m, N), list)
+
+    def test_list_returns_list(self):
+        M = [1, 2, 3]
+        self.assertIsInstance(_as_list(M, len(M)), list)
+
+    def test_error_if_wrong_length(self):
+        M = [1, 2, 3]
+        self.assertRaises(ValueError, _as_list, M, len(M)-1)
+
+    def test_return_value_correct(self):
+        m = 0
+        N = 3
+        self.assertEqual(_as_list(m, N), [m, ]*N)
+
 
 class ErrorMeasureTest(unittest.TestCase):
 
