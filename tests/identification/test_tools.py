@@ -89,7 +89,7 @@ class NbCoeffInKernelTest(unittest.TestCase):
         self.Nmax = 5
         self.Mmax = 20
         self.iter_obj = itertools.product(range(1, self.Nmax+1),
-                                          range(1, self.Mmax+1))
+                                          range(self.Mmax))
 
     def test_nb_coeff_symmetric_form(self):
         for N, M in self.iter_obj:
@@ -116,8 +116,9 @@ class NbCoeffInAllKernelsTest(unittest.TestCase):
     def setUp(self):
         self.Nmax = 5
         self.Mmax = 5
+        self.M_list = [10, 0, 3, 0, 2]
         self.iter_obj = itertools.product(range(1, self.Nmax+1),
-                                          range(1, self.Mmax+1))
+                                          range(self.Mmax))
 
     def test_nb_coeff_symmetric_form(self):
         for N, M in self.iter_obj:
@@ -137,6 +138,13 @@ class NbCoeffInAllKernelsTest(unittest.TestCase):
             with self.subTest(i=(N, M)):
                 nb_coeff = nb_coeff_in_all_kernels(M, N, form=None)
                 self.assertEqual(nb_coeff, sum([M**N for N in range(1, N+1)]))
+
+    def test_M_as_list(self):
+        for form, val in [('sym', 26), ('tri', 26), (None, 69)]:
+            with self.subTest(i=form):
+                nb_coeff = nb_coeff_in_all_kernels(self.M_list,
+                                                   len(self.M_list), form=form)
+                self.assertEqual(nb_coeff, val)
 
 
 class AssertEnoughDataSamplesTest(unittest.TestCase):
@@ -232,6 +240,27 @@ class VectorToAllKerrnelsTest(VectorToKernelTest):
         self.h_tri[1] = self.h_vec[1]
         self.h_sym[1] = self.h_vec[1]
 
+        self.M_2 = [4, 3, 2]
+        self.f_2 = np.concatenate((np.arange(1, binomial(self.M_2[0], 1)+1),
+                                   np.arange(1, binomial(self.M_2[1]+1, 2)+1),
+                                   np.arange(1, binomial(self.M_2[2]+2, 3)+1)),
+                                  axis=0)
+        self.h_tri_2 = {1: np.array([1, 2, 3, 4]),
+                        2: np.array([[1, 2, 3],
+                                     [0, 4, 5],
+                                     [0, 0, 6]]),
+                        3: np.array([[[1, 2],
+                                      [0, 3]],
+                                     [[0, 0],
+                                      [0, 4]]])}
+        self.h_sym_2 = {1: np.array([1, 2, 3, 4]),
+                        2: np.array([[1., 1, 3/2],
+                                     [1, 4, 5/2],
+                                     [3/2, 5/2, 6]]),
+                        3: np.array([[[1., 2/3],
+                                      [2/3, 1]],
+                                     [[2/3, 1],
+                                      [1, 4]]])}
 
     def test_triangular_form(self):
         kernels = vector_to_all_kernels(self.f, self.M, self.N, form='tri')
@@ -241,6 +270,16 @@ class VectorToAllKerrnelsTest(VectorToKernelTest):
     def test_symmetric_form(self):
         kernels = vector_to_all_kernels(self.f, self.M, self.N, form='sym')
         result = [np.all(h == self.h_sym[n]) for n, h in kernels.items()]
+        self.assertTrue(all(result))
+
+    def test_triangular_form_2(self):
+        kernels = vector_to_all_kernels(self.f_2, self.M_2, self.N, form='tri')
+        result = [np.all(h == self.h_tri_2[n]) for n, h in kernels.items()]
+        self.assertTrue(all(result))
+
+    def test_symmetric_form_2(self):
+        kernels = vector_to_all_kernels(self.f_2, self.M_2, self.N, form='sym')
+        result = [np.all(h == self.h_sym_2[n]) for n, h in kernels.items()]
         self.assertTrue(all(result))
 
 
