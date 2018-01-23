@@ -20,9 +20,7 @@ from pyvi.identification.tools import (_as_list, error_measure,
                                        nb_coeff_in_all_kernels,
                                        assert_enough_data_samples,
                                        vector_to_kernel, kernel_to_vector,
-                                       vector_to_all_kernels,
-                                       volterra_basis_by_order,
-                                       volterra_basis_by_term)
+                                       vector_to_all_kernels, volterra_basis)
 from pyvi.utilities.mathbox import binomial
 
 
@@ -290,19 +288,19 @@ class VolterraBasisTest(unittest.TestCase):
         self.N = 4
         self.M = 15
         self.M_2 = [10, 15, 0, 5]
-        sig_real = np.arange(1, self.L+1)
-        sig_cplx = np.arange(self.L) + 2j * np.arange(self.L)
+        sig_r = np.arange(1, self.L+1)
+        sig_c = np.arange(self.L) + 2j * np.arange(self.L)
         self.order_keys = {1: 0, 2: 0, 3: 0, 4: 0}
-        self.order_r = volterra_basis_by_order(sig_real, self.M, self.N)
-        self.order_c = volterra_basis_by_order(sig_cplx, self.M, self.N)
-        self.order_r_2 = volterra_basis_by_order(sig_real, self.M_2, self.N)
-        self.order_c_2 = volterra_basis_by_order(sig_cplx, self.M_2, self.N)
+        self.order_r = volterra_basis(sig_r, self.M, self.N, mode='order')
+        self.order_c = volterra_basis(sig_c, self.M, self.N, mode='order')
+        self.order_r_2 = volterra_basis(sig_r, self.M_2, self.N, mode='order')
+        self.order_c_2 = volterra_basis(sig_c, self.M_2, self.N, mode='order')
         self.term_keys = {(1, 0): 0, (2, 0): 0, (2, 1): 0, (3, 0): 0,
                           (3, 1): 0, (4, 0): 0, (4, 1): 0, (4, 2): 0}
-        self.term_r = volterra_basis_by_term(sig_real, self.M, self.N)
-        self.term_c = volterra_basis_by_term(sig_cplx, self.M, self.N)
-        self.term_r_2 = volterra_basis_by_term(sig_real, self.M_2, self.N)
-        self.term_c_2 = volterra_basis_by_term(sig_cplx, self.M_2, self.N)
+        self.term_r = volterra_basis(sig_r, self.M, self.N, mode='term')
+        self.term_c = volterra_basis(sig_c, self.M, self.N, mode='term')
+        self.term_r_2 = volterra_basis(sig_r, self.M_2, self.N, mode='term')
+        self.term_c_2 = volterra_basis(sig_c, self.M_2, self.N, mode='term')
 
     def test_output_type_for_orders(self):
         for i, value in enumerate([self.order_r, self.order_c, self.order_r_2,

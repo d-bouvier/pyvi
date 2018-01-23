@@ -18,10 +18,9 @@ kernel_to_vector :
     Rearranges a Volterra kernel in vector form.
 vector_to_all_kernels :
     Rearranges vector of Volterra kernels coefficients into N tensors.
-volterra_basis_by_order :
-    Returns a dict gathering Volterra basis matrix for each order.
-volterra_basis_by_term :
-    Returns a dict gathering Volterra basis matrix for each combinatorial term.
+volterra_basis :
+    Returns a dict gathering Volterra basis matrix for each order or
+    combinatorial term.
 
 Notes
 -----
@@ -52,36 +51,6 @@ _tri_sym_strings_opt = _triangular_strings_opt | _symmetric_strings_opt
 #==============================================================================
 # Functions
 #==============================================================================
-
-def _as_list(M, N):
-    """
-    Check that M is a list, or if int returns a list of this length N .
-
-    Parameters
-    ----------
-    M : int or list(int)
-        Memory length for each kernels (in samples).
-    N : int
-        Truncation order.
-
-    Returns
-    -------
-    list : list(int)
-        List of memory length by order (in samples).
-    """
-
-    if isinstance(M, int):
-        return [M, ]*N
-    elif isinstance(M, list):
-        if len(M) != N:
-            raise ValueError('M has length {}, but '.format(len(M)) +
-                             'truncation order N is {}'.format(N))
-        else:
-            return M
-    else:
-        raise ValueError('M is of type {}, '.format(type(M)) +
-                         'should be an int or a list of int.')
-
 
 def error_measure(kernels_ref, kernels_est, db=True):
     """
@@ -123,6 +92,36 @@ def error_measure(kernels_ref, kernels_est, db=True):
             errors.append(rms_error / rms_ref)
 
     return errors
+
+
+def _as_list(M, N):
+    """
+    Check that M is a list, or if int returns a list of this length N .
+
+    Parameters
+    ----------
+    M : int or list(int)
+        Memory length for each kernels (in samples).
+    N : int
+        Truncation order.
+
+    Returns
+    -------
+    list : list(int)
+        List of memory length by order (in samples).
+    """
+
+    if isinstance(M, int):
+        return [M, ]*N
+    elif isinstance(M, list):
+        if len(M) != N:
+            raise ValueError('M has length {}, but '.format(len(M)) +
+                             'truncation order N is {}'.format(N))
+        else:
+            return M
+    else:
+        raise ValueError('M is of type {}, '.format(type(M)) +
+                         'should be an int or a list of int.')
 
 
 def nb_coeff_in_kernel(m, n, form='sym'):
@@ -332,53 +331,7 @@ def vector_to_all_kernels(f, M, N, form='sym'):
     return kernels
 
 
-def volterra_basis_by_order(signal, M, N):
-    """
-    Returns a dict gathering Volterra basis matrix for each order.
-
-    Parameters
-    ----------
-    signal : array_like
-        Input signal from which to construct the Volterras basis.
-    M : int or list(int)
-        Memory length for each kernels (in samples).
-    N : int
-        Truncation order.
-
-    Returns
-    -------
-    kernels : dict(int: numpy.ndarray)
-        Dictionnary of Volterra basis matrix for each order.
-    """
-
-    return _volterra_basis(signal.copy(), M, N, mode='order')
-
-
-def volterra_basis_by_term(signal, M, N):
-    """
-    Returns a dict gathering Volterra basis matrix for each combinatorial term.
-
-    Parameters
-    ----------
-    signal : array_like
-        Input signal from which to construct the Volterras basis.
-    M : int or list(int)
-        Memory length for each kernels (in samples).
-    N : int
-        Truncation order.
-
-    Returns
-    -------
-    kernels : dict((int, int): numpy.ndarray)
-        Dictionnary of Volterra basis matrix for each combinatorial term.
-    """
-
-    phi = _volterra_basis(signal.copy(), M, N, mode='term')
-
-    return phi
-
-
-def _volterra_basis(signal, M, N, mode):
+def volterra_basis(signal, M, N, mode):
     """
     Base function for creating dictionnary of Volterra basis matrix.
 

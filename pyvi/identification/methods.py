@@ -31,10 +31,9 @@ Developed for Python 3.6.1
 import warnings
 import numpy as np
 import scipy.linalg as sc_lin
-from .tools import (volterra_basis_by_order, volterra_basis_by_term,
-                    nb_coeff_in_kernel, nb_coeff_in_all_kernels,
-                    assert_enough_data_samples, vector_to_kernel,
-                    vector_to_all_kernels)
+from .tools import (volterra_basis, nb_coeff_in_kernel,
+                    nb_coeff_in_all_kernels,  assert_enough_data_samples,
+                    vector_to_kernel, vector_to_all_kernels)
 from ..utilities.mathbox import binomial
 
 
@@ -93,7 +92,7 @@ def _KLS_construct_phi(signal, M, N, phi=None):
     """Auxiliary function of KLS() for Volterra basis computation."""
 
     if phi is None:
-        phi_dict = volterra_basis_by_order(signal, M, N)
+        phi_dict = volterra_basis(signal, M, N, mode='order')
     elif isinstance(phi, dict):
         phi_dict = phi
     elif isinstance(phi, np.ndarray):
@@ -170,7 +169,7 @@ def _orderKLS_check_feasability(nb_data, M, N, form='sym', name='orderKLS'):
 def _orderKLS_construct_phi(signal, M, N):
     """Auxiliary function of orderKLS() for Volterra basis computation."""
 
-    return volterra_basis_by_order(signal, M, N)
+    return volterra_basis(signal, M, N, mode='order')
 
 
 def _orderKLS_core_computation(combinatorial_matrix, output_sig):
@@ -242,7 +241,7 @@ def _termKLS_check_feasability(nb_data, M, N, form='sym'):
 def _termKLS_construct_phi(signal, M, N):
     """Auxiliary function of termKLS() for Volterra basis computation."""
 
-    return volterra_basis_by_term(signal, M, N)
+    return volterra_basis(signal, M, N, mode='term')
 
 
 def _termKLS_core_mean_mode(phi, output_by_term, M, N, form, cast_mode):
