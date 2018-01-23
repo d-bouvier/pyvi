@@ -288,34 +288,43 @@ class VolterraBasisTest(unittest.TestCase):
     def setUp(self):
         self.L = 100
         self.N = 4
-        self.M = 25
-        sig_real = np.arange(self.L)
+        self.M = 15
+        self.M_2 = [10, 15, 0, 5]
+        sig_real = np.arange(1, self.L+1)
         sig_cplx = np.arange(self.L) + 2j * np.arange(self.L)
         self.order_keys = {1: 0, 2: 0, 3: 0, 4: 0}
         self.order_r = volterra_basis_by_order(sig_real, self.M, self.N)
         self.order_c = volterra_basis_by_order(sig_cplx, self.M, self.N)
+        self.order_r_2 = volterra_basis_by_order(sig_real, self.M_2, self.N)
+        self.order_c_2 = volterra_basis_by_order(sig_cplx, self.M_2, self.N)
         self.term_keys = {(1, 0): 0, (2, 0): 0, (2, 1): 0, (3, 0): 0,
                           (3, 1): 0, (4, 0): 0, (4, 1): 0, (4, 2): 0}
         self.term_r = volterra_basis_by_term(sig_real, self.M, self.N)
         self.term_c = volterra_basis_by_term(sig_cplx, self.M, self.N)
+        self.term_r_2 = volterra_basis_by_term(sig_real, self.M_2, self.N)
+        self.term_c_2 = volterra_basis_by_term(sig_cplx, self.M_2, self.N)
 
     def test_output_type_for_orders(self):
-        for i, value in enumerate([self.order_r, self.order_c]):
+        for i, value in enumerate([self.order_r, self.order_c, self.order_r_2,
+                                   self.order_c_2]):
             with self.subTest(i=i):
                 self.assertIsInstance(value, dict)
 
     def test_output_type_for_terms(self):
-        for i, value in enumerate([self.term_r, self.term_c]):
+        for i, value in enumerate([self.term_r, self.term_c, self.term_r_2,
+                                   self.term_c_2]):
             with self.subTest(i=i):
                 self.assertIsInstance(value, dict)
 
     def test_output_shape_for_orders(self):
-        for i, value in enumerate([self.order_r, self.order_c]):
+        for i, value in enumerate([self.order_r, self.order_c, self.order_r_2,
+                                   self.order_c_2]):
             with self.subTest(i=i):
                 self.assertEqual(value.keys(), self.order_keys.keys())
 
     def test_output_shape_for_terms(self):
-        for i, value in enumerate([self.term_r, self.term_c]):
+        for i, value in enumerate([self.term_r, self.term_c, self.term_r_2,
+                                   self.term_c_2]):
             with self.subTest(i=i):
                 self.assertEqual(value.keys(), self.term_keys.keys())
 
@@ -326,6 +335,13 @@ class VolterraBasisTest(unittest.TestCase):
                     nb_coeff = nb_coeff_in_kernel(self.M, n, form='sym')
                     self.assertEqual(basis.shape, (self.L, nb_coeff))
 
+    def test_basis_shapes_for_orders_2(self):
+        for i, value in enumerate([self.order_r_2, self.order_c_2]):
+            for n, basis in value.items():
+                with self.subTest(i=(i, n)):
+                    nb_coeff = nb_coeff_in_kernel(self.M_2[n-1], n, form='sym')
+                    self.assertEqual(basis.shape, (self.L, nb_coeff))
+
     def test_basis_shapes_for_terms(self):
         for i, value in enumerate([self.term_r, self.term_c]):
             for (n, q), basis in value.items():
@@ -333,15 +349,34 @@ class VolterraBasisTest(unittest.TestCase):
                     nb_coeff = nb_coeff_in_kernel(self.M, n, form='sym')
                     self.assertEqual(basis.shape, (self.L, nb_coeff))
 
+    def test_basis_shapes_for_terms_2(self):
+        for i, value in enumerate([self.term_r_2, self.term_c_2]):
+            for (n, q), basis in value.items():
+                with self.subTest(i=(i, (n, q))):
+                    nb_coeff = nb_coeff_in_kernel(self.M_2[n-1], n, form='sym')
+                    self.assertEqual(basis.shape, (self.L, nb_coeff))
+
     def test_same_result_with_term_and_order_on_real_signals(self):
         for n in range(1, self.N+1):
             with self.subTest(i=n):
                 self.assertTrue(np.all(self.order_r[n] == self.term_r[(n, 0)]))
 
+    def test_same_result_with_term_and_order_on_real_signals_2(self):
+        for n in range(1, self.N+1):
+            with self.subTest(i=n):
+                self.assertTrue(np.all(self.order_r_2[n] ==
+                                       self.term_r_2[(n, 0)]))
+
     def test_same_result_with_term_and_order_on_complex_signals(self):
         for n in range(1, self.N+1):
             with self.subTest(i=n):
                 self.assertTrue(np.all(self.order_c[n] == self.term_c[(n, 0)]))
+
+    def test_same_result_with_term_and_order_on_complex_signals_2(self):
+        for n in range(1, self.N+1):
+            with self.subTest(i=n):
+                self.assertTrue(np.all(self.order_c_2[n] ==
+                                       self.term_c_2[(n, 0)]))
 
     def test_same_result_between_all_terms_with_real_signals(self):
         for n in range(1, self.N+1):
@@ -349,6 +384,13 @@ class VolterraBasisTest(unittest.TestCase):
             for q in range(1, 1+n//2):
                 with self.subTest(i=(n, q)):
                     self.assertTrue(np.all(term == self.term_r[(n, q)]))
+
+    def test_same_result_between_all_terms_with_real_signals_2(self):
+        for n in range(1, self.N+1):
+            term = self.term_r_2[(n, 0)]
+            for q in range(1, 1+n//2):
+                with self.subTest(i=(n, q)):
+                    self.assertTrue(np.all(term == self.term_r_2[(n, q)]))
 
 
 #==============================================================================
