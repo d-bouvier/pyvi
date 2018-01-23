@@ -375,9 +375,6 @@ def volterra_basis_by_term(signal, M, N):
 
     phi = _volterra_basis(signal.copy(), M, N, mode='term')
 
-    for (n, k) in phi.keys():
-        phi[(n, k)] = phi[(n, k)] / binomial(n, k)
-
     return phi
 
 
@@ -461,5 +458,9 @@ def _volterra_basis(signal, M, N, mode):
                         phi[(n, k)][:-offset, ind[0]]
 
             dec += nb_ind
+
+    if mode == 'term':
+        for (n, k) in phi.keys():
+            phi[(n, k)] = phi[(n, k)] / binomial(n, k)
 
     return phi
