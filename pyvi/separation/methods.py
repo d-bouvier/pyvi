@@ -30,7 +30,6 @@ Developed for Python 3.6.1
 # Importations
 #==============================================================================
 
-import warnings
 import numpy as np
 import scipy.fftpack as sc_fft
 import scipy.signal as sc_sig
