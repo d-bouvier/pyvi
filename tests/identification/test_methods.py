@@ -107,7 +107,7 @@ class termKLSTest(KLSTest):
                                            self.M, self.N)
 
 
-class phaseKLSTest(termKLSTest):
+class iterKLSTest(termKLSTest):
 
     def _init_parameters(self):
         termKLSTest._init_parameters(self)
@@ -120,18 +120,6 @@ class phaseKLSTest(termKLSTest):
         for ind in range(input_coll.shape[0]):
             output_coll[ind] = generate_output(input_coll[ind], self.N)
         self.output_sig_by_phase = method.process_outputs(output_coll)
-
-    def _identification(self):
-        self.kernels_est = identif.phaseKLS(self.input_sig,
-                                            self.output_sig_by_phase,
-                                            self.M, self.N)
-
-
-class iterKLSTest(phaseKLSTest):
-
-    def _init_parameters(self):
-        phaseKLSTest._init_parameters(self)
-        self.atol = 1e-12
 
     def _identification(self):
         self.kernels_est = identif.iterKLS(self.input_sig,
