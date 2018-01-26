@@ -211,6 +211,11 @@ class VectorToKernelTest(unittest.TestCase):
                 result = vector_to_kernel(self.h_vec[n], self.M, n, form='sym')
                 self.assertTrue(np.all(result == self.h_sym[n]))
 
+    def test_error_raised(self):
+        n = 2
+        self.assertRaises(ValueError, vector_to_kernel, self.h_vec[n], self.M,
+                          n+1)
+
 
 class KernelToVectorTest(VectorToKernelTest):
 
@@ -235,6 +240,7 @@ class VectorToAllKerrnelsTest(VectorToKernelTest):
         self.h_vec[1] = np.arange(1, self.M+1)
         self.f = np.concatenate((self.h_vec[1], self.h_vec[2], self.h_vec[3]),
                                 axis=0)
+        self.f_dict = {1: self.h_vec[1], 2: self.h_vec[2], 3: self.h_vec[3]}
         self.h_tri[1] = self.h_vec[1]
         self.h_sym[1] = self.h_vec[1]
 
@@ -243,6 +249,9 @@ class VectorToAllKerrnelsTest(VectorToKernelTest):
                                    np.arange(1, binomial(self.M_2[1]+1, 2)+1),
                                    np.arange(1, binomial(self.M_2[2]+2, 3)+1)),
                                   axis=0)
+        self.f_dict_2 = {1: np.arange(1, binomial(self.M_2[0], 1)+1),
+                         2: np.arange(1, binomial(self.M_2[1]+1, 2)+1),
+                         3: np.arange(1, binomial(self.M_2[2]+2, 3)+1)}
         self.h_tri_2 = {1: np.array([1, 2, 3, 4]),
                         2: np.array([[1, 2, 3],
                                      [0, 4, 5],
@@ -277,6 +286,26 @@ class VectorToAllKerrnelsTest(VectorToKernelTest):
 
     def test_symmetric_form_2(self):
         kernels = vector_to_all_kernels(self.f_2, self.M_2, self.N, form='sym')
+        result = [np.all(h == self.h_sym_2[n]) for n, h in kernels.items()]
+        self.assertTrue(all(result))
+
+    def test_error_raised_if_wrong_size(self):
+        self.assertRaises(ValueError, vector_to_all_kernels, self.f, self.M,
+                          self.N+1)
+
+    def test_error_raised_if_wrong_type(self):
+        f = list()
+        self.assertRaises(TypeError, vector_to_all_kernels, f, self.M, self.N)
+
+    def test_f_as_dict(self):
+        kernels = vector_to_all_kernels(self.f_dict, self.M, self.N,
+                                        form='sym')
+        result = [np.all(h == self.h_sym[n]) for n, h in kernels.items()]
+        self.assertTrue(all(result))
+
+    def test_f_as_dict_2(self):
+        kernels = vector_to_all_kernels(self.f_dict_2, self.M_2, self.N,
+                                        form='sym')
         result = [np.all(h == self.h_sym_2[n]) for n, h in kernels.items()]
         self.assertTrue(all(result))
 

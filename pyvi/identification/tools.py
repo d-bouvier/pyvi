@@ -230,9 +230,11 @@ def vector_to_kernel(vec_kernel, m, n, form='sym'):
 
     # Check dimension
     length = nb_coeff_in_kernel(m, n, form=form)
-    assert len(vec_kernel) == length, 'The vector of coefficients for ' + \
-        'Volterra kernel of order {} has wrong length'.format(n) + \
-        '(got {}, expected {}).'.format(vec_kernel.shape[0], length)
+    if len(vec_kernel) != length:
+        raise ValueError('The vector of coefficients for Volterra kernel' +
+                         'of order {} has wrong length'.format(n) +
+                         '(got {}, '.format(vec_kernel.shape[0]) +
+                         'expected {}).'.format(length))
 
     # Initialization
     kernel = np.zeros((m,)*n, dtype=vec_kernel.dtype)
@@ -295,8 +297,9 @@ def vector_to_all_kernels(f, M, N, form='sym'):
 
     Parameters
     ----------
-    f : numpy.ndarray
-        Vector regrouping all symmetric coefficients of the Volterra kernels.
+    f : numpy.ndarray or dict(int: numpy.ndarray)
+        Vector regrouping all symmetric coefficients of the Volterra kernels,
+        or dictionnary with one vector by order.
     M : int or list(int)
         Memory length for each kernels (in samples).
     N : int
@@ -310,23 +313,34 @@ def vector_to_all_kernels(f, M, N, form='sym'):
         Dictionnary linking the Volterra kernel of order ``n`` to key ``n``.
     """
 
-    # Check dimension
     M = _as_list(M, N)
-    length = nb_coeff_in_all_kernels(M, N, form=form)
-    assert f.shape[0] == length, \
-        'The vector of Volterra coefficients has wrong length ' + \
-        '(got {}, expected {}).'.format(f.shape[0], length)
+
+    # Check dimension
+    if isinstance(f, np.ndarray):
+        length = nb_coeff_in_all_kernels(M, N, form=form)
+        if f.shape[0] != length:
+            raise ValueError('The vector of Volterra coefficients has wrong ' +
+                             'length (got {}, '.format(f.shape[0]) +
+                             'expected {}).'.format(length))
+    elif not isinstance(f, dict):
+        raise TypeError('Cannot handle type {} '.format(type(f)) +
+                        "for variable f'")
 
     # Initialization
     kernels = dict()
-    current_ind = 0
 
-    # Loop on all orders of nonlinearity
-    for m, n in itr.zip_longest(M, range(1, N+1)):
-        nb_coeff = nb_coeff_in_kernel(m, n, form=form)
-        kernels[n] = vector_to_kernel(f[current_ind:current_ind+nb_coeff],
-                                      m, n, form=form)
-        current_ind += nb_coeff
+    if isinstance(f, np.ndarray):
+        current_ind = 0
+        for m, n in itr.zip_longest(M, range(1, N+1)):
+            nb_coeff = nb_coeff_in_kernel(m, n, form=form)
+            kernels[n] = vector_to_kernel(f[current_ind:current_ind+nb_coeff],
+                                          m, n, form=form)
+            current_ind += nb_coeff
+    elif isinstance(f, dict):
+        for n, f_n in f.items():
+            m = M[n-1]
+            kernels[n] = vector_to_kernel(f_n, m, n, form=form)
+
 
     return kernels
 

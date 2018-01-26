@@ -29,9 +29,9 @@ Developed for Python 3.6.1
 import warnings
 import numpy as np
 import scipy.linalg as sc_lin
-from .tools import (volterra_basis, nb_coeff_in_kernel,
+from .tools import (volterra_basis, vector_to_all_kernels, nb_coeff_in_kernel,
                     nb_coeff_in_all_kernels, assert_enough_data_samples,
-                    vector_to_kernel, vector_to_all_kernels)
+                    _as_list)
 from ..utilities.mathbox import binomial
 
 
@@ -49,8 +49,8 @@ def KLS(input_sig, output_sig, M, N, phi=None, form='sym'):
         Input signal.
     output_sig : numpy.ndarray
         Output signal.
-    M : int
-        Memory length of kernels (in samples).
+    M : int or list(int)
+        Memory length for each kernels (in samples).
     N : int
         Truncation order.
     phi : {dict(int: numpy.ndarray), numpy.ndarray}, optional (default=None)
@@ -101,14 +101,17 @@ def _KLS_construct_phi(signal, M, N, phi=None):
 def _KLS_core_computation(combinatorial_matrix, output_sig):
     """Auxiliary function of KLS() for the core computation."""
 
-    # QR decomposition
-    q, r = sc_lin.qr(combinatorial_matrix, mode='economic')
+    if combinatorial_matrix.size:
+        # QR decomposition
+        q, r = sc_lin.qr(combinatorial_matrix, mode='economic')
 
-    # Projection on combinatorial basis
-    y = np.dot(q.T, output_sig)
+        # Projection on combinatorial basis
+        y = np.dot(q.T, output_sig)
 
-    # Forward inverse
-    return sc_lin.solve_triangular(r, y)
+        # Forward inverse
+        return sc_lin.solve_triangular(r, y)
+    else:
+        return np.zeros((0,))
 
 
 #=============================================#
@@ -123,8 +126,8 @@ def orderKLS(input_sig, output_by_order, M, N, phi=None, form='sym'):
         Input signal.
     output_by_order : numpy.ndarray
         Output signal separated in ``N`` nonlinear homogeneous orders.
-    M : int
-        Memory length of kernels (in samples).
+    M : int or list(int)
+        Memory length for each kernels (in samples).
     N : int
         Truncation order.
     phi : {None, dict(int: numpy.ndarray)}, optional (default=None)
@@ -145,14 +148,13 @@ def orderKLS(input_sig, output_by_order, M, N, phi=None, form='sym'):
     if phi is None:
         phi = _orderKLS_construct_phi(input_sig, M, N)
 
-    kernels = dict()
-
     # Identification on each order
+    f = dict()
     for n, phi_n in phi.items():
-        f_n = _orderKLS_core_computation(phi_n, output_by_order[n-1])
+        f[n] = _orderKLS_core_computation(phi_n, output_by_order[n-1])
 
-        # Re-arranging vector f_n into volterra kernel of order n
-        kernels[n] = vector_to_kernel(f_n, M, n, form=form)
+    # Re-arranging vector f into volterra kernels
+    kernels = vector_to_all_kernels(f, M, N, form=form)
 
     return kernels
 
@@ -160,7 +162,9 @@ def orderKLS(input_sig, output_by_order, M, N, phi=None, form='sym'):
 def _orderKLS_check_feasability(nb_data, M, N, form='sym', name='orderKLS'):
     """Auxiliary function of orderKLS() for checking feasability."""
 
-    nb_coeff = nb_coeff_in_kernel(M, N, form=form)
+    nb_coeff = 0
+    for m, n in zip(_as_list(M, N), range(1, N+1)):
+        nb_coeff = max(nb_coeff, nb_coeff_in_kernel(m, n, form=form))
     assert_enough_data_samples(nb_data, nb_coeff, M, N, name=name)
 
 
@@ -189,8 +193,8 @@ def termKLS(input_sig, output_by_term, M, N, phi=None, form='sym',
         Input signal.
     output_by_term : dict((int, int): numpy.ndarray}
         Output signal separated in nonlinear combinatorial terms.
-    M : int
-        Memory length of kernels (in samples).
+    M : int or list(int)
+        Memory length for each kernels (in samples).
     N : int
         Truncation order.
     phi : {None, dict(int: numpy.ndarray)}, optional (default=None)
@@ -213,14 +217,11 @@ def termKLS(input_sig, output_by_term, M, N, phi=None, form='sym',
     if phi is None:
         phi = _termKLS_construct_phi(input_sig, M, N)
 
-    kernels = dict()
-
     # Identification
     f = _termKLS_core_computation(phi, output_by_term, N, cast_mode)
 
-    # Re-arranging vector f_n into volterra kernel of order n
-    for n in range(1, N+1):
-        kernels[n] = vector_to_kernel(f[n], M, n, form=form)
+    # Re-arranging vector f into volterra kernels
+    kernels = vector_to_all_kernels(f, M, N, form=form)
 
     return kernels
 
@@ -266,8 +267,8 @@ def iterKLS(input_sig, output_by_phase, M, N, phi=None, form='sym',
         Input signal.
     output_by_phase : numpy.ndarray
         Output signal separated in homogeneous-phase signals.
-    M : int
-        Memory length of kernels (in samples).
+    M : int or list(int)
+        Memory length for each kernels (in samples).
     N : int
         Truncation order.
     phi : {None, dict(int: numpy.ndarray)}, optional (default=None)
@@ -290,11 +291,8 @@ def iterKLS(input_sig, output_by_phase, M, N, phi=None, form='sym',
     if phi is None:
         phi = _iterKLS_construct_phi(input_sig, M, N)
 
-    # Initialization
-    kernels = dict()
-    f = dict()
-
     # Identification recursive on each homogeneous-phase signal
+    f = dict()
     for n in range(N, 0, -1):
         temp_sig = output_by_phase[n].copy()
         for n2 in range(n+2, N+1, 2):
@@ -304,9 +302,8 @@ def iterKLS(input_sig, output_by_phase, M, N, phi=None, form='sym',
             _cplx_to_real(phi[(n, 0)], cast_mode=cast_mode),
             _cplx_to_real(temp_sig, cast_mode=cast_mode))
 
-    # Re-arranging vector f_n into volterra kernel of order n
-    for n in range(1, N+1):
-        kernels[n] = vector_to_kernel(f[n], M, n, form=form)
+    # Re-arranging vector f into volterra kernels
+    kernels = vector_to_all_kernels(f, M, N, form=form)
 
     return kernels
 
