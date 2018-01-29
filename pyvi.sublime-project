@@ -1,0 +1,35 @@
+{
+	"folders":
+	[
+		{
+			"name": "pyvi",
+            "path": "/",
+            "file_exclude_patterns": [".gitignore", "*.sublime-project",
+                "*.sublime-workspace"]
+		},
+		{
+			"file_exclude_patterns":
+			[
+				"*.pdf",
+				"*.npz",
+				"*.pyvi"
+			],
+			"folder_exclude_patterns":
+			[
+				"data"
+			],
+			"name": "experiments",
+			"path": "/Users/bouvier/Codes/These/experiences"
+		},
+		{
+			"file_exclude_patterns":
+			[
+				"*.pdf",
+				"*.npz",
+				"*.pyvi"
+			],
+			"name": "drafts",
+			"path": "/Users/bouvier/Codes/These/draft"
+		}
+	]
+}

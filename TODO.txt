@@ -1,0 +1,18 @@
+pyvi/ and tests/:
+    Remove 'system' and 'simulation' submodules
+pyvi/ and tests/:
+    Use of 'super()' in all inherited class (in 'separation' and 'tests')
+tests/:
+    Rename more clearly test classes (even split come into several classes)
+tests/identification/tools.py/
+    Split VectorToAllKerrnelsTest() into 2 classes (*_M_int and *_M_list)
+    Split VolterraBasisTest() into 2 classes (*_M_int and *_M_list)
+identification/methods.py:
+    Write all methods as classes and subclasses
+identification/methods.py:
+    In iterKLS(), create a _core_computation function
+identification/methods.py:I
+    In iterKLS(), add handling of M[2, 1] for order-2 kernel identification
+identification/methods.py:
+    In _KLS_core_computation(), speed up computation with scipy.linalg.qr_multiply()
+
