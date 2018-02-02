@@ -18,6 +18,20 @@
 			[
 				"data"
 			],
+			"name": "articles",
+			"path": "/Users/bouvier/Codes/These/articles"
+		},
+		{
+			"file_exclude_patterns":
+			[
+				"*.pdf",
+				"*.npz",
+				"*.pyvi"
+			],
+			"folder_exclude_patterns":
+			[
+				"data"
+			],
 			"name": "experiments",
 			"path": "/Users/bouvier/Codes/These/experiences"
 		},
@@ -29,7 +43,7 @@
 				"*.pyvi"
 			],
 			"name": "drafts",
-			"path": "/Users/bouvier/Codes/These/draft"
+			"path": "/Users/bouvier/Codes/These/drafts"
 		}
 	]
 }
