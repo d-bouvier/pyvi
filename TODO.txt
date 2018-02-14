@@ -1,6 +1,4 @@
 pyvi/ and tests/:
-    Remove 'system' and 'simulation' submodules
-pyvi/ and tests/:
     Use of 'super()' in all inherited class (in 'separation' and 'tests')
 tests/:
     Rename more clearly test classes (even split come into several classes)
