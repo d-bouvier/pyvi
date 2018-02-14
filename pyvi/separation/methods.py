@@ -30,6 +30,7 @@ Developed for Python 3.6.1
 # Importations
 #==============================================================================
 
+import warnings
 import numpy as np
 import scipy.fftpack as sc_fft
 import scipy.signal as sc_sig
@@ -141,7 +142,7 @@ class AS(_SeparationMethod):
     _SeparationMethod : Parent class.
     """
 
-    def __init__(self, N=3, gain=1.51, negative_gain=True, K=None):
+    def __init__(self, N=3, gain=0.64, negative_gain=True, K=None):
 
         nb_test = N if K is None else K
         self.gain = gain
@@ -226,13 +227,13 @@ class _PS(_SeparationMethod):
         self.rho = rho
         _SeparationMethod.__init__(self, N, N, self._gen_phase_factors(N))
 
-    def _gen_phase_factors(self, nb_test):
+    def _gen_phase_factors(self, nb_phase):
         """
         Generates the vector of dephasing factors.
         """
 
-        self.w = np.exp(- 1j * 2 * np.pi / nb_test)
-        return self.rho * self.w**np.arange(nb_test)
+        self.w = np.exp(- 1j * 2 * np.pi / nb_phase)
+        return self.rho * self.w**np.arange(nb_phase)
 
     def process_outputs(self, output_coll):
         """
@@ -265,9 +266,9 @@ class _PS(_SeparationMethod):
         return sc_fft.ifft(output_coll, n=N, axis=0)
 
 
-class PS(_PS):
+class HPS(_PS):
     """
-    Class for Phase-based Separation method into homo-phase signals.
+    Class for Phase-based Separation method into homophase signals.
 
     Parameters
     ----------
@@ -299,10 +300,18 @@ class PS(_PS):
 
     rho = 1
 
-    def __init__(self, N=3, multiplicity=1):
-        self.nb_phase = 2*N + 1
-        self.nb_phase_tot = multiplicity * self.nb_phase
-        phase_vec = self._gen_phase_factors(self.nb_phase_tot)
+    def __init__(self, N=3, nb_phase=None):
+        nb_phase_min = 2*N + 1
+        if nb_phase is not None:
+            if nb_phase < nb_phase_min:
+                message = "Specified 'nb_phase' parameter is lower than " + \
+                          "the minimum needed {} .Instead, minimum was used."
+                warnings.warn(message.format(nb_phase_min), UserWarning)
+                nb_phase = nb_phase_min
+            self.nb_phase = nb_phase
+        else:
+            self.nb_phase = nb_phase_min
+        phase_vec = self._gen_phase_factors(self.nb_phase)
 
         _SeparationMethod.__init__(self, N, self.nb_phase, phase_vec)
 
@@ -336,11 +345,11 @@ class PS(_PS):
             return 2*np.real(_SeparationMethod.gen_inputs(self, signal))
 
     def process_outputs(self, output_coll):
-        temp = _PS._inverse_fft(self, output_coll, self.nb_phase_tot)
+        temp = _PS._inverse_fft(self, output_coll, self.nb_phase)
         return np.concatenate((temp[0:self.N+1], temp[-self.N:]), axis=0)
 
 
-class PAS(PS, AS):
+class PAS(HPS, AS):
     """
     Class for Phase-and-Amplitude-based Separation method.
 
@@ -384,18 +393,19 @@ class PAS(PS, AS):
 
     negative_gain = False
 
-    def __init__(self, N=3, gain=1.51, multiplicity=1):
-        self.gain = gain
+    def __init__(self, N=3, gain=0.64, nb_phase=None):
         self.nb_amp = (N + 1) // 2
+        self.nb_phase = 2*N + 1
+        self.nb_term = self.nb_amp * self.nb_phase
+
+        self.gain = gain
         self.amp_vec = self._gen_amp_factors(self.nb_amp)
 
-        self.nb_phase = 2*N + 1
-        self.nb_phase_tot = multiplicity * self.nb_phase
-        phase_vec = self._gen_phase_factors(self.nb_phase_tot)
+        self.HPS_obj = HPS(N, nb_phase)
 
-        nb_test = self.nb_phase_tot * self.nb_amp
-        self.nb_term = (N * (N + 3)) // 2
-        factors = np.tensordot(self.amp_vec, phase_vec, axes=0).flatten()
+        factors = np.tensordot(self.amp_vec, self.HPS_obj.factors,
+                               axes=0).flatten()
+        nb_test = len(factors)
 
         _SeparationMethod.__init__(self, N, nb_test, factors)
 
@@ -422,7 +432,6 @@ class PAS(PS, AS):
         """
 
         sig_shape = output_coll.shape[1:]
-
         out_per_phase = np.zeros((self.nb_amp, self.nb_phase) + sig_shape,
                                  dtype='complex128')
         output_by_order = np.zeros((self.N,) + sig_shape)
@@ -434,10 +443,10 @@ class PAS(PS, AS):
 
         # Inverse DFT for each set with same amplitude
         for idx in range(self.nb_amp):
-            start = idx * self.nb_phase_tot
-            end = start + self.nb_phase_tot
-            out_per_phase[idx] = PS.process_outputs(self,
-                                                    output_coll[start:end])
+            start = idx * self.HPS_obj.nb_phase
+            end = start + self.HPS_obj.nb_phase
+            out_per_phase[idx] = \
+                self.HPS_obj.process_outputs(output_coll[start:end])
 
         # Computation of indexes and necessary vector
         tmp = np.arange(1, self.N+1)

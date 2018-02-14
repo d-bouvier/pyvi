@@ -1,5 +1,1 @@
-data/
-draft
-*.sublime-project
 *.sublime-workspace
-tests/utilities/test_plotbox
