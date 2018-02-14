@@ -151,7 +151,7 @@ class iterKLSTest(termKLSTest):
         self.atol = 1e-12
 
     def _create_output(self):
-        method = sep.PS(N=self.N)
+        method = sep.HPS(N=self.N)
         input_coll = method.gen_inputs(self.input_sig)
         output_coll = np.zeros(input_coll.shape, dtype='complex')
         for ind in range(input_coll.shape[0]):
