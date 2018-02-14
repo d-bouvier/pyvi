@@ -142,7 +142,7 @@ class AS(_SeparationMethod):
     _SeparationMethod : Parent class.
     """
 
-    def __init__(self, N=3, gain=1.51, negative_gain=True, K=None):
+    def __init__(self, N=3, gain=0.64, negative_gain=True, K=None):
 
         nb_test = N if K is None else K
         self.gain = gain
@@ -393,7 +393,7 @@ class PAS(HPS, AS):
 
     negative_gain = False
 
-    def __init__(self, N=3, gain=1.51, nb_phase=None):
+    def __init__(self, N=3, gain=0.64, nb_phase=None):
         self.nb_amp = (N + 1) // 2
         self.nb_phase = 2*N + 1
         self.nb_term = self.nb_amp * self.nb_phase
