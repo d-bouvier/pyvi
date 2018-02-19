@@ -23,159 +23,170 @@ import pyvi.separation.methods as sep
 
 class _SeparationMethodGlobalTest():
 
-    method_class = None
-    input_dtype = 'float'
-    signal_dtype = 'float'
-    atol = 1e-12
-    N = 4
+    methods = dict()
+    input_dtype = {'AS': 'float',
+                   'CPS': 'complex',
+                   'HPS': 'complex',
+                   'PAS': 'complex'}
+    signal_dtype = {'AS': 'float',
+                    'CPS': 'complex',
+                    'HPS': 'float',
+                    'PAS': 'float'}
+    true_input_func = {'AS': lambda x: x,
+                       'CPS': lambda x: x,
+                       'HPS': lambda x: 2 * np.real(x),
+                       'PAS': lambda x: 2 * np.real(x)}
+    atol = {'AS': 1e-11,
+            'CPS': 5e-12,
+            'HPS': 1e-12,
+            'PAS': 1e-10}
+    N = {'AS': 5,
+         'CPS': 5,
+         'HPS': 2,
+         'PAS': 5}
+    L = 10000
 
-    def setUp(self):
-        self.L = 2000
-        if self.input_dtype == 'float':
-            input_sig = np.random.normal(size=(self.L,))
-        else:
-            input_sig = np.random.normal(size=(self.L,)) + \
-                        1j * np.random.normal(size=(self.L,))
-        self.method = self.method_class(N=self.N)
-        input_coll = self.method.gen_inputs(input_sig)
-        self.output_coll = np.zeros(input_coll.shape, dtype=self.signal_dtype)
-        for ind in range(input_coll.shape[0]):
-            self.output_coll[ind] = generate_output(input_coll[ind], self.N)
-        self.order_est = self.method.process_outputs(self.output_coll)
-        if (self.input_dtype == 'complex') & (self.signal_dtype == 'float'):
-            input_sig = 2 * np.real(input_sig)
-        self.order_true = generate_output(input_sig, self.N, by_order=True)
-
-    def test_shape(self):
-        self.assertEqual(self.order_est.shape, (self.N, self.L))
-
-    def test_correct_output(self):
-        self.assertTrue(np.allclose(self.order_est, self.order_true,
-                                    rtol=0, atol=self.atol))
-
-
-class ASMethodTestCase(_SeparationMethodGlobalTest, unittest.TestCase):
-
-    method_class = sep.AS
-
-
-class _PSMethodTestCase(_SeparationMethodGlobalTest, unittest.TestCase):
-
-    method_class = sep._PS
-    input_dtype = 'complex'
-    signal_dtype = 'complex'
-
-
-class HPSMethodTestCase(_SeparationMethodGlobalTest, unittest.TestCase):
-
-    method_class = sep.HPS
-    input_dtype = 'complex'
-    signal_dtype = 'float'
-    N = 2
-
-    def setUp(self):
-        self.nb_phase_list = [5, 8, 16, 32]
-        self.method = dict()
-        self.output_coll = dict()
+    def setUp(self, **kwargs):
         self.order_est = dict()
-        self.L = 2000
-        input_sig = np.random.normal(size=(self.L,)) + \
-                    1j * np.random.normal(size=(self.L,))
-        for nb_phase in self.nb_phase_list:
-            method = self.method_class(N=self.N, nb_phase=nb_phase)
+        self.order_true = dict()
+        for name, method_class in self.methods.items():
+            if self.input_dtype[name] == 'float':
+                input_sig = np.random.normal(size=(self.L,))
+            elif self.input_dtype[name] == 'complex':
+                input_sig = np.random.normal(size=(self.L,)) + \
+                            1j * np.random.normal(size=(self.L,))
+            method = method_class(self.N[name], **kwargs)
             input_coll = method.gen_inputs(input_sig)
-            self.output_coll[nb_phase] = np.zeros(input_coll.shape,
-                                                  dtype=self.signal_dtype)
+            output_coll = np.zeros(input_coll.shape,
+                                   dtype=self.signal_dtype[name])
             for ind in range(input_coll.shape[0]):
-                self.output_coll[nb_phase][ind] = \
-                    generate_output(input_coll[ind], self.N)
-            save = method.process_outputs(self.output_coll[nb_phase])
-            order_est = np.stack((save[1] + save[4],
-                                  save[0] + save[2] + save[3]), axis=0)
-            self.order_est[nb_phase] = np.real(order_est)
-            self.method[nb_phase] = method
-        input_sig = 2 * np.real(input_sig)
-        self.order_true = generate_output(input_sig, self.N, by_order=True)
+                output_coll[ind] = generate_output(input_coll[ind],
+                                                   self.N[name])
+            if name == 'HPS':
+                temp = method.process_outputs(output_coll)
+                self.order_est[name] = np.stack((temp[1]+temp[-1],
+                                                 temp[0]+temp[2]+temp[-2]),
+                                                axis=0)
+            else:
+                self.order_est[name] = method.process_outputs(output_coll)
+            input_sig = self.true_input_func[name](input_sig)
+            self.order_true[name] = generate_output(input_sig, self.N[name],
+                                                    by_order=True)
 
     def test_shape(self):
-        for nb_phase in self.nb_phase_list:
-            with self.subTest(i=nb_phase):
-                self.assertEqual(self.order_est[nb_phase].shape,
-                                 (self.N, self.L))
+        for name in self.methods:
+            with self.subTest(i=name):
+                self.assertEqual(self.order_est[name].shape,
+                                 (self.N[name], self.L))
 
     def test_correct_output(self):
-        for nb_phase in self.nb_phase_list:
-            with self.subTest(i=nb_phase):
-                tmp_atol = self.atol*(1/np.sqrt(nb_phase/(2*self.N+1)))
-                self.assertTrue(np.allclose(self.order_est[nb_phase],
-                                            self.order_true, rtol=0,
-                                            atol=tmp_atol))
+        for name in self.methods:
+            with self.subTest(i=name):
+                self.assertTrue(np.allclose(self.order_est[name],
+                                            self.order_true[name],
+                                            rtol=0, atol=self.atol[name]))
+
+
+class NoKwargsTestCase(_SeparationMethodGlobalTest, unittest.TestCase):
+
+    methods = {'AS': sep.AS,
+               'CPS': sep.CPS,
+               'HPS': sep.HPS,
+               'PAS': sep.PAS}
+
+
+class GainTestCase(_SeparationMethodGlobalTest, unittest.TestCase):
+
+    methods = {'AS': sep.AS,
+               'PAS': sep.PAS}
+    atol = {'AS': 1e-10,
+            'PAS': 1e-8}
+
+    def setUp(self):
+        super().setUp(gain=1.5)
+
+
+class NegativeGainTestCase(_SeparationMethodGlobalTest, unittest.TestCase):
+
+    methods = {'AS': sep.AS}
+    atol = {'AS': 5e-10}
+
+    def setUp(self):
+        super().setUp(negative_gain=False)
+
+
+class K_ArgumentTestCase(_SeparationMethodGlobalTest, unittest.TestCase):
+
+    methods = {'AS': sep.AS}
+
+    def setUp(self):
+        super().setUp(K=10)
+
+
+class NbPhaseTestCase(_SeparationMethodGlobalTest, unittest.TestCase):
+
+    methods = {'CPS': sep.CPS,
+               'HPS': sep.HPS,
+               'PAS': sep.PAS}
+
+    def setUp(self):
+        super().setUp(nb_phase=32)
+
+
+
+class RhoTestCase(_SeparationMethodGlobalTest, unittest.TestCase):
+
+    methods = {'CPS': sep.CPS,
+               'HPS': sep.HPS,
+               'PAS': sep.PAS}
+    atol = {'CPS': 5e-10,
+            'HPS': 1e-12,
+            'PAS': 5e-10}
+
+    def setUp(self):
+        super().setUp(rho=2.)
+
+
+class WarningsNbPhaseTestCase(unittest.TestCase):
+
+    def test_warnings_CPS(self):
+        self.assertWarns(UserWarning, sep.CPS, 3, nb_phase=2)
+
+    def test_warnings_HPS(self):
+        self.assertWarns(UserWarning, sep.HPS, 3, nb_phase=5)
+
+
+
+class HPS_GenInputsTestCase(unittest.TestCase):
+
+    def setUp(self):
+        self.N = 3
+        self.L = 10000
+        self.method = sep.HPS(self.N)
 
     def test_gen_inputs(self):
         for dtype, out_type in (('float', tuple), ('complex', np.ndarray)):
             with self.subTest(i=dtype):
                 input_sig = np.zeros((self.L,), dtype=dtype)
-                method = self.method[self.nb_phase_list[0]]
-                outputs = method.gen_inputs(input_sig)
+                outputs = self.method.gen_inputs(input_sig)
                 self.assertIsInstance(outputs, out_type)
 
-    def test_warnings(self):
-        self.assertWarns(UserWarning, self.method_class, 2, 2)
 
-
-class PASMethodTestCase(_SeparationMethodGlobalTest, unittest.TestCase):
-
-    method_class = sep.PAS
-    input_dtype = 'complex'
-    signal_dtype = 'float'
-    atol = 1e-10
+class PAS_RawModeTestCase(unittest.TestCase):
 
     def setUp(self):
-        self.nb_phase_list = [9, 10, 16, 32, 64]
-        self.method = dict()
-        self.output_coll = dict()
-        self.order_est = dict()
-        self.L = 2000
-        input_sig = np.random.normal(size=(self.L,)) + \
-                    1j * np.random.normal(size=(self.L,))
-        for nb_phase in self.nb_phase_list:
-            method = self.method_class(N=self.N, nb_phase=nb_phase)
-            input_coll = method.gen_inputs(input_sig)
-            self.output_coll[nb_phase] = np.zeros(input_coll.shape,
-                                                  dtype=self.signal_dtype)
-            for ind in range(input_coll.shape[0]):
-                self.output_coll[nb_phase][ind] = \
-                    generate_output(input_coll[ind], self.N)
-            self.order_est[nb_phase] = \
-                method.process_outputs(self.output_coll[nb_phase])
-            self.method[nb_phase] = method
-        input_sig = 2 * np.real(input_sig)
-        self.order_true = generate_output(input_sig, self.N, by_order=True)
+        self.N = 3
+        self.L = 10000
+        method = sep.PAS(self.N)
+        output_coll = np.zeros((method.K, self.L))
+        _, self.term_est = method.process_outputs(output_coll, raw_mode=True)
 
-    def test_shape(self):
-        for nb_phase in self.nb_phase_list:
-            with self.subTest(i=nb_phase):
-                self.assertEqual(self.order_est[nb_phase].shape,
-                                 (self.N, self.L))
-
-    def test_correct_output(self):
-        for nb_phase in self.nb_phase_list:
-            with self.subTest(i=nb_phase):
-                tmp_atol = self.atol*(1/np.sqrt(nb_phase/(2*self.N+1)))
-                self.assertTrue(np.allclose(self.order_est[nb_phase],
-                                            self.order_true, rtol=0,
-                                            atol=tmp_atol))
-
-    def test_shape_term(self):
-        for nb_phase in self.nb_phase_list:
-            with self.subTest(i=nb_phase):
-                _, term_est = self.method[nb_phase].process_outputs(
-                    self.output_coll[nb_phase], raw_mode=True)
-                keys = dict()
-                for n in range(1, self.N+1):
-                    for k in range(n//2 + 1):
-                        keys[(n, k)] = ()
-                self.assertEqual(term_est.keys(), keys.keys())
+    def test_keys(self):
+        keys = dict()
+        for n in range(1, self.N+1):
+            for k in range(n//2 + 1):
+                keys[(n, k)] = ()
+        self.assertEqual(self.term_est.keys(), keys.keys())
 
 
 #==============================================================================
