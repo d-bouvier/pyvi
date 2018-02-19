@@ -11,10 +11,10 @@ _SeparationMethod :
     Base class for order separation methods.
 AS :
     Class for Amplitude-based Separation method.
-_PS :
-    Class for Phase-based Separation method using complex signals.
-PS :
-    Class for Phase-based Separation method into homo-phase signals.
+CPS :
+    Class for Complex Phase-based Separation method (using complex signals).
+HPS :
+    Class for Phase-based Separation method into homophase signals.
 PAS :
     Class for Phase-and-Amplitude-based Separation method.
 PAS_v2 :
@@ -142,7 +142,7 @@ class AS(_SeparationMethod):
     _SeparationMethod : Parent class.
     """
 
-    def __init__(self, N=3, gain=0.64, negative_gain=True, K=None):
+    def __init__(self, N, gain=0.64, negative_gain=True, K=None):
 
         nb_test = N if K is None else K
         self.gain = gain
@@ -191,9 +191,9 @@ class AS(_SeparationMethod):
             return np.dot(np.linalg.pinv(mixing_mat), output_coll)
 
 
-class _PS(_SeparationMethod):
+class CPS(_SeparationMethod):
     """
-    Class for Phase-based Separation method using complex signals.
+    Class for Complex Phase-based Separation method (using complex signals).
 
     Parameters
     ----------
@@ -223,17 +223,35 @@ class _PS(_SeparationMethod):
     _SeparationMethod: Parent class
     """
 
-    def __init__(self, N=3, rho=1.):
+    def __init__(self, N, nb_phase=None, rho=1.):
         self.rho = rho
-        _SeparationMethod.__init__(self, N, N, self._gen_phase_factors(N))
 
-    def _gen_phase_factors(self, nb_phase):
+        nb_phase_min = self._compute_required_nb_phase(N)
+        if nb_phase is not None:
+            if nb_phase < nb_phase_min:
+                message = "Specified 'nb_phase' parameter is lower than " + \
+                          "the minimum needed ({}) .Instead, minimum was used."
+                warnings.warn(message.format(nb_phase_min), UserWarning)
+                nb_phase = nb_phase_min
+            self.nb_phase = nb_phase
+        else:
+            self.nb_phase = nb_phase_min
+
+        _SeparationMethod.__init__(self, N, self.nb_phase,
+                                   self._gen_phase_factors())
+
+    def _compute_required_nb_phase(self, N):
+        """Computes the required minium number of phase."""
+        return N
+
+    def _gen_phase_factors(self):
         """
         Generates the vector of dephasing factors.
         """
 
-        self.w = np.exp(- 1j * 2 * np.pi / nb_phase)
-        return self.rho * self.w**np.arange(nb_phase)
+        self.w = np.exp(- 1j * 2 * np.pi / self.nb_phase)
+        vec = np.arange(self.nb_phase)/self.nb_phase
+        return self.rho * np.exp(- 2j * np.pi * vec)
 
     def process_outputs(self, output_coll):
         """
@@ -250,23 +268,25 @@ class _PS(_SeparationMethod):
             Estimation of the N first nonlinear homogeneous orders.
         """
 
-        estimation = self._inverse_fft(output_coll, self.N)
+        estimation = np.roll(self._inverse_fft(output_coll), -1, axis=0)
         if self.rho == 1:
-            return np.roll(estimation, -1, axis=0)
+            return estimation[:self.N]
         else:
-            demixing_vec = np.vander([1/self.rho], N=self.N, increasing=True)
-            return demixing_vec.T * np.roll(estimation, -1, axis=0)
+            vec = np.arange(1, self.N+1)
+            demixing_vec = (1/self.rho) ** vec
+            demixing_vec.shape = (self.N, 1)
+            return demixing_vec * estimation[:self.N]
 
-    def _inverse_fft(self, output_coll, N):
+    def _inverse_fft(self, output_coll):
         """
         Invert Discrete Fourier Transform using the FFT algorithm.
         """
 
         self.condition_numbers.append(1)
-        return sc_fft.ifft(output_coll, n=N, axis=0)
+        return sc_fft.ifft(output_coll, n=self.nb_phase, axis=0)
 
 
-class HPS(_PS):
+class HPS(CPS):
     """
     Class for Phase-based Separation method into homophase signals.
 
@@ -290,30 +310,17 @@ class HPS(_PS):
     gen_inputs(signal)
         Returns the collection of input test signals.
     process_output(output_coll)
-        Process outputs and returns estimated homo-phase signals.
+        Process outputs and returns estimated homophase signals.
 
     See also
     --------
-    _PS: Parents class
+    CPS: Parents class
     _SeparationMethod
     """
 
-    rho = 1
-
-    def __init__(self, N=3, nb_phase=None):
-        nb_phase_min = 2*N + 1
-        if nb_phase is not None:
-            if nb_phase < nb_phase_min:
-                message = "Specified 'nb_phase' parameter is lower than " + \
-                          "the minimum needed {} .Instead, minimum was used."
-                warnings.warn(message.format(nb_phase_min), UserWarning)
-                nb_phase = nb_phase_min
-            self.nb_phase = nb_phase
-        else:
-            self.nb_phase = nb_phase_min
-        phase_vec = self._gen_phase_factors(self.nb_phase)
-
-        _SeparationMethod.__init__(self, N, self.nb_phase, phase_vec)
+    def _compute_required_nb_phase(self, N):
+        """Computes the required minium number of phase."""
+        return 2*N + 1
 
     def gen_inputs(self, signal):
         """
@@ -345,8 +352,29 @@ class HPS(_PS):
             return 2*np.real(_SeparationMethod.gen_inputs(self, signal))
 
     def process_outputs(self, output_coll):
-        temp = _PS._inverse_fft(self, output_coll, self.nb_phase)
-        return np.concatenate((temp[0:self.N+1], temp[-self.N:]), axis=0)
+        """
+        Process outputs and returns homophase signals.
+
+        Parameters
+        ----------
+        output_coll : array_like
+            Collection of the K output signals.
+
+        Returns
+        -------
+        homophase : array_like
+            Estimation of the homophase signals for phase -N to N.
+        """
+        temp = self._inverse_fft(output_coll)
+        homophase = np.concatenate((temp[0:self.N+1], temp[-self.N:]), axis=0)
+        if self.rho == 1:
+            return homophase
+        else:
+            tmp = np.arange(1, self.N+1)
+            vec = np.concatenate((tmp[1:2], tmp, tmp[::-1]))
+            demixing_vec = (1/self.rho) ** vec
+            demixing_vec.shape = (2*self.N+1, 1)
+            return demixing_vec * homophase
 
 
 class PAS(HPS, AS):
@@ -393,7 +421,7 @@ class PAS(HPS, AS):
 
     negative_gain = False
 
-    def __init__(self, N=3, gain=0.64, nb_phase=None):
+    def __init__(self, N, gain=0.64, nb_phase=None, rho=1.):
         self.nb_amp = (N + 1) // 2
         self.nb_phase = 2*N + 1
         self.nb_term = self.nb_amp * self.nb_phase
@@ -401,10 +429,11 @@ class PAS(HPS, AS):
         self.gain = gain
         self.amp_vec = self._gen_amp_factors(self.nb_amp)
 
-        self.HPS_obj = HPS(N, nb_phase)
+        self.HPS_obj = HPS(N, nb_phase=nb_phase)
 
-        factors = np.tensordot(self.amp_vec, self.HPS_obj.factors,
-                               axes=0).flatten()
+        self.rho = rho
+        factors = self.rho * np.tensordot(self.amp_vec, self.HPS_obj.factors,
+                                          axes=0).flatten()
         nb_test = len(factors)
 
         _SeparationMethod.__init__(self, N, nb_test, factors)
@@ -482,6 +511,15 @@ class PAS(HPS, AS):
                     q = ((n - phase_idx) % self.nb_phase) // 2
                     combinatorial_terms[(n, q)] = \
                         (tmp[ind] + 1j*tmp[ind+ind_dec]) / binomial(n, q)
+
+        if self.rho != 1:
+            if raw_mode:
+                for (n, q), val in combinatorial_terms.items():
+                    combinatorial_terms[(n, q)] = val / (self.rho**n)
+            vec = np.arange(1, self.N+1)
+            demixing_vec = (1/self.rho) ** vec
+            demixing_vec.shape = (self.N, 1)
+            output_by_order = demixing_vec * output_by_order
 
         # Function output
         if raw_mode:
