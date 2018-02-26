@@ -136,12 +136,8 @@ class NbPhaseTestCase(_SeparationMethodGlobalTest, unittest.TestCase):
 
 class RhoTestCase(_SeparationMethodGlobalTest, unittest.TestCase):
 
-    methods = {'CPS': sep.CPS,
-               'HPS': sep.HPS,
-               'PAS': sep.PAS}
-    atol = {'CPS': 5e-10,
-            'HPS': 1e-12,
-            'PAS': 5e-10}
+    methods = {'CPS': sep.CPS}
+    atol = {'CPS': 5e-10}
 
     def setUp(self):
         super().setUp(rho=2.)
