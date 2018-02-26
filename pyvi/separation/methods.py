@@ -319,6 +319,9 @@ class HPS(CPS):
     _SeparationMethod
     """
 
+    def __init__(self, N, nb_phase=None):
+        super().__init__(N, nb_phase=nb_phase, rho=1)
+
     def _compute_required_nb_phase(self, N):
         """Computes the required minium number of phase."""
         return 2*N + 1
@@ -368,14 +371,7 @@ class HPS(CPS):
         """
         temp = self._inverse_fft(output_coll)
         homophase = np.concatenate((temp[0:self.N+1], temp[-self.N:]), axis=0)
-        if self.rho == 1:
-            return homophase
-        else:
-            tmp = np.arange(1, self.N+1)
-            vec = np.concatenate((tmp[1:2], tmp, tmp[::-1]))
-            demixing_vec = (1/self.rho) ** vec
-            demixing_vec.shape = (2*self.N+1, 1)
-            return demixing_vec * homophase
+        return homophase
 
 
 class PS(HPS):
@@ -625,8 +621,9 @@ class PAS(HPS, AS):
     """
 
     negative_gain = False
+    rho = 1
 
-    def __init__(self, N, gain=0.64, nb_phase=None, rho=1.):
+    def __init__(self, N, gain=0.64, nb_phase=None, ):
         self.nb_amp = (N + 1) // 2
         self.nb_phase = 2*N + 1
         self.nb_term = self.nb_amp * self.nb_phase
@@ -636,7 +633,6 @@ class PAS(HPS, AS):
 
         self.HPS_obj = HPS(N, nb_phase=nb_phase)
 
-        self.rho = rho
         factors = self.rho * np.tensordot(self.amp_vec, self.HPS_obj.factors,
                                           axes=0).flatten()
         nb_test = len(factors)
@@ -716,15 +712,6 @@ class PAS(HPS, AS):
                     q = ((n - phase_idx) % self.nb_phase) // 2
                     combinatorial_terms[(n, q)] = \
                         (tmp[ind] + 1j*tmp[ind+ind_dec]) / binomial(n, q)
-
-        if self.rho != 1:
-            if raw_mode:
-                for (n, q), val in combinatorial_terms.items():
-                    combinatorial_terms[(n, q)] = val / (self.rho**n)
-            vec = np.arange(1, self.N+1)
-            demixing_vec = (1/self.rho) ** vec
-            demixing_vec.shape = (self.N, 1)
-            output_by_order = demixing_vec * output_by_order
 
         # Function output
         if raw_mode:
