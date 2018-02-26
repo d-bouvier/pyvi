@@ -27,22 +27,27 @@ class _SeparationMethodGlobalTest():
     input_dtype = {'AS': 'float',
                    'CPS': 'complex',
                    'HPS': 'complex',
+                   'PS': 'complex',
                    'PAS': 'complex'}
     signal_dtype = {'AS': 'float',
                     'CPS': 'complex',
                     'HPS': 'float',
+                    'PS': 'float',
                     'PAS': 'float'}
     true_input_func = {'AS': lambda x: x,
                        'CPS': lambda x: x,
                        'HPS': lambda x: 2 * np.real(x),
+                       'PS': lambda x: 2 * np.real(x),
                        'PAS': lambda x: 2 * np.real(x)}
     atol = {'AS': 1e-11,
             'CPS': 5e-12,
             'HPS': 1e-12,
+            'PS': 1e-9,
             'PAS': 1e-10}
     N = {'AS': 5,
          'CPS': 5,
          'HPS': 2,
+         'PS': 5,
          'PAS': 5}
     L = 10000
 
@@ -92,6 +97,7 @@ class NoKwargsTestCase(_SeparationMethodGlobalTest, unittest.TestCase):
     methods = {'AS': sep.AS,
                'CPS': sep.CPS,
                'HPS': sep.HPS,
+               'PS': sep.PS,
                'PAS': sep.PAS}
 
 
@@ -127,6 +133,7 @@ class NbPhaseTestCase(_SeparationMethodGlobalTest, unittest.TestCase):
 
     methods = {'CPS': sep.CPS,
                'HPS': sep.HPS,
+               'PS': sep.PS,
                'PAS': sep.PAS}
 
     def setUp(self):
@@ -156,7 +163,6 @@ class WarningsNbPhaseTestCase(unittest.TestCase):
         self.assertWarns(UserWarning, sep.HPS, 3, nb_phase=5)
 
 
-
 class HPS_GenInputsTestCase(unittest.TestCase):
 
     def setUp(self):
@@ -172,12 +178,14 @@ class HPS_GenInputsTestCase(unittest.TestCase):
                 self.assertIsInstance(outputs, out_type)
 
 
-class PAS_RawModeTestCase(unittest.TestCase):
+class PS_RawModeTestCase(unittest.TestCase):
+
+    method = sep.PS
 
     def setUp(self):
         self.N = 3
         self.L = 10000
-        method = sep.PAS(self.N)
+        method = self.method(self.N)
         output_coll = np.zeros((method.K, self.L))
         _, self.term_est = method.process_outputs(output_coll, raw_mode=True)
 
@@ -187,6 +195,11 @@ class PAS_RawModeTestCase(unittest.TestCase):
             for k in range(n//2 + 1):
                 keys[(n, k)] = ()
         self.assertEqual(self.term_est.keys(), keys.keys())
+
+
+class PAS_RawModeTestCase(PS_RawModeTestCase):
+
+    method = sep.PAS
 
 
 #==============================================================================
