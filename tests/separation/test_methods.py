@@ -15,163 +15,118 @@ Developed for Python 3.6.1
 import unittest
 import numpy as np
 import pyvi.separation.methods as sep
+from pyvi.utilities import binomial, rms
 
 
 #==============================================================================
 # Test Class
 #==============================================================================
 
-class _SeparationMethodGlobalTest():
+class _OrderSeparationMethodGlobalTest():
 
-    methods = dict()
+    method = dict()
     input_dtype = {'AS': 'float',
                    'CPS': 'complex',
-                   'HPS': 'complex',
                    'PS': 'complex',
                    'PAS': 'complex'}
     signal_dtype = {'AS': 'float',
                     'CPS': 'complex',
-                    'HPS': 'float',
                     'PS': 'float',
                     'PAS': 'float'}
     true_input_func = {'AS': lambda x: x,
                        'CPS': lambda x: x,
-                       'HPS': lambda x: 2 * np.real(x),
                        'PS': lambda x: 2 * np.real(x),
                        'PAS': lambda x: 2 * np.real(x)}
-    atol = {'AS': 1e-11,
-            'CPS': 5e-12,
-            'HPS': 1e-12,
-            'PS': 1e-9,
-            'PAS': 1e-10}
-    N = {'AS': 5,
-         'CPS': 5,
-         'HPS': 2,
-         'PS': 5,
-         'PAS': 5}
+    tol = 5e-10
+    N = 5
     L = 10000
 
     def setUp(self, **kwargs):
         self.order_est = dict()
         self.order_true = dict()
-        for name, method_class in self.methods.items():
+        for name, method_class in self.method.items():
             if self.input_dtype[name] == 'float':
                 input_sig = np.random.normal(size=(self.L,))
             elif self.input_dtype[name] == 'complex':
                 input_sig = np.random.normal(size=(self.L,)) + \
                             1j * np.random.normal(size=(self.L,))
-            method = method_class(self.N[name], **kwargs)
+            method = method_class(self.N, **kwargs)
             input_coll = method.gen_inputs(input_sig)
             output_coll = np.zeros(input_coll.shape,
                                    dtype=self.signal_dtype[name])
             for ind in range(input_coll.shape[0]):
-                output_coll[ind] = generate_output(input_coll[ind],
-                                                   self.N[name])
-            if name == 'HPS':
-                temp = method.process_outputs(output_coll)
-                self.order_est[name] = np.stack((temp[1]+temp[-1],
-                                                 temp[0]+temp[2]+temp[-2]),
-                                                axis=0)
+                output_coll[ind] = generate_output(input_coll[ind], self.N)
             else:
                 self.order_est[name] = method.process_outputs(output_coll)
             input_sig = self.true_input_func[name](input_sig)
-            self.order_true[name] = generate_output(input_sig, self.N[name],
+            self.order_true[name] = generate_output(input_sig, self.N,
                                                     by_order=True)
 
     def test_shape(self):
-        for name in self.methods:
+        for name in self.method:
             with self.subTest(i=name):
-                self.assertEqual(self.order_est[name].shape,
-                                 (self.N[name], self.L))
+                self.assertEqual(self.order_est[name].shape, (self.N, self.L))
 
     def test_correct_output(self):
-        for name in self.methods:
+        for name in self.method:
             with self.subTest(i=name):
-                self.assertTrue(np.allclose(self.order_est[name],
-                                            self.order_true[name],
-                                            rtol=0, atol=self.atol[name]))
+                error = rms(self.order_est[name] - self.order_true[name])
+                self.assertTrue(error < self.tol)
 
 
-class NoKwargsTestCase(_SeparationMethodGlobalTest, unittest.TestCase):
+class NoKwargsTestCase(_OrderSeparationMethodGlobalTest, unittest.TestCase):
 
-    methods = {'AS': sep.AS,
-               'CPS': sep.CPS,
-               'HPS': sep.HPS,
-               'PS': sep.PS,
-               'PAS': sep.PAS}
+    method = {'AS': sep.AS,
+              'CPS': sep.CPS,
+              'PS': sep.PS,
+              'PAS': sep.PAS}
 
 
-class GainTestCase(_SeparationMethodGlobalTest, unittest.TestCase):
+class GainTestCase(_OrderSeparationMethodGlobalTest, unittest.TestCase):
 
-    methods = {'AS': sep.AS,
-               'PAS': sep.PAS}
-    atol = {'AS': 1e-10,
-            'PAS': 1e-8}
+    method = {'AS': sep.AS,
+              'PAS': sep.PAS}
+    tol = 1e-10
 
     def setUp(self):
         super().setUp(gain=1.5)
 
 
-class NegativeGainTestCase(_SeparationMethodGlobalTest, unittest.TestCase):
+class NegativeGainTestCase(_OrderSeparationMethodGlobalTest,
+                           unittest.TestCase):
 
-    methods = {'AS': sep.AS}
-    atol = {'AS': 5e-10}
+    method = {'AS': sep.AS}
 
     def setUp(self):
         super().setUp(negative_gain=False)
 
 
-class K_ArgumentTestCase(_SeparationMethodGlobalTest, unittest.TestCase):
+class K_ArgumentTestCase(_OrderSeparationMethodGlobalTest, unittest.TestCase):
 
-    methods = {'AS': sep.AS}
+    method = {'AS': sep.AS}
 
     def setUp(self):
-        super().setUp(K=10)
+        super().setUp(K=3*self.N)
 
 
-class NbPhaseTestCase(_SeparationMethodGlobalTest, unittest.TestCase):
+class NbPhaseTestCase(_OrderSeparationMethodGlobalTest, unittest.TestCase):
 
-    methods = {'CPS': sep.CPS,
-               'HPS': sep.HPS,
-               'PS': sep.PS,
-               'PAS': sep.PAS}
+    method = {'CPS': sep.CPS,
+              'PS': sep.PS,
+              'PAS': sep.PAS}
+    tol = 5e-10
 
     def setUp(self):
         super().setUp(nb_phase=32)
 
 
+class RhoTestCase(_OrderSeparationMethodGlobalTest, unittest.TestCase):
 
-class RhoTestCase(_SeparationMethodGlobalTest, unittest.TestCase):
-
-    methods = {'CPS': sep.CPS}
+    method = {'CPS': sep.CPS}
     atol = {'CPS': 5e-10}
 
     def setUp(self):
         super().setUp(rho=2.)
-
-
-class WarningsNbPhaseTestCase(unittest.TestCase):
-
-    def test_warnings_CPS(self):
-        self.assertWarns(UserWarning, sep.CPS, 3, nb_phase=2)
-
-    def test_warnings_HPS(self):
-        self.assertWarns(UserWarning, sep.HPS, 3, nb_phase=5)
-
-
-class HPS_GenInputsTestCase(unittest.TestCase):
-
-    def setUp(self):
-        self.N = 3
-        self.L = 10000
-        self.method = sep.HPS(self.N)
-
-    def test_gen_inputs(self):
-        for dtype, out_type in (('float', tuple), ('complex', np.ndarray)):
-            with self.subTest(i=dtype):
-                input_sig = np.zeros((self.L,), dtype=dtype)
-                outputs = self.method.gen_inputs(input_sig)
-                self.assertIsInstance(outputs, out_type)
 
 
 class PS_RawModeTestCase(unittest.TestCase):
@@ -196,6 +151,76 @@ class PS_RawModeTestCase(unittest.TestCase):
 class PAS_RawModeTestCase(PS_RawModeTestCase):
 
     method = sep.PAS
+
+
+class HPS_Test(_OrderSeparationMethodGlobalTest, unittest.TestCase):
+
+    method = sep.HPS
+    tol = 1e-14
+
+    def setUp(self, **kwargs):
+        phase_vec = 2 * np.pi * np.arange(self.L)/self.L
+        input_sig = np.exp(1j * phase_vec)
+        power_vec = np.arange(1, self.N+1)
+
+        method = self.method(self.N, **kwargs)
+        input_coll = method.gen_inputs(input_sig)
+        output_coll = np.zeros(input_coll.shape, dtype='complex')
+        for ind in range(input_coll.shape[0]):
+            tmp = input_coll[ind][np.newaxis, :]**power_vec[:, np.newaxis]
+            output_coll[ind] = np.sum(tmp, axis=0)
+        self.homophase_est = method.process_outputs(output_coll)
+
+        self.nb_phase = 2*self.N+1
+        self.homophase_true = np.zeros((self.nb_phase, self.L),
+                                       dtype='complex')
+        for p in range(-self.N, self.N+1):
+            ind = p % self.nb_phase
+            if p:
+                start = abs(p)
+            else:
+                start = 2
+            for n in range(start, self.N+1, 2):
+                q = (n - p) // 2
+                fac = binomial(n, q)
+                self.homophase_true[ind] += fac * np.exp(1j * p * phase_vec)
+
+    def test_shape(self):
+        self.assertEqual(self.homophase_est.shape, (2*self.N+1, self.L))
+
+    def test_correct_output(self):
+        error = rms(self.homophase_est - self.homophase_true)
+        self.assertTrue(error < self.tol)
+
+
+class HPS_NbPhaseTestCase(HPS_Test):
+
+    def setUp(self):
+        super().setUp(nb_phase=32)
+
+
+class HPS_GenInputsTestCase(unittest.TestCase):
+
+    def setUp(self):
+        self.N = 3
+        self.L = 10000
+        self.method = sep.HPS(self.N)
+
+    def test_gen_inputs(self):
+        for dtype, out_type in (('float', tuple), ('complex', np.ndarray)):
+            with self.subTest(i=dtype):
+                input_sig = np.zeros((self.L,), dtype=dtype)
+                outputs = self.method.gen_inputs(input_sig)
+                self.assertIsInstance(outputs, out_type)
+
+
+class WarningsNbPhaseTestCase(unittest.TestCase):
+
+    def test_warnings_CPS(self):
+        self.assertWarns(UserWarning, sep.CPS, 3, nb_phase=2)
+
+    def test_warnings_HPS(self):
+        self.assertWarns(UserWarning, sep.HPS, 3, nb_phase=5)
 
 
 #==============================================================================
