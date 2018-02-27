@@ -103,7 +103,7 @@ class _SeparationMethod:
         output_coll : array_like
             Collection of the K output signals.
         """
-        pass
+        self.condition_numbers = []
 
 
 class AS(_SeparationMethod):
@@ -172,6 +172,8 @@ class AS(_SeparationMethod):
         output_by_order : array_like
             Estimation of the N first nonlinear homogeneous orders.
         """
+
+        _SeparationMethod.process_outputs(self, None)
 
         mixing_mat = \
             np.vander(self.factors, N=self.N+1, increasing=True)[:, 1::]
@@ -265,6 +267,8 @@ class CPS(_SeparationMethod):
         output_by_order : array_like
             Estimation of the N first nonlinear homogeneous orders.
         """
+
+        _SeparationMethod.process_outputs(self, None)
 
         estimation = np.roll(self._inverse_fft(output_coll), -1, axis=0)
         if self.rho == 1:
@@ -366,6 +370,9 @@ class HPS(CPS):
         homophase : array_like
             Estimation of the homophase signals for phase -N to N.
         """
+
+        _SeparationMethod.process_outputs(self, None)
+
         temp = self._inverse_fft(output_coll)
         homophase = np.concatenate((temp[0:self.N+1], temp[-self.N:]), axis=0)
         return homophase
@@ -441,6 +448,8 @@ class PS(HPS):
         This function always return ``output_by_order``; it also returns
         ``combinatorial_terms`` if `raw_mode`` option is set to True.
         """
+
+        _SeparationMethod.process_outputs(self, None)
 
         output_by_order = np.zeros((self.N,) + output_coll.shape[1:])
         if raw_mode:
