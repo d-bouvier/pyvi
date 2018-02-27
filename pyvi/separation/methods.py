@@ -50,18 +50,17 @@ class _SeparationMethod:
     ----------
     N : int
         Number of orders to separate (truncation order of the Volterra series).
-    K : int
-        Number of tests signals needed for the method.
     factors : array_like (with length K)
         Factors applied to the base signal in order to create the test signals.
-    condition_numbers : list(float)
-        List of condition numbers of all matrix inverted during separation.
 
     Attributes
     ----------
     N : int
-    K : int
     factors : array_like (of length K)
+    K : int
+        Number of tests signals needed for the method.
+    condition_numbers : list(float)
+        List of condition numbers of all matrix inverted during separation.
 
     Methods
     -------
@@ -71,10 +70,10 @@ class _SeparationMethod:
         Process outputs.
     """
 
-    def __init__(self, N, K, factors):
+    def __init__(self, N, factors):
         self.N = N
-        self.K = K
         self.factors = factors
+        self.K = len(factors)
         self.condition_numbers = []
 
     def gen_inputs(self, signal):
@@ -148,8 +147,7 @@ class AS(_SeparationMethod):
         nb_test = N if K is None else K
         self.gain = gain
         self.negative_gain = negative_gain
-        _SeparationMethod.__init__(self, N, nb_test,
-                                   self._gen_amp_factors(nb_test))
+        _SeparationMethod.__init__(self, N, self._gen_amp_factors(nb_test))
 
     def _gen_amp_factors(self, nb_test):
         """
@@ -238,8 +236,7 @@ class CPS(_SeparationMethod):
         else:
             self.nb_phase = nb_phase_min
 
-        _SeparationMethod.__init__(self, N, self.nb_phase,
-                                   self._gen_phase_factors())
+        _SeparationMethod.__init__(self, N, self._gen_phase_factors())
 
     def _compute_required_nb_phase(self, N):
         """Computes the required minium number of phase."""
@@ -635,9 +632,8 @@ class PAS(HPS, AS):
 
         factors = self.rho * np.tensordot(self.amp_vec, self.HPS_obj.factors,
                                           axes=0).flatten()
-        nb_test = len(factors)
 
-        _SeparationMethod.__init__(self, N, nb_test, factors)
+        _SeparationMethod.__init__(self, N, factors)
 
     def process_outputs(self, output_coll, raw_mode=False):
         """
