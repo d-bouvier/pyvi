@@ -39,7 +39,7 @@ class _OrderSeparationMethodGlobalTest():
                        'PAS': lambda x: 2 * np.real(x)}
     tol = 5e-10
     N = 5
-    L = 10000
+    L = 1000
 
     def setUp(self, **kwargs):
         self.order_est = dict()

@@ -103,6 +103,7 @@ class _SeparationMethod:
         output_coll : array_like
             Collection of the K output signals.
         """
+
         self.condition_numbers = []
 
 
@@ -143,7 +144,6 @@ class AS(_SeparationMethod):
     """
 
     def __init__(self, N, gain=0.64, negative_gain=True, K=None):
-
         self.nb_amp = N if K is None else K
         self.gain = gain
         self.negative_gain = negative_gain
@@ -242,6 +242,7 @@ class CPS(_SeparationMethod):
 
     def _compute_required_nb_phase(self, N):
         """Computes the required minium number of phase."""
+
         return N
 
     def _gen_phase_factors(self):
@@ -327,6 +328,7 @@ class HPS(CPS):
 
     def _compute_required_nb_phase(self, N):
         """Computes the required minium number of phase."""
+
         return 2*N + 1
 
     def gen_inputs(self, signal):
@@ -415,19 +417,14 @@ class PS(HPS):
     rho = 1
 
     def __init__(self, N, nb_phase=None):
-
         super().__init__(N, nb_phase=nb_phase)
 
         factors = []
         for w1, w2 in itr.combinations_with_replacement(self.factors, 2):
             factors.append(w1 + w2)
 
-        # factors = self.factors[:, np.newaxis] + self.factors[np.newaxis, :]
-        # factors = factors.flatten()
-
         self.factors = factors
         self.K = len(factors)
-
 
     def process_outputs(self, output_coll, raw_mode=False):
         """
@@ -559,8 +556,6 @@ class PS(HPS):
         Invert Discrete Fourier Transform using the FFT algorithm.
         """
 
-        # shape = (self.nb_phase, self.nb_phase_min) + output_coll.shape[1:]
-        # output_coll_2d = output_coll.reshape(shape)
         shape = (self.nb_phase,)*2 + coll_1d.shape[1:]
         coll_2d = np.zeros(shape)
 
@@ -631,7 +626,6 @@ class PAS(HPS, AS):
     negative_gain = False
 
     def __init__(self, N, gain=0.64, nb_phase=None):
-
         AS.__init__(self, (N + 1) // 2, gain=gain,
                     negative_gain=self.negative_gain)
         self.amp_vec = self.factors
