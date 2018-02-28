@@ -144,17 +144,17 @@ class AS(_SeparationMethod):
 
     def __init__(self, N, gain=0.64, negative_gain=True, K=None):
 
-        nb_test = N if K is None else K
+        self.nb_amp = N if K is None else K
         self.gain = gain
         self.negative_gain = negative_gain
-        _SeparationMethod.__init__(self, N, self._gen_amp_factors(nb_test))
+        super().__init__(N, self._gen_amp_factors())
 
-    def _gen_amp_factors(self, nb_test):
+    def _gen_amp_factors(self):
         """
         Generates the vector of amplitude factors.
         """
 
-        tmp_vec = np.arange(nb_test)
+        tmp_vec = np.arange(self.nb_amp)
         return (-1)**(tmp_vec*self.negative_gain) * \
                 self.gain**(tmp_vec // (1+self.negative_gain))
 
@@ -238,7 +238,7 @@ class CPS(_SeparationMethod):
         else:
             self.nb_phase = nb_phase_min
 
-        _SeparationMethod.__init__(self, N, self._gen_phase_factors())
+        super().__init__(N, self._gen_phase_factors())
 
     def _compute_required_nb_phase(self, N):
         """Computes the required minium number of phase."""
@@ -320,8 +320,10 @@ class HPS(CPS):
     _SeparationMethod
     """
 
+    rho = 1
+
     def __init__(self, N, nb_phase=None):
-        super().__init__(N, nb_phase=nb_phase, rho=1)
+        super().__init__(N, nb_phase=nb_phase, rho=self.rho)
 
     def _compute_required_nb_phase(self, N):
         """Computes the required minium number of phase."""
@@ -414,7 +416,7 @@ class PS(HPS):
 
     def __init__(self, N, nb_phase=None):
 
-        HPS.__init__(self, N, nb_phase=nb_phase)
+        super().__init__(N, nb_phase=nb_phase)
 
         factors = []
         for w1, w2 in itr.combinations_with_replacement(self.factors, 2):
@@ -627,20 +629,20 @@ class PAS(HPS, AS):
     """
 
     negative_gain = False
-    rho = 1
 
-    def __init__(self, N, gain=0.64, nb_phase=None, ):
-        self.nb_amp = (N + 1) // 2
-        self.nb_phase = 2*N + 1
-        self.nb_term = self.nb_amp * self.nb_phase
+    def __init__(self, N, gain=0.64, nb_phase=None):
 
-        self.gain = gain
-        self.amp_vec = self._gen_amp_factors(self.nb_amp)
+        AS.__init__(self, (N + 1) // 2, gain=gain,
+                    negative_gain=self.negative_gain)
+        self.amp_vec = self.factors
 
+        self.nb_phase = self._compute_required_nb_phase(N)
         self.HPS_obj = HPS(N, nb_phase=nb_phase)
 
-        factors = self.rho * np.tensordot(self.amp_vec, self.HPS_obj.factors,
-                                          axes=0).flatten()
+        self.nb_term = self.nb_amp * self.nb_phase
+
+        factors = np.tensordot(self.amp_vec, self.HPS_obj.factors, axes=0)
+        factors = factors.flatten()
 
         _SeparationMethod.__init__(self, N, factors)
 
