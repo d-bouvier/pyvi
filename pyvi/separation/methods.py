@@ -177,18 +177,18 @@ class AS(_SeparationMethod):
 
         mixing_mat = \
             np.vander(self.factors, N=self.N+1, increasing=True)[:, 1::]
-        return self._inverse_mixing_mat(output_coll, mixing_mat)
+        return self._solve(output_coll, mixing_mat)
 
-    def _inverse_mixing_mat(self, output_coll, mixing_mat):
+    def _solve(self, output_coll, mixing_mat):
         """
         Resolves the vandermonde system via inverse or pseudo-inverse.
         """
 
         self.condition_numbers.append(np.linalg.cond(mixing_mat))
         is_square = mixing_mat.shape[0] == mixing_mat.shape[1]
-        if is_square: # Square matrix
+        if is_square:
             return np.dot(np.linalg.inv(mixing_mat), output_coll)
-        else: # Non-square matrix (pseudo-inverse)
+        else:
             return np.dot(np.linalg.pinv(mixing_mat), output_coll)
 
 
@@ -271,16 +271,17 @@ class CPS(_SeparationMethod):
 
         _SeparationMethod.process_outputs(self, None)
 
-        estimation = np.roll(self._inverse_fft(output_coll), -1, axis=0)
+        estimation = np.roll(self._ifft(output_coll), -1, axis=0)[:self.N]
         if self.rho == 1:
-            return estimation[:self.N]
+            return estimation
         else:
             vec = np.arange(1, self.N+1)
             demixing_vec = (1/self.rho) ** vec
             demixing_vec.shape = (self.N, 1)
-            return demixing_vec * estimation[:self.N]
+            self.condition_numbers.append(np.diag(demixing_vec))
+            return demixing_vec * estimation
 
-    def _inverse_fft(self, output_coll):
+    def _ifft(self, output_coll):
         """
         Invert Discrete Fourier Transform using the FFT algorithm.
         """
@@ -377,9 +378,8 @@ class HPS(CPS):
 
         _SeparationMethod.process_outputs(self, None)
 
-        temp = self._inverse_fft(output_coll)
-        homophase = np.concatenate((temp[0:self.N+1], temp[-self.N:]), axis=0)
-        return homophase
+        temp = self._ifft(output_coll)
+        return np.concatenate((temp[0:self.N+1], temp[-self.N:]), axis=0)
 
 
 class PS(HPS):
@@ -455,7 +455,7 @@ class PS(HPS):
             combinatorial_terms = dict()
 
         # Computation of the inverse 2D-DFT
-        out_per_phase = self._inverse_fft(output_coll)
+        out_per_phase = self._ifft(output_coll)
 
         # Computation of the complex-2-real matrix
         c2r_mat = np.array([[1., 0], [1., 0], [0, 1.], [0, -1.]])
@@ -512,7 +512,7 @@ class PS(HPS):
                 mix_mat = mixing_mat
 
             # Computation of the Mpq terms and nonlinear orders
-            tmp = AS._inverse_mixing_mat(self, sigs, mix_mat)
+            tmp = AS._solve(self, sigs, mix_mat)
             if phase_idx:
                 ind_dec = tmp.shape[0] // 2
                 for ind in range(ind_dec):
@@ -536,7 +536,7 @@ class PS(HPS):
         else:
             return output_by_order
 
-    def _inverse_fft(self, output_coll):
+    def _ifft(self, output_coll):
         """
         Invert Discrete Fourier Transform using the FFT algorithm.
         """
@@ -686,8 +686,8 @@ class PAS(HPS, AS):
 
         # Inverse Vandermonde matrix for each set with same null phase
         col_idx = np.arange(first_nl_order[0], self.N+1, 2) - 1
-        tmp = AS._inverse_mixing_mat(self, np.real(out_per_phase[:, 0]),
-                                     mixing_mat[:, col_idx])
+        tmp = AS._solve(self, np.real(out_per_phase[:, 0]),
+                        mixing_mat[:, col_idx])
         for ind in range(tmp.shape[0]):
             n = first_nl_order[0] + 2*ind
             output_by_order[n-1] += tmp[ind]
@@ -704,7 +704,7 @@ class PAS(HPS, AS):
                                    np.imag(out_per_phase[:, phase_idx]),
                                    np.imag(out_per_phase[:, phase_idx_conj])))
             mix_mat = np.kron(conj_mat, mixing_mat[:, col_idx])
-            tmp = AS._inverse_mixing_mat(self, sigs, mix_mat)
+            tmp = AS._solve(self, sigs, mix_mat)
             ind_dec = tmp.shape[0] // 2
             for ind in range(ind_dec):
                 n = first_nl_order[phase_idx] + 2*ind
