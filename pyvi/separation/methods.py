@@ -41,6 +41,7 @@ import itertools as itr
 import numpy as np
 import scipy.fftpack as sc_fft
 import scipy.signal as sc_sig
+from .tools import create_vandermonde_mixing_mat
 from ..utilities.mathbox import binomial, multinomial
 from ..utilities.decorators import inherit_docstring
 
@@ -796,27 +797,3 @@ class PAS(_AbstractPS, AS):
                                    np.imag(out_per_phase[phase_conj])))
         else:
             return np.real(out_per_phase[0])
-
-
-#==============================================================================
-# Functions
-#==============================================================================
-
-def create_vandermonde_mixing_mat(factors, N):
-    """
-    Creates the Vandermonde matrix due to the nonlinear orders homogeneity.
-
-    Parameters
-    ----------
-    N : int
-        Number of orders to separate (truncation order of the Volterra series).
-    factors : array_like
-        Factors applied to the base signal in order to create the test signals.
-
-    Returns
-    -------
-    matrix: np.ndarray (of size=(len(factors), N))
-        Mixing matrix of the Volterra orders in the output signals.
-    """
-
-    return np.vander(factors, N=N+1, increasing=True)[:, 1::]
