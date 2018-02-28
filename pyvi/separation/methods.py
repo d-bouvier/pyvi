@@ -1,24 +1,30 @@
 # -*- coding: utf-8 -*-
 """
-Module for nonlinear order separation.
+Module for Volterra series nonlinear order separation.
 
-This package creates classes for nonlinear homogeneous order separation of
-Volterra series.
+This package creates classes for several nonlinear homogeneous order
+separation methods.
 
 Class
 -----
 _SeparationMethod :
-    Base class for order separation methods.
+    Asbstract base class for order separation methods.
 AS :
     Class for Amplitude-based Separation method.
 CPS :
-    Class for Complex Phase-based Separation method (using complex signals).
+    Class for Complex Phase-based Separation method using complex signals.
 HPS :
     Class for Phase-based Separation method into homophase signals.
+_AbstractPS :
+    Abstract base class for Phase-based Separation method using real signals.
+PS :
+    Class for Phase-based Separation method using real signals (and 2D-DFT).
 PAS :
-    Class for Phase-and-Amplitude-based Separation method.
-PAS_v2 :
-    Class for Phase-and-Amplitude-based Separation method using fewer signals.
+    Class for Phase-and-Amplitude-based Separation method using real signals.
+
+Functions
+---------
+    Creates the Vandermonde matrix due to the nonlinear orders homogeneity.
 
 Notes
 -----
@@ -36,6 +42,7 @@ import numpy as np
 import scipy.fftpack as sc_fft
 import scipy.signal as sc_sig
 from ..utilities.mathbox import binomial, multinomial
+from ..utilities.decorators import inherit_docstring
 
 
 #==============================================================================
@@ -44,21 +51,23 @@ from ..utilities.mathbox import binomial, multinomial
 
 class _SeparationMethod:
     """
-    Base class for order separation methods.
+    Asbstract base class for order separation methods.
 
     Parameters
     ----------
     N : int
         Number of orders to separate (truncation order of the Volterra series).
-    factors : array_like (with length K)
+    factors : array_like
         Factors applied to the base signal in order to create the test signals.
 
     Attributes
     ----------
     N : int
-    factors : array_like (of length K)
+        Truncation order.
     K : int
-        Number of tests signals needed for the method.
+        Number of tests signals.
+    factors : array_like
+        Vector of length K regrouping all factors.
     condition_numbers : list(float)
         List of condition numbers of all matrix inverted during separation.
 
@@ -67,7 +76,7 @@ class _SeparationMethod:
     gen_inputs(signal)
         Returns the collection of input test signals.
     process_output(output_coll)
-        Process outputs.
+        Process outputs and returns estimated orders.
     """
 
     def __init__(self, N, factors):
@@ -89,19 +98,26 @@ class _SeparationMethod:
         -------
         input_coll : numpy.ndarray
             Collection of the K input test signals (each with the same shape as
-            ``signal``).
+            ``signal``); first dimension of ``input_coll`` is of length K.
         """
 
         return np.tensordot(self.factors, signal, axes=0)
 
     def process_outputs(self, output_coll):
         """
-        Process outputs.
+        Process outputs and returns estimated orders.
 
         Parameters
         ----------
-        output_coll : array_like
-            Collection of the K output signals.
+        output_coll : numpy.ndarray
+            Collection of the K output signals; first dimension should be of
+            length K.
+
+        Returns
+        -------
+        output_by_order : numpy.ndarray
+            Estimation of the nonlinear homogeneous orders; first dimension of
+            ``output_by_order`` is of length N.
         """
 
         self.condition_numbers = []
@@ -113,12 +129,13 @@ class AS(_SeparationMethod):
 
     Parameters
     ----------
-    N : int, optional (default=3)
+    N : int
         Number of orders to separate (truncation order of the Volterra series).
-    gain : float, optional (default=1.51)
-        Gain factor in amplitude between  the input test signals.
+    gain : float, optional (default=0.64)
+        Gain factor in amplitude between consecutive test signals.
     negative_gain : boolean, optional (default=True)
-        Defines if amplitudes with negative values can be used.
+        Defines if amplitudes with negative values can be used; this greatly
+        improves separation.
     K : int, optional (default=None)
         Number of tests signals needed for the method; must be greater than or
         equal to N; if None, will be set equal to N.
@@ -126,10 +143,21 @@ class AS(_SeparationMethod):
     Attributes
     ----------
     N : int
+        Truncation order.
     K : int
-    factors : array_like (of length K)
+        Number of tests signals.
+    nb_amp : int
+        Number of amplitude factors; equal to K for AS.
+    factors : array_like
+        Vector of length K regrouping all factors.
     gain : float
+        Amplitude factor between consecutive test signals.
     negative_gain : boolean
+        Boolean for use of negative values amplitudes.
+    mixing_mat : numpy.ndarray
+        Mixing matrix between orders and output.
+    condition_numbers : list(float)
+        List of condition numbers of all matrix inverted during separation.
 
     Methods
     -------
@@ -151,64 +179,62 @@ class AS(_SeparationMethod):
         self.mixing_mat = create_vandermonde_mixing_mat(self.factors, self.N)
 
     def _gen_amp_factors(self):
-        """
-        Generates the vector of amplitude factors.
-        """
+        """Generates the vector of amplitude factors."""
 
         tmp_vec = np.arange(self.nb_amp)
         return (-1)**(tmp_vec*self.negative_gain) * \
                 self.gain**(tmp_vec // (1+self.negative_gain))
 
+    @inherit_docstring
     def process_outputs(self, output_coll):
-        """
-        Process outputs and returns estimated orders.
-
-        Parameters
-        ----------
-        output_coll : array_like
-            Collection of the K output signals.
-
-        Returns
-        -------
-        output_by_order : array_like
-            Estimation of the N first nonlinear homogeneous orders.
-        """
-
         _SeparationMethod.process_outputs(self, None)
         return self._solve(output_coll, self.mixing_mat)
 
-    def _solve(self, output_coll, mixing_mat):
-        """
-        Resolves the vandermonde system via inverse or pseudo-inverse.
-        """
+    def _solve(self, sig_coll, mixing_mat):
+        """Solve the linear system via inverse or pseudo-inverse."""
 
         self.condition_numbers.append(np.linalg.cond(mixing_mat))
         is_square = mixing_mat.shape[0] == mixing_mat.shape[1]
         if is_square:
-            return np.dot(np.linalg.inv(mixing_mat), output_coll)
+            return np.dot(np.linalg.inv(mixing_mat), sig_coll)
         else:
-            return np.dot(np.linalg.pinv(mixing_mat), output_coll)
+            return np.dot(np.linalg.pinv(mixing_mat), sig_coll)
 
 
 class CPS(_SeparationMethod):
     """
-    Class for Complex Phase-based Separation method (using complex signals).
+    Class for Complex Phase-based Separation method using complex signals.
 
     Parameters
     ----------
-    N : int, optional (default=3)
+    N : int
         Number of orders to separate (truncation order of the Volterra series).
+    nb_phase : int
+        Number of phase factors used; should be greater than N; choosing N
+        large leads to a more robust method but also to more test signals.
     rho : float, optional (default=1.)
-        Rejection factor value for dealing with the order aliasing effect.
+        Rejection factor value for dealing with the order aliasing effect;
+        must be less than 1 to reject higher-orders; must be close to 1 to
+        not enhance noise measurement.
 
     Attributes
     ----------
     N : int
+        Truncation order.
     K : int
-    factors : array_like (of length K)
+        Number of tests signals.
+    nb_phase : int
+        Number of phase factors; equal to K for CPS and HPS.
+    factors : array_like
+        Vector of length K regrouping all factors.
     rho : float
+        Rejection factor.
     w : float
-        Complex unit-root used as dephasing factor.
+        Initial phase factor.
+    fft_axis : int, class attribute
+        Axis along which to compute the inverse FFT.
+    condition_numbers : list(float)
+        List of condition numbers of all matrix inverted during separation.
 
     Methods
     -------
@@ -246,32 +272,17 @@ class CPS(_SeparationMethod):
         return N
 
     def _gen_phase_factors(self):
-        """
-        Generates the vector of dephasing factors.
-        """
+        """Generates the vector of dephasing factors."""
 
         self.w = np.exp(- 1j * 2 * np.pi / self.nb_phase)
         vec = np.arange(self.nb_phase)/self.nb_phase
         return self.rho * np.exp(- 2j * np.pi * vec)
 
+    @inherit_docstring
     def process_outputs(self, output_coll):
-        """
-        Process outputs and returns estimated orders.
-
-        Parameters
-        ----------
-        output_coll : array_like
-            Collection of the K output signals.
-
-        Returns
-        -------
-        output_by_order : array_like
-            Estimation of the N first nonlinear homogeneous orders.
-        """
-
         _SeparationMethod.process_outputs(self, None)
-
         estimation = np.roll(self._ifft(output_coll), -1, axis=0)[:self.N]
+
         if self.rho == 1:
             return estimation
         else:
@@ -282,9 +293,7 @@ class CPS(_SeparationMethod):
             return demixing_vec * estimation
 
     def _ifft(self, output_coll):
-        """
-        Invert Discrete Fourier Transform using the FFT algorithm.
-        """
+        """Inverse Discrete Fourier Transform using the FFT algorithm."""
 
         self.condition_numbers.append(1)
         return sc_fft.ifft(output_coll, n=self.nb_phase, axis=self.fft_axis)
@@ -296,18 +305,30 @@ class HPS(CPS):
 
     Parameters
     ----------
-    N : int, optional (default=3)
+    N : int
         Number of nonlinear orders (truncation order of the Volterra series).
+    nb_phase : int
+        Number of phase factors used; should be greater than N; choosing N
+        large leads to a more robust method but also to more test signals.
 
     Attributes
     ----------
     N : int
+        Truncation order.
     K : int
-    factors : array_like (of length K)
-    rho : float (class Attribute, always 1)
-    w : float
+        Number of tests signals.
     nb_phase : int
-        Number of different phases used.
+        Number of phase factors; equal to K for CPS and HPS.
+    factors : array_like
+        Vector of length K regrouping all factors.
+    rho : float, class attribute
+        Rejection factor; equal to 1 (not used) for HPS, PS and PAS.
+    w : float
+        Initial phase factor.
+    fft_axis : int or tuple(int), class attribute
+        Axis along which inverse FFT is computed; equal to 0 for HPS and PAS.
+    condition_numbers : list(float)
+        List of condition numbers of all matrix inverted during separation.
 
     Methods
     -------
@@ -328,8 +349,6 @@ class HPS(CPS):
         super().__init__(N, nb_phase=nb_phase, rho=self.rho)
 
     def _compute_required_nb_phase(self, N):
-        """Computes the required minium number of phase."""
-
         return 2*N + 1
 
     def gen_inputs(self, signal):
@@ -345,13 +364,10 @@ class HPS(CPS):
         -------
         input_coll : numpy.ndarray
             Collection of the K input test signals (each with the same shape as
-            ``signal``).
-        signal_cplx : numpy.ndarray (only if ``signal`` is not complex)
-            Complex version of ``signal`` obtained using Hilbert transform.
-
-        See also
-        --------
-        _SeparationMethod.gen_inputs
+            ``signal``);  first dimension of ``input_coll`` is of length K.
+        signal_cplx : numpy.ndarray
+            Complex version of ``signal`` obtained using Hilbert transform;
+            only returned if ``signal`` is not complex-valued
         """
 
         if not np.iscomplexobj(signal):
@@ -366,13 +382,15 @@ class HPS(CPS):
 
         Parameters
         ----------
-        output_coll : array_like
-            Collection of the K output signals.
+        output_coll : numpy.ndarray
+            Collection of the K output signals; first dimension should be of
+            length K.
 
         Returns
         -------
-        homophase : array_like
-            Estimation of the homophase signals for phase -N to N.
+        homophase : numpy.ndarray
+            Estimation of the homophase signals; phases are along the first
+            dimension, in the following order: [0, 1, ... N, -N, ..., -1].
         """
 
         _SeparationMethod.process_outputs(self, None)
@@ -383,13 +401,60 @@ class HPS(CPS):
 
 class _AbstractPS(HPS):
     """
-    Abstract Class for phase-based order separation method using real signals.
+    Abstract base class for Phase-based Separation method using real signals.
+
+    Parameters
+    ----------
+    N : int
+        Number of nonlinear orders (truncation order of the Volterra series).
+    nb_phase : int
+        Number of phase factors used; should be greater than N; choosing N
+        large leads to a more robust method but also to more test signals.
+
+    Attributes
+    ----------
+    N : int
+        Truncation order.
+    K : int
+        Number of tests signals.
+    nb_phase : int
+        Number of phase factors.
+    factors : array_like
+        Vector of length K regrouping all factors.
+    rho : float, class attribute
+        Rejection factor; equal to 1 (not used) for HPS, PS and PAS.
+    w : float
+        Initial phase factor.
+    fft_axis : int or tuple(int), class attribute
+        Axis along which inverse FFT is computed.
+    mixing_mat : dict(int: numpy.ndarray)
+        Dictionnary of mixing matrix between orders and output for each phase.
+    nq_tuples : dict(int: list((int, int)))
+        Dictionnary of list oof tuples (n, q) for each phase.
+    c2r_mat : numpy.ndarray, class attribute
+        Matrix for taking into account conjuguated terms in estimation.
+    condition_numbers : list(float)
+        List of condition numbers of all matrix inverted during separation.
+
+    Methods
+    -------
+    gen_inputs(signal)
+        Returns the collection of input test signals.
+    process_output(output_coll, raw_mode=False)
+        Process outputs and returns estimated orders or combinatorial terms.
+
+    See also
+    --------
+    HPS: Parents class
+    CPS, _SeparationMethod
     """
 
     negative_gain = False
     c2r_mat = np.array([[1., 0], [1., 0], [0, 1.], [0, -1.]])
 
     def _create_necessary_matrix_and_index(self):
+        """"Create mixing matrix and list of (n, q) tuple for each phase."""
+
         raise NotImplementedError
 
     def process_outputs(self, output_coll, raw_mode=False):
@@ -398,24 +463,27 @@ class _AbstractPS(HPS):
 
         Parameters
         ----------
-        output_coll : (K, ...) array_like
-            Collection of the K output signals.
+        output_coll : numpy.ndarray
+            Collection of the K output signals; first dimension should be of
+            length K.
         raw_mode : boolean, optional (default=False)
-            Option that defines what the function returns.
+            If True, only returns eestimated orders; else also returns
+            estimated combinatorial terms.
 
         Returns
         -------
         output_by_order : numpy.ndarray
-            Estimation of the N first nonlinear homogeneous orders.
-        combinatorial_terms : dict((int, int): array_like)
-            Estimation of the N first nonlinear homogeneous orders.
-
-        This function always return ``output_by_order``; it also returns
-        ``combinatorial_terms`` if `raw_mode`` optionis set to True.
+            Estimation of the nonlinear homogeneous orders; first dimension of
+            ``output_by_order`` is of length N.
+        combinatorial_terms : dict((int, int): numpy.ndarray)
+            Dictionnary of the estimated combinatorial terms for each couple
+            (n, q) where n is the nonlinear order and q the number of times
+            where the conjuguate input signal appears.
         """
 
         _SeparationMethod.process_outputs(self, None)
 
+        # Initialization
         combinatorial_terms = dict()
         output_by_order = np.zeros((self.N,) + output_coll.shape[1:])
 
@@ -424,7 +492,7 @@ class _AbstractPS(HPS):
 
         # Extract combinatorial terms from homophase signals
         for phase in range(self.N+1):
-            sigs = self._compute_sigs(out_per_phase, phase)
+            sigs = self._corresponding_sigs(out_per_phase, phase)
             tmp = AS._solve(self, sigs, self.mixing_mat[phase])
             for ind, (n, q) in enumerate(self.nq_tuples[phase]):
                 if phase:
@@ -442,53 +510,70 @@ class _AbstractPS(HPS):
             return output_by_order
 
     def _regroup_per_phase(self, output_coll):
-        """
-        Invert Discrete Fourier Transform using the FFT algorithm.
-        """
+        """Compute homophase signals using DFT algorithm."""
 
         output_coll_2d = self._from_1d_to_2d(output_coll)
         return self._ifft(output_coll_2d)
 
     def _from_1d_to_2d(self, coll_1d):
+        """"Reshape the collection of signals form 1D to 2D."""
+
         raise NotImplementedError
 
-    def _ifft(self, output_coll_2d):
-        raise NotImplementedError
+    def _corresponding_sigs(self, out_per_phase, phase):
+        """"Returns homophase signals, splitting real and imaginary part."""
 
-    def _compute_sigs(self, out_per_phase, phase):
         raise NotImplementedError
 
 
 class PS(_AbstractPS):
     """
-    Class for Real Phase-based Separation method (using 2D-Fourier Transform).
+    Class for Phase-based Separation method using real signals (and 2D-DFT).
 
     Parameters
     ----------
     N : int
         Number of nonlinear orders (truncation order of the Volterra series).
+    nb_phase : int
+        Number of phase factors used; should be greater than N; choosing N
+        large leads to a more robust method but also to more test signals.
 
     Attributes
     ----------
     N : int
+        Truncation order.
     K : int
-    factors : array_like (of length K)
-    w : float
-    rho : float (class Attribute, always 1)
+        Number of tests signals.
     nb_phase : int
-        Number of different phases used.
+        Number of phase factors.
+    factors : array_like
+        Vector of length K regrouping all factors.
+    rho : float, class attribute
+        Rejection factor; equal to 1 (not used) for HPS, PS and PAS.
+    w : float
+        Initial phase factor.
+    fft_axis : int or tuple(int), class attribute
+        Axis along which inverse FFT is computed; equal to (0, 1) for PS.
+    mixing_mat : dict(int: numpy.ndarray)
+        Dictionnary of mixing matrix between orders and output for each phase.
+    nq_tuples : dict(int: list((int, int)))
+        Dictionnary of list oof tuples (n, q) for each phase.
+    c2r_mat : numpy.ndarray, class attribute
+        Matrix for taking into account conjuguated terms in estimation.
+    condition_numbers : list(float)
+        List of condition numbers of all matrix inverted during separation.
 
     Methods
     -------
     gen_inputs(signal)
         Returns the collection of input test signals.
-    process_output(output_coll)
-        Process outputs and returns estimated homo-phase signals.
+    process_output(output_coll, raw_mode=False)
+        Process outputs and returns estimated orders or combinatorial terms.
 
     See also
     --------
-    _PS: Parents class
-    _SeparationMethod
+    _AbstractPS: Parents class
+    HPS, CPS, _SeparationMethod
     """
 
     fft_axis = (0, 1)
@@ -504,6 +589,7 @@ class PS(_AbstractPS):
         self.K = len(factors)
         self._create_necessary_matrix_and_index()
 
+    @inherit_docstring
     def _create_necessary_matrix_and_index(self):
         self.mixing_mat = dict()
         self.nq_tuples = dict()
@@ -538,11 +624,8 @@ class PS(_AbstractPS):
             else:
                 self.mixing_mat[phase] = tmp_mat
 
+    @inherit_docstring
     def _from_1d_to_2d(self, coll_1d):
-        """
-        Invert Discrete Fourier Transform using the FFT algorithm.
-        """
-
         shape = (self.nb_phase,)*2 + coll_1d.shape[1:]
         coll_2d = np.zeros(shape)
 
@@ -554,20 +637,11 @@ class PS(_AbstractPS):
 
         return coll_2d
 
+    @inherit_docstring
     def _ifft(self, output_coll_2d):
-        """
-        Invert Discrete Fourier Transform using the FFT algorithm.
-        """
-
         self.condition_numbers.append(1)
         spectrum_2d = sc_fft.ifft2(output_coll_2d, axes=self.fft_axis)
         spectrum_2d = sc_fft.fftshift(spectrum_2d, axes=self.fft_axis)
-        return self._truncate_spectrum(spectrum_2d)[::-1, :]
-
-    def _truncate_spectrum(self, spectrum_2d):
-        """
-        Truncate a 2D-spectrum to keep only the bins of the first frequencies.
-        """
 
         diff = self.nb_phase - self._compute_required_nb_phase(self.N)
         if not (diff // 2):
@@ -575,16 +649,12 @@ class PS(_AbstractPS):
         else:
             slice_obj = slice(diff % 2 + diff // 2, -(diff // 2))
 
-        return spectrum_2d[slice_obj, slice_obj]
+        return spectrum_2d[slice_obj, slice_obj][::-1, :]
 
-    def _compute_sigs(self, out_per_phase, phase):
+    @inherit_docstring
+    def _corresponding_sigs(self, out_per_phase, phase):
         dec_diag = (self.N + 1 - phase) // 2
-        if dec_diag == 0:
-            slice_obj = slice(None)
-        else:
-            slice_obj = slice(dec_diag, -dec_diag)
-
-        # Regroupment of conjuguate terms (upper and lower diagonal)
+        slice_obj = slice(dec_diag, -dec_diag) if dec_diag else slice(None)
         if phase:
             upper_diag = np.diagonal(out_per_phase, offset=phase).T
             lower_diag = np.diagonal(out_per_phase, offset=-phase).T
@@ -598,32 +668,48 @@ class PS(_AbstractPS):
 
 class PAS(_AbstractPS, AS):
     """
-    Class for Phase-and-Amplitude-based Separation method.
+    Class for Phase-and-Amplitude-based Separation method using real signals.
 
     Parameters
     ----------
-    N : int, optional (default=3)
-        Number of orders to separate (truncation order of the Volterra series).
-    gain : float, optional (default=1.51)
-        Gain factor in amplitude between  the input test signals.
+    N : int
+        Number of nonlinear orders (truncation order of the Volterra series).
+    gain : float, optional (default=0.64)
+        Gain factor in amplitude between the input test signals.
+    nb_phase : int
+        Number of phase factors used; should be greater than N; choosing N
+        large leads to a more robust method but also to more test signals.
 
     Attributes
     ----------
     N : int
+        Truncation order.
     K : int
-    factors : array_like (of length K)
-    gain : float
-    negative_gain : boolean (class Attribute, always False)
-    rho : float (class Attribute, always 1)
-    w : float
-    nb_amp : int
-        Number of different amplitudes used.
+        Number of tests signals.
     nb_phase : int
-        Number of different phases used.
-    nb_term : int
-        Total number of combinatorial terms.
-    amp_vec : array_like (of length nb_amp)
-        Vector regrouping all amplitudes used.
+        Number of phase factors.
+    nb_amp : int
+        Number of amplitude factors.
+    factors : array_like
+        Vector of length K regrouping all factors.
+    rho : float, class attribute
+        Rejection factor; equal to 1 (not used) for HPS, PS and PAS.
+    w : float
+        Initial phase factor.
+    gain : float
+        Amplitude factor between consecutive test signals.
+    negative_gain : boolean, class attribute
+        Boolean for use of negative values amplitudes; equal to False for PAS.
+    fft_axis : int or tuple(int), class attribute
+        Axis along which inverse FFT is computed; equal to 0 for HPS and PAS.
+    mixing_mat : dict(int: numpy.ndarray)
+        Dictionnary of mixing matrix between orders and output for each phase.
+    nq_tuples : dict(int: list((int, int)))
+        Dictionnary of list oof tuples (n, q) for each phase.
+    c2r_mat : numpy.ndarray, class attribute
+        Matrix for taking into account conjuguated terms in estimation.
+    condition_numbers : list(float)
+        List of condition numbers of all matrix inverted during separation.
 
     Methods
     -------
@@ -634,8 +720,8 @@ class PAS(_AbstractPS, AS):
 
     See also
     --------
-    PS, AS: Parents class
-    _SeparationMethod
+    _AbstractPS, AS: Parents class
+    HPS, CPS, _SeparationMethod
     """
 
     def __init__(self, N, gain=0.64, nb_phase=None):
@@ -654,6 +740,7 @@ class PAS(_AbstractPS, AS):
         _SeparationMethod.__init__(self, N, factors)
         self._create_necessary_matrix_and_index()
 
+    @inherit_docstring
     def _create_necessary_matrix_and_index(self):
         self.mixing_mat = dict()
         self.nq_tuples = dict()
@@ -673,22 +760,17 @@ class PAS(_AbstractPS, AS):
             else:
                 self.mixing_mat[phase] = tmp_mat
 
+    @inherit_docstring
     def _from_1d_to_2d(self, coll_1d):
-        """
-        Invert Discrete Fourier Transform using the FFT algorithm.
-        """
-
         shape_2d = (self.HPS_obj.nb_phase, self.nb_amp) + coll_1d.shape[1:]
         return coll_1d.reshape(shape_2d)
 
+    @inherit_docstring
     def _ifft(self, output_coll_2d):
-        """
-        Invert Discrete Fourier Transform using the FFT algorithm.
-        """
-
         return self.HPS_obj.process_outputs(output_coll_2d)
 
-    def _compute_sigs(self, out_per_phase, phase):
+    @inherit_docstring
+    def _corresponding_sigs(self, out_per_phase, phase):
         if phase:
             phase_conj = self.nb_phase - phase
             return np.concatenate((np.real(out_per_phase[phase]),
@@ -704,4 +786,20 @@ class PAS(_AbstractPS, AS):
 #==============================================================================
 
 def create_vandermonde_mixing_mat(factors, N):
+    """
+    Creates the Vandermonde matrix due to the nonlinear orders homogeneity.
+
+    Parameters
+    ----------
+    N : int
+        Number of orders to separate (truncation order of the Volterra series).
+    factors : array_like
+        Factors applied to the base signal in order to create the test signals.
+
+    Returns
+    -------
+    matrix: np.ndarray (of size=(len(factors), N))
+        Mixing matrix of the Volterra orders in the output signals.
+    """
+
     return np.vander(factors, N=N+1, increasing=True)[:, 1::]
