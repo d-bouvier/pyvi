@@ -101,12 +101,12 @@ class NegativeGainTestCase(_OrderSeparationMethodGlobalTest,
         super().setUp(negative_gain=False)
 
 
-class K_ArgumentTestCase(_OrderSeparationMethodGlobalTest, unittest.TestCase):
+class NbAmpTestCase(_OrderSeparationMethodGlobalTest, unittest.TestCase):
 
     method = {'AS': sep.AS}
 
     def setUp(self):
-        super().setUp(K=3*self.N)
+        super().setUp(nb_amp=3*self.N)
 
 
 class NbPhaseTestCase(_OrderSeparationMethodGlobalTest, unittest.TestCase):
@@ -212,6 +212,12 @@ class HPS_GenInputsTestCase(unittest.TestCase):
                 input_sig = np.zeros((self.L,), dtype=dtype)
                 outputs = self.method.gen_inputs(input_sig)
                 self.assertIsInstance(outputs, out_type)
+
+
+class WarningsNbAmpTestCase(unittest.TestCase):
+
+    def test_warnings_CPS(self):
+        self.assertWarns(UserWarning, sep.AS, 3, nb_amp=2)
 
 
 class WarningsNbPhaseTestCase(unittest.TestCase):

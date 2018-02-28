@@ -136,9 +136,9 @@ class AS(_SeparationMethod):
     negative_gain : boolean, optional (default=True)
         Defines if amplitudes with negative values can be used; this greatly
         improves separation.
-    K : int, optional (default=None)
-        Number of tests signals needed for the method; must be greater than or
-        equal to N; if None, will be set equal to N.
+    nb_amp : int, optional (default=None)
+        Number of different amplitudes; must be greater than or equal to N;
+        if None, will be set equal to N.
 
     Attributes
     ----------
@@ -171,12 +171,27 @@ class AS(_SeparationMethod):
     _SeparationMethod : Parent class.
     """
 
-    def __init__(self, N, gain=0.64, negative_gain=True, K=None):
-        self.nb_amp = N if K is None else K
+    def __init__(self, N, gain=0.64, negative_gain=True, nb_amp=None):
+        nb_amp_min = self._compute_required_nb_amp(N)
+        if nb_amp is not None:
+            if nb_amp < nb_amp_min:
+                message = "Specified 'nb_amp' parameter is lower than " + \
+                          "the minimum needed ({}) .Instead, minimum was used."
+                warnings.warn(message.format(nb_amp_min), UserWarning)
+                nb_amp = nb_amp_min
+            self.nb_amp = nb_amp
+        else:
+            self.nb_amp = nb_amp_min
+
         self.gain = gain
         self.negative_gain = negative_gain
         super().__init__(N, self._gen_amp_factors())
         self.mixing_mat = create_vandermonde_mixing_mat(self.factors, self.N)
+
+    def _compute_required_nb_amp(self, N):
+        """Computes the required minium number of amplitude."""
+
+        return N
 
     def _gen_amp_factors(self):
         """Generates the vector of amplitude factors."""
@@ -251,8 +266,6 @@ class CPS(_SeparationMethod):
     fft_axis = 0
 
     def __init__(self, N, nb_phase=None, rho=1.):
-        self.rho = rho
-
         nb_phase_min = self._compute_required_nb_phase(N)
         if nb_phase is not None:
             if nb_phase < nb_phase_min:
@@ -264,6 +277,7 @@ class CPS(_SeparationMethod):
         else:
             self.nb_phase = nb_phase_min
 
+        self.rho = rho
         super().__init__(N, self._gen_phase_factors())
 
     def _compute_required_nb_phase(self, N):
@@ -728,23 +742,26 @@ class PAS(_AbstractPS, AS):
         self.nb_phase = self._compute_required_nb_phase(N)
         self.HPS_obj = HPS(N, nb_phase=nb_phase)
 
-        AS.__init__(self, (N + 1) // 2, gain=gain,
-                    negative_gain=self.negative_gain)
-        self.amp_vec = self.factors
+        AS.__init__(self, N, gain=gain, negative_gain=self.negative_gain)
+        amp_vec = self.factors
 
         self.nb_term = self.nb_amp * self.nb_phase
 
-        factors = np.tensordot(self.HPS_obj.factors, self.amp_vec, axes=0)
+        factors = np.tensordot(self.HPS_obj.factors, amp_vec, axes=0)
         factors = factors.flatten()
 
         _SeparationMethod.__init__(self, N, factors)
-        self._create_necessary_matrix_and_index()
+        self._create_necessary_matrix_and_index(amp_vec)
 
     @inherit_docstring
-    def _create_necessary_matrix_and_index(self):
+    def _compute_required_nb_amp(self, N):
+        return (N + 1) // 2
+
+    @inherit_docstring
+    def _create_necessary_matrix_and_index(self, amp_vec):
         self.mixing_mat = dict()
         self.nq_tuples = dict()
-        global_mixing_mat = create_vandermonde_mixing_mat(self.amp_vec, self.N)
+        global_mixing_mat = create_vandermonde_mixing_mat(amp_vec, self.N)
 
         for phase in range(self.N+1):
             start = phase if phase else 2
