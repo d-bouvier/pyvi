@@ -458,10 +458,10 @@ class _AbstractPS(HPS):
         Initial phase factor.
     fft_axis : int or tuple(int), class attribute
         Axis along which inverse FFT is computed.
-    mixing_mat : dict(int: numpy.ndarray)
+    mixing_mat_dict : dict(int: numpy.ndarray)
         Dictionnary of mixing matrix between orders and output for each phase.
-    nq_tuples : dict(int: list((int, int)))
-        Dictionnary of list oof tuples (n, q) for each phase.
+    nq_dict : dict(int: list((int, int)))
+        Dictionnary of list of tuples (n, q) for each phase.
     c2r_mat : numpy.ndarray, class attribute
         Matrix for taking into account conjuguated terms in estimation.
     condition_numbers : list(float)
@@ -483,8 +483,28 @@ class _AbstractPS(HPS):
     negative_gain = False
     c2r_mat = np.array([[1., 0], [1., 0], [0, 1.], [0, -1.]])
 
-    def _create_necessary_matrix_and_index(self):
-        """"Create mixing matrix and list of (n, q) tuple for each phase."""
+    def _create_nq_dict(self):
+        """Create dictionnary of (n, q) tuple for each phase."""
+
+        self.nq_dict = dict()
+        for phase in range(self.N+1):
+            start = phase if phase else 2
+            current_orders = np.arange(start, self.N+1, 2)
+            self.nq_dict[phase] = [(n, (n-phase)//2) for n in current_orders]
+
+    def _create_mixing_matrix_dict(self):
+        """"Create dictionnary of mixing matrix for each phase."""
+
+        self.mixing_mat_dict = dict()
+        for phase in range(self.N+1):
+            tmp_mixing_mat = self._create_tmp_mixing_matrix(phase)
+            if phase:
+                tmp_mixing_mat = np.kron(self.c2r_mat, tmp_mixing_mat)
+            self.condition_numbers.append(np.linalg.cond(tmp_mixing_mat))
+            self.mixing_mat_dict[phase] = tmp_mixing_mat
+
+    def _create_tmp_mixing_matrix(self, phase):
+        """"Create mixing matrix for a given phase."""
 
         raise NotImplementedError
 
@@ -522,8 +542,8 @@ class _AbstractPS(HPS):
         # Extract combinatorial terms from homophase signals
         for phase in range(self.N+1):
             sigs = self._corresponding_sigs(out_per_phase, phase)
-            tmp = AS._solve(self, sigs, self.mixing_mat[phase])
-            for ind, (n, q) in enumerate(self.nq_tuples[phase]):
+            tmp = AS._solve(self, sigs, self.mixing_mat_dict[phase])
+            for ind, (n, q) in enumerate(self.nq_dict[phase]):
                 if phase:
                     dec = tmp.shape[0] // 2
                     combinatorial_terms[(n, q)] = (tmp[ind] + 1j*tmp[ind+dec])
@@ -583,10 +603,10 @@ class PS(_AbstractPS):
         Initial phase factor.
     fft_axis : int or tuple(int), class attribute
         Axis along which inverse FFT is computed; equal to (0, 1) for PS.
-    mixing_mat : dict(int: numpy.ndarray)
+    mixing_mat_dict : dict(int: numpy.ndarray)
         Dictionnary of mixing matrix between orders and output for each phase.
-    nq_tuples : dict(int: list((int, int)))
-        Dictionnary of list oof tuples (n, q) for each phase.
+    nq_dict : dict(int: list((int, int)))
+        Dictionnary of list of tuples (n, q) for each phase.
     c2r_mat : numpy.ndarray, class attribute
         Matrix for taking into account conjuguated terms in estimation.
     condition_numbers : list(float)
@@ -616,42 +636,32 @@ class PS(_AbstractPS):
 
         self.factors = factors
         self.K = len(factors)
-        self._create_necessary_matrix_and_index()
+        self._create_nq_dict()
+        self._create_mixing_matrix_dict()
 
     @inherit_docstring
-    def _create_necessary_matrix_and_index(self):
-        self.mixing_mat = dict()
-        self.nq_tuples = dict()
+    def _create_tmp_mixing_matrix(self, phase):
+        len_diag = self.N + int((phase % 2) == (self.N % 2))
+        p1_start = ((phase + (self.N+1) % 2) // 2) - (self.N // 2)
+        p1_end = p1_start + len_diag
+        p1_vec = np.arange(p1_start, p1_end)
+        tmp_mixing_mat = np.zeros((len_diag, len(self.nq_dict[phase])))
 
-        for phase in range(self.N+1):
-            start = phase if phase else 2
-            current_orders = np.arange(start, self.N+1, 2)
-            self.nq_tuples[phase] = [(n, (n-phase)//2) for n in current_orders]
+        # Computation of the combinatorial factor for each term
+        for indp, (p1, p2) in enumerate(zip(p1_vec, p1_vec[::-1])):
+            for indn, (n, q) in enumerate(self.nq_dict[phase]):
+                if (abs(p1) + abs(p2)) <= n:
+                    tmp_start = max(0, p1)
+                    tmp_end = 1 + (n - abs(p2) + p1) // 2
+                    k1_vec = np.arange(tmp_start, tmp_end)
+                    k2_vec = k1_vec - p1
+                    k3_vec = (n + p2 - (k1_vec + k2_vec)) // 2
+                    k4_vec = k3_vec - p2
 
-            len_diag = self.N + int((phase % 2) == (self.N % 2))
-            p1_start = ((phase + (self.N+1) % 2) // 2) - (self.N // 2)
-            p1_end = p1_start + len_diag
-            p1_vec = np.arange(p1_start, p1_end)
-            tmp_mat = np.zeros((len_diag, len(current_orders)))
+                    for k in zip(k1_vec, k2_vec, k3_vec, k4_vec):
+                        tmp_mixing_mat[indp, indn] += multinomial(n, k)
 
-            # Computation of the combinatorial factor for each term
-            for indp, (p1, p2) in enumerate(zip(p1_vec, p1_vec[::-1])):
-                for indn, n in enumerate(current_orders):
-                    if (abs(p1) + abs(p2)) <= n:
-                        tmp_start = max(0, p1)
-                        tmp_end = 1 + (n - abs(p2) + p1) // 2
-                        k1_vec = np.arange(tmp_start, tmp_end)
-                        k2_vec = k1_vec - p1
-                        k3_vec = (n + p2 - (k1_vec + k2_vec)) // 2
-                        k4_vec = k3_vec - p2
-
-                        for k in zip(k1_vec, k2_vec, k3_vec, k4_vec):
-                            tmp_mat[indp, indn] += multinomial(n, k)
-
-            if phase:
-                tmp_mat = np.kron(self.c2r_mat, tmp_mat)
-            self.condition_numbers.append(np.linalg.cond(tmp_mat))
-            self.mixing_mat[phase] = tmp_mat
+        return tmp_mixing_mat
 
     @inherit_docstring
     def _from_1d_to_2d(self, coll_1d):
@@ -731,10 +741,10 @@ class PAS(_AbstractPS, AS):
         Boolean for use of negative values amplitudes; equal to False for PAS.
     fft_axis : int or tuple(int), class attribute
         Axis along which inverse FFT is computed; equal to 0 for HPS and PAS.
-    mixing_mat : dict(int: numpy.ndarray)
+    mixing_mat_dict : dict(int: numpy.ndarray)
         Dictionnary of mixing matrix between orders and output for each phase.
-    nq_tuples : dict(int: list((int, int)))
-        Dictionnary of list oof tuples (n, q) for each phase.
+    nq_dict : dict(int: list((int, int)))
+        Dictionnary of list of tuples (n, q) for each phase.
     c2r_mat : numpy.ndarray, class attribute
         Matrix for taking into account conjuguated terms in estimation.
     condition_numbers : list(float)
@@ -758,40 +768,28 @@ class PAS(_AbstractPS, AS):
         self.HPS_obj = HPS(N, nb_phase=nb_phase)
 
         AS.__init__(self, N, gain=gain, negative_gain=self.negative_gain)
-        amp_vec = self.factors
-
+        self._global_mix_mat = create_vandermonde_mixing_mat(self.factors, N)
         self.nb_term = self.nb_amp * self.nb_phase
 
-        factors = np.tensordot(self.HPS_obj.factors, amp_vec, axes=0)
+        factors = np.tensordot(self.HPS_obj.factors, self.factors, axes=0)
         factors = factors.flatten()
 
         _SeparationMethod.__init__(self, N, factors)
         self.condition_numbers += self.HPS_obj.condition_numbers
-        self._create_necessary_matrix_and_index(amp_vec)
+        self._create_nq_dict()
+        self._create_mixing_matrix_dict()
 
     @inherit_docstring
     def _compute_required_nb_amp(self, N):
         return (N + 1) // 2
 
     @inherit_docstring
-    def _create_necessary_matrix_and_index(self, amp_vec):
-        self.mixing_mat = dict()
-        self.nq_tuples = dict()
-        global_mixing_mat = create_vandermonde_mixing_mat(amp_vec, self.N)
-
-        for phase in range(self.N+1):
-            start = phase if phase else 2
-            current_orders = np.arange(start, self.N+1, 2)
-            self.nq_tuples[phase] = [(n, (n-phase)//2) for n in current_orders]
-
-            tmp_mat = global_mixing_mat[:, current_orders-1]
-            for ind, (n, q) in enumerate(self.nq_tuples[phase]):
-                tmp_mat[:, ind] *= binomial(n, q)
-
-            if phase:
-                tmp_mat = np.kron(self.c2r_mat, tmp_mat)
-            self.condition_numbers.append(np.linalg.cond(tmp_mat))
-            self.mixing_mat[phase] = tmp_mat
+    def _create_tmp_mixing_matrix(self, phase):
+        current_orders_index = [n-1 for (n, q) in self.nq_dict[phase]]
+        tmp_mixing_mat = self._global_mix_mat[:, current_orders_index]
+        for ind, (n, q) in enumerate(self.nq_dict[phase]):
+            tmp_mixing_mat[:, ind] *= binomial(n, q)
+        return tmp_mixing_mat
 
     @inherit_docstring
     def _from_1d_to_2d(self, coll_1d):
