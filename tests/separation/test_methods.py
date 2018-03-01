@@ -238,7 +238,7 @@ class ASBestGainTest(unittest.TestCase):
                   (9, {}, 0.79174226)]
     tol = 1e-8
 
-    def test_correc(self):
+    def test_correct(self):
         for N, kwargs, ref in self.best_gains:
             with self.subTest(i=(N, kwargs)):
                 val = sep.AS.best_gain(N, tol=self.tol, **kwargs)

@@ -190,7 +190,8 @@ class AS(_SeparationMethod):
         self.mixing_mat = create_vandermonde_mixing_mat(self.factors, self.N)
         self.condition_numbers.append(np.linalg.cond(self.mixing_mat))
 
-    def _compute_required_nb_amp(self, N):
+    @classmethod
+    def _compute_required_nb_amp(cls, N):
         """Computes the required minium number of amplitude."""
 
         return N
@@ -306,7 +307,8 @@ class CPS(_SeparationMethod):
         if self.rho != 1.:
             self.condition_numbers.append(np.linalg.cond(self.contrast_vector))
 
-    def _compute_required_nb_phase(self, N):
+    @classmethod
+    def _compute_required_nb_phase(cls, N):
         """Computes the required minium number of phase."""
 
         return N
@@ -378,7 +380,8 @@ class HPS(CPS):
     def __init__(self, N, nb_phase=None):
         super().__init__(N, nb_phase=nb_phase, rho=self.rho)
 
-    def _compute_required_nb_phase(self, N):
+    @classmethod
+    def _compute_required_nb_phase(cls, N):
         return 2*N + 1
 
     def gen_inputs(self, signal):
