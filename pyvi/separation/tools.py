@@ -72,5 +72,3 @@ def create_vandermonde_mixing_mat(factors, N):
     """
 
     return np.vander(factors, N=N+1, increasing=True)[:, 1::]
-
-

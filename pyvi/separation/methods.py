@@ -215,6 +215,26 @@ class AS(_SeparationMethod):
         else:
             return np.dot(np.linalg.pinv(mixing_mat), sig_coll)
 
+    @classmethod
+    def best_gain(cls, N, gain_min=0.1, gain_max=1., tol=1e-6, **kwargs):
+        """ Search for the gain that minimizes the maximum condition number."""
+
+        while True:
+            gain_vec = np.linspace(gain_min, gain_max, num=9)
+            gain_step = abs(gain_vec[8] - gain_vec[0])
+            cond_number = []
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                for gain in gain_vec:
+                    method_obj = cls(N, gain, **kwargs)
+                    cond_number.append(max(method_obj.condition_numbers))
+            idx_min = np.argmin(cond_number)
+            if gain_step < tol:
+                return gain_vec[idx_min]
+            else:
+                gain_min = gain_vec[idx_min-1] if idx_min else gain_vec[0]
+                gain_max = gain_vec[idx_min+1] if idx_min != 8 else gain_vec[8]
+
 
 class CPS(_SeparationMethod):
     """

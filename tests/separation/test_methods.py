@@ -229,6 +229,27 @@ class WarningsNbPhaseTestCase(unittest.TestCase):
         self.assertWarns(UserWarning, sep.HPS, 3, nb_phase=5)
 
 
+class ASBestGainTest(unittest.TestCase):
+
+    best_gains = [(3, {}, 0.52662910),
+                  (3, {'negative_gain': True}, 0.52662910),
+                  (3, {'negative_gain': False}, 0.53977263),
+                  (3, {'nb_amp': 10}, 0.66459128),
+                  (9, {}, 0.79174226)]
+    tol = 1e-8
+
+    def test_correc(self):
+        for N, kwargs, ref in self.best_gains:
+            with self.subTest(i=(N, kwargs)):
+                val = sep.AS.best_gain(N, tol=self.tol, **kwargs)
+                error = abs(ref - val)
+                self.assertTrue(error < self.tol)
+
+
+class PASBestGainTest(ASBestGainTest):
+    best_gains = [(3, {}, 0.52662911),
+                  (5, {}, 0.66150378),
+                  (9, {}, 0.79174226)]
 
 
 #==============================================================================
