@@ -11,5 +11,5 @@ Developed for Python 3.6.1
 from .__config__ import (__author__, __maintainer__, __version__)
 
 from . import utilities
-from . import separation as sep
-from . import identification as identif
+from . import separation
+from . import identification
