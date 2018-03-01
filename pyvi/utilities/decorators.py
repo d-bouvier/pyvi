@@ -1,5 +1,17 @@
 # -*- coding: utf-8 -*-
 """
+Decorator for making methods inherit docstrings.
+
+Class
+-----
+DocInherit :
+    Docstring inheriting method descriptor.
+
+Decorator
+---------
+inherit_docstring :
+    Decorator for making methods inherit docstrings.
+
 Code found on http://code.activestate.com/recipes/576862/
 """
 

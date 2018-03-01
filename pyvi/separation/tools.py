@@ -4,8 +4,8 @@ Module for measuring order separation error.
 
 Functions
 ---------
-error_measure :
-    Returns the relative error between orders and their estimates.
+create_vandermonde_mixing_mat :
+    Creates the Vandermonde matrix due to the nonlinear orders homogeneity.
 
 Notes
 -----

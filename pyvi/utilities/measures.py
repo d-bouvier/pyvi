@@ -1,5 +1,14 @@
 # -*- coding: utf-8 -*-
 """
+Error measure function.
+
+Functions
+---------
+separation_error :
+    Returns the relative error between nonlinear orders and their estimates.
+identification_error :
+    Returns the relative error between kernels and their estimates.
+
 Developed for Python 3.6.1
 @author: Damien Bouvier (Damien.Bouvier@ircam.fr)
 """
@@ -17,7 +26,7 @@ from ..utilities.mathbox import rms, safe_db
 
 def separation_error(signals_ref, signals_est, db=True):
     """
-    Returns the relative error between orders and their estimates.
+    Returns the relative error between nonlinear orders and their estimates.
 
     This error is computed as the RMS value of the error estimation divided by
     the RMS values of the true orders, for each order.

@@ -4,8 +4,6 @@ Module for handling identification error, kernels and volterra basis.
 
 Functions
 ---------
-error_measure :
-    Returns the relative error between kernels and their estimates.
 nb_coeff_in_kernel :
     Returns the number of coefficient in a kernel.
 nb_coeff_in_all_kernels :

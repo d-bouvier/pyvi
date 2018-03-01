@@ -22,10 +22,6 @@ PS :
 PAS :
     Class for Phase-and-Amplitude-based Separation method using real signals.
 
-Functions
----------
-    Creates the Vandermonde matrix due to the nonlinear orders homogeneity.
-
 Notes
 -----
 Developed for Python 3.6.1
