@@ -15,8 +15,7 @@ Developed for Python 3.6.1
 import unittest
 import itertools
 import numpy as np
-from pyvi.identification.tools import (_as_list, error_measure,
-                                       nb_coeff_in_kernel,
+from pyvi.identification.tools import (_as_list, nb_coeff_in_kernel,
                                        nb_coeff_in_all_kernels,
                                        assert_enough_data_samples,
                                        vector_to_kernel, kernel_to_vector,
@@ -48,37 +47,6 @@ class AsListTest(unittest.TestCase):
         m = 0
         N = 3
         self.assertEqual(_as_list(m, N), [m, ]*N)
-
-
-class ErrorMeasureTest(unittest.TestCase):
-
-    def setUp(self):
-        self.N = 3
-        self.M = 20
-        self.kernels = dict()
-        for n in range(1, self.N+1):
-            self.kernels[n] = np.random.uniform(size=(self.M,)*n)
-        self.sigma_values = [0, 0.001, 0.01, 0.1, 1]
-
-    def test_output_len_with_db_mode_off(self):
-        for i, sigma in enumerate(self.sigma_values):
-            with self.subTest(i=i):
-                kernels_est = dict()
-                for n, h in self.kernels.items():
-                    kernels_est[n] = h + np.random.normal(scale=sigma,
-                                                          size=(self.M,)*n)
-                error = error_measure(self.kernels, kernels_est, db=False)
-                self.assertEqual(len(error), self.N)
-
-    def test_output_len_with_db_mode_on(self):
-        for i, sigma in enumerate(self.sigma_values):
-            with self.subTest(i=i):
-                kernels_est = dict()
-                for n, h in self.kernels.items():
-                    kernels_est[n] = h + np.random.normal(scale=sigma,
-                                                          size=(self.M,)*n)
-                error = error_measure(self.kernels, kernels_est, db=True)
-                self.assertEqual(len(error), self.N)
 
 
 class NbCoeffInKernelTest(unittest.TestCase):
