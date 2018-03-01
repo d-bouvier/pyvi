@@ -229,35 +229,6 @@ class WarningsNbPhaseTestCase(unittest.TestCase):
         self.assertWarns(UserWarning, sep.HPS, 3, nb_phase=5)
 
 
-class ConditionNumberTest(_OrderSeparationMethodGlobalTest, unittest.TestCase):
-
-    method = {'AS': sep.AS,
-              'CPS': sep.CPS,
-              'PS': sep.PS,
-              'PAS': sep.PAS,
-              'HPS': sep.HPS}
-    L = 10
-    test_shape = property()
-    test_correct_output = property()
-
-    def setUp(self):
-        self.input_dtype['HPS'] = 'complex'
-        self.signal_dtype['HPS'] = 'float'
-        self.cond_pre = dict()
-        self.cond_post = dict()
-        for name, method_class in self.method.items():
-            input_sig = np.zeros((self.L,), dtype=self.input_dtype[name])
-            method = method_class(self.N)
-            input_coll = method.gen_inputs(input_sig)
-            method.process_outputs(input_coll)
-            self.cond_pre[name] = method.condition_numbers
-            method.process_outputs(input_coll)
-            self.cond_post[name] = method.condition_numbers
-
-    def test_condition_number_cleared(self):
-        for name in self.method:
-            with self.subTest(i=name):
-                self.assertListEqual(self.cond_pre[name], self.cond_post[name])
 
 
 #==============================================================================

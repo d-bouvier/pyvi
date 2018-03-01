@@ -121,7 +121,7 @@ class _SeparationMethod:
             ``output_by_order`` is of length N.
         """
 
-        self.condition_numbers = []
+        raise NotImplementedError
 
 
 class AS(_SeparationMethod):
@@ -188,6 +188,7 @@ class AS(_SeparationMethod):
         self.negative_gain = negative_gain
         super().__init__(N, self._gen_amp_factors())
         self.mixing_mat = create_vandermonde_mixing_mat(self.factors, self.N)
+        self.condition_numbers.append(np.linalg.cond(self.mixing_mat))
 
     def _compute_required_nb_amp(self, N):
         """Computes the required minium number of amplitude."""
@@ -203,13 +204,11 @@ class AS(_SeparationMethod):
 
     @inherit_docstring
     def process_outputs(self, output_coll):
-        _SeparationMethod.process_outputs(self, None)
         return self._solve(output_coll, self.mixing_mat)
 
     def _solve(self, sig_coll, mixing_mat):
         """Solve the linear system via inverse or pseudo-inverse."""
 
-        self.condition_numbers.append(np.linalg.cond(mixing_mat))
         is_square = mixing_mat.shape[0] == mixing_mat.shape[1]
         if is_square:
             return np.dot(np.linalg.inv(mixing_mat), sig_coll)
@@ -281,6 +280,12 @@ class CPS(_SeparationMethod):
         self.rho = rho
         super().__init__(N, self._gen_phase_factors())
 
+        self.condition_numbers.append(1.)
+        self.contrast_vector = (1/self.rho) ** np.arange(1, self.N+1)
+        self.contrast_vector.shape = (self.N, 1)
+        if self.rho != 1.:
+            self.condition_numbers.append(np.linalg.cond(self.contrast_vector))
+
     def _compute_required_nb_phase(self, N):
         """Computes the required minium number of phase."""
 
@@ -295,22 +300,12 @@ class CPS(_SeparationMethod):
 
     @inherit_docstring
     def process_outputs(self, output_coll):
-        _SeparationMethod.process_outputs(self, None)
         estimation = np.roll(self._ifft(output_coll), -1, axis=0)[:self.N]
-
-        if self.rho == 1:
-            return estimation
-        else:
-            vec = np.arange(1, self.N+1)
-            demixing_vec = (1/self.rho) ** vec
-            demixing_vec.shape = (self.N, 1)
-            self.condition_numbers.append(np.diag(demixing_vec))
-            return demixing_vec * estimation
+        return self.contrast_vector * estimation
 
     def _ifft(self, output_coll):
         """Inverse Discrete Fourier Transform using the FFT algorithm."""
 
-        self.condition_numbers.append(1)
         return sc_fft.ifft(output_coll, n=self.nb_phase, axis=self.fft_axis)
 
 
@@ -408,8 +403,6 @@ class HPS(CPS):
             dimension, in the following order: [0, 1, ... N, -N, ..., -1].
         """
 
-        _SeparationMethod.process_outputs(self, None)
-
         temp = self._ifft(output_coll)
         return np.concatenate((temp[0:self.N+1], temp[-self.N:]), axis=0)
 
@@ -495,8 +488,6 @@ class _AbstractPS(HPS):
             (n, q) where n is the nonlinear order and q the number of times
             where the conjuguate input signal appears.
         """
-
-        _SeparationMethod.process_outputs(self, None)
 
         # Initialization
         combinatorial_terms = dict()
@@ -635,9 +626,9 @@ class PS(_AbstractPS):
                             tmp_mat[indp, indn] += multinomial(n, k)
 
             if phase:
-                self.mixing_mat[phase] = np.kron(self.c2r_mat, tmp_mat)
-            else:
-                self.mixing_mat[phase] = tmp_mat
+                tmp_mat = np.kron(self.c2r_mat, tmp_mat)
+            self.condition_numbers.append(np.linalg.cond(tmp_mat))
+            self.mixing_mat[phase] = tmp_mat
 
     @inherit_docstring
     def _from_1d_to_2d(self, coll_1d):
@@ -752,6 +743,7 @@ class PAS(_AbstractPS, AS):
         factors = factors.flatten()
 
         _SeparationMethod.__init__(self, N, factors)
+        self.condition_numbers += self.HPS_obj.condition_numbers
         self._create_necessary_matrix_and_index(amp_vec)
 
     @inherit_docstring
@@ -774,9 +766,9 @@ class PAS(_AbstractPS, AS):
                 tmp_mat[:, ind] *= binomial(n, q)
 
             if phase:
-                self.mixing_mat[phase] = np.kron(self.c2r_mat, tmp_mat)
-            else:
-                self.mixing_mat[phase] = tmp_mat
+                tmp_mat = np.kron(self.c2r_mat, tmp_mat)
+            self.condition_numbers.append(np.linalg.cond(tmp_mat))
+            self.mixing_mat[phase] = tmp_mat
 
     @inherit_docstring
     def _from_1d_to_2d(self, coll_1d):
