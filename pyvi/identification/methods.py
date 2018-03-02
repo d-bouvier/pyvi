@@ -29,7 +29,8 @@ Developed for Python 3.6.1
 import warnings
 import numpy as np
 import scipy.linalg as sc_lin
-from .tools import volterra_basis, assert_enough_data_samples
+from .tools import assert_enough_data_samples
+from ..volterra.combinatorics import volterra_basis
 from ..volterra.tools import kernel_nb_coeff, series_nb_coeff, vec2series
 from ..utilities.tools import _as_list
 from ..utilities.mathbox import binomial
