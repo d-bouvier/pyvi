@@ -30,10 +30,11 @@ Developed for Python 3.6.1
 # Importations
 #==============================================================================
 
-import itertools as itr
 import numpy as np
 import scipy.linalg as sc_lin
-from ..utilities.mathbox import (binomial, multinomial, array_symmetrization)
+from ..volterra.tools import kernel_nb_coeff
+from ..utilities.mathbox import binomial
+from ..utilities.tools import _as_list
 
 
 #==============================================================================
@@ -48,87 +49,6 @@ _tri_sym_strings_opt = _triangular_strings_opt | _symmetric_strings_opt
 #==============================================================================
 # Functions
 #==============================================================================
-
-def _as_list(M, N):
-    """
-    Check that M is a list, or if int returns a list of this length N .
-
-    Parameters
-    ----------
-    M : int or list(int)
-        Memory length for each kernels (in samples).
-    N : int
-        Truncation order.
-
-    Returns
-    -------
-    list : list(int)
-        List of memory length by order (in samples).
-    """
-
-    if isinstance(M, int):
-        return [M, ]*N
-    elif isinstance(M, list):
-        if len(M) != N:
-            raise ValueError('M has length {}, but '.format(len(M)) +
-                             'truncation order N is {}'.format(N))
-        else:
-            return M
-    else:
-        raise ValueError('M is of type {}, '.format(type(M)) +
-                         'should be an int or a list of int.')
-
-
-def nb_coeff_in_kernel(m, n, form='sym'):
-    """
-    Returns the number of coefficient in a kernel.
-
-    Parameters
-    ----------
-    m : int
-        Memory length of the kernel (in samples).
-    n : int
-        Kernel order.
-    form : {'sym', 'tri', 'symmetric', 'triangular'}, optional (default='sym')
-        Form of the returned Volterra kernel (symmetric or triangular).
-
-    Returns
-    -------
-    nb_coeff : int
-        The corresponding number of coefficient.
-    """
-
-    if form in _tri_sym_strings_opt:
-        return binomial(m + n - 1, n)
-    else:
-        return m**n
-
-
-def nb_coeff_in_all_kernels(M, N, form='sym'):
-    """
-    Returns the number of coefficient in all kernels up to a specified order.
-
-    Parameters
-    ----------
-    M : int or list(int)
-        Memory length for each kernels (in samples).
-    N : int
-        Truncation order.
-    form : {'sym', 'tri', 'symmetric', 'triangular'}, optional (default='sym')
-        Form of the returned Volterra kernel (symmetric or triangular).
-
-    Returns
-    -------
-    nb_coeff : int
-        The corresponding number of coefficient.
-    """
-
-    if form in _tri_sym_strings_opt and isinstance(M, int):
-        return binomial(M + N, N) - 1
-    else:
-        M = _as_list(M, N)
-        return sum([nb_coeff_in_kernel(m, n+1, form=form)
-                    for n, m in enumerate(M)])
 
 
 def assert_enough_data_samples(nb_data, max_nb_est, M, N, name):
@@ -160,144 +80,6 @@ def assert_enough_data_samples(nb_data, max_nb_est, M, N, name):
                          'for a truncation to order {} '.format(N) +
                          'and a {}-samples memory length'.format(M) +
                          'using {} method.'.format(name))
-
-
-def vector_to_kernel(vec_kernel, m, n, form='sym'):
-    """
-    Rearranges vector of order n Volterra kernel coefficients into tensor.
-
-    Parameters
-    ----------
-    vec_kernel : numpy.ndarray
-        Vector regrouping all symmetric coefficients of a Volterra kernel.
-    m : int
-        Memory length of the kernel (in samples).
-    n : int
-        Kernel order.
-    form : {'sym', 'tri', 'symmetric', 'triangular'}, optional (default='sym')
-        Form of the returned Volterra kernel (symmetric or triangular).
-
-    Returns
-    -------
-    kernel : numpy.ndarray
-        The corresponding Volterra kernel.
-    """
-
-    # Check dimension
-    length = nb_coeff_in_kernel(m, n, form=form)
-    if len(vec_kernel) != length:
-        raise ValueError('The vector of coefficients for Volterra kernel' +
-                         'of order {} has wrong length'.format(n) +
-                         '(got {}, '.format(vec_kernel.shape[0]) +
-                         'expected {}).'.format(length))
-
-    # Initialization
-    kernel = np.zeros((m,)*n, dtype=vec_kernel.dtype)
-    current_ind = 0
-
-    # Loop on all combinations for order n
-    for indexes in itr.combinations_with_replacement(range(m), n):
-        kernel[indexes] = vec_kernel[current_ind]
-        current_ind += 1
-
-    if form in _symmetric_strings_opt:
-        return array_symmetrization(kernel)
-    elif form in _triangular_strings_opt:
-        return kernel
-
-
-def kernel_to_vector(kernel, form='sym'):
-    """
-    Rearranges a Volterra kernel in vector form.
-
-    Parameters
-    ----------
-    form : {'sym', 'tri', 'symmetric', 'triangular'}, optional (default='sym')
-        Form of the given Volterra kernel (symmetric or triangular).
-
-    Returns
-    -------
-    vec_kernel : numpy.ndarray
-        The corresponding Volterra kernel in vector form.
-    """
-
-    # Check dimension
-    n = kernel.ndim
-    M = kernel.shape[0]
-    length = nb_coeff_in_kernel(M, n)
-
-    # Initialization
-    vec_kernel = np.zeros((length), dtype=kernel.dtype)
-    current_ind = 0
-
-    # Applying a factor if kernel is in symmetric form
-    if form in _symmetric_strings_opt:
-        factor = np.zeros(kernel.shape)
-        for indexes in itr.combinations_with_replacement(range(M), n):
-            k = [indexes.count(x) for x in set(indexes)]
-            factor[indexes] = multinomial(len(indexes), k)
-        kernel = kernel * factor
-
-    # Loop on all combinations for
-    for indexes in itr.combinations_with_replacement(range(M), n):
-        vec_kernel[current_ind] = kernel[indexes]
-        current_ind += 1
-
-    return vec_kernel
-
-
-def vector_to_all_kernels(f, M, N, form='sym'):
-    """
-    Rearranges vector of Volterra kernels coefficients into N tensors.
-
-    Parameters
-    ----------
-    f : numpy.ndarray or dict(int: numpy.ndarray)
-        Vector regrouping all symmetric coefficients of the Volterra kernels,
-        or dictionnary with one vector by order.
-    M : int or list(int)
-        Memory length for each kernels (in samples).
-    N : int
-        Truncation order.
-    form : {'sym', 'tri', 'symmetric', 'triangular'}, optional (default='sym')
-        Form of the returned Volterra kernel (symmetric or triangular).
-
-    Returns
-    -------
-    kernels : dict(int: numpy.ndarray)
-        Dictionnary linking the Volterra kernel of order ``n`` to key ``n``.
-    """
-
-    M = _as_list(M, N)
-
-    # Check dimension
-    if isinstance(f, np.ndarray):
-        length = nb_coeff_in_all_kernels(M, N, form=form)
-        if f.shape[0] != length:
-            raise ValueError('The vector of Volterra coefficients has wrong ' +
-                             'length (got {}, '.format(f.shape[0]) +
-                             'expected {}).'.format(length))
-    elif not isinstance(f, dict):
-        raise TypeError('Cannot handle type {} '.format(type(f)) +
-                        "for variable f'")
-
-    # Initialization
-    kernels = dict()
-
-    if isinstance(f, np.ndarray):
-        current_ind = 0
-        for m, n in itr.zip_longest(M, range(1, N+1)):
-            nb_coeff = nb_coeff_in_kernel(m, n, form=form)
-            kernels[n] = vector_to_kernel(f[current_ind:current_ind+nb_coeff],
-                                          m, n, form=form)
-            current_ind += nb_coeff
-    elif isinstance(f, dict):
-        for n, f_n in f.items():
-            m = M[n-1]
-            kernels[n] = vector_to_kernel(f_n, m, n, form=form)
-
-
-    return kernels
 
 
 def volterra_basis(signal, M, N, mode):
@@ -349,8 +131,8 @@ def volterra_basis(signal, M, N, mode):
 
     # Loop on nonlinear orders
     for n, m, m_bis in zip(range(2, N+1), M[1:], M_bis[1:]):
-        nb_coeff = nb_coeff_in_kernel(m, n, form='tri')
-        nb_coeff_bis = nb_coeff_in_kernel(m_bis, n, form='tri')
+        nb_coeff = kernel_nb_coeff(m, n, form='tri')
+        nb_coeff_bis = kernel_nb_coeff(m_bis, n, form='tri')
         delay = np.concatenate(tuple(max_delay[n-1].values()))
         ind_bis = np.where(delay < m_bis)[0]
         dec_bis = len(ind_bis)
