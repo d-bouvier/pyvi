@@ -30,8 +30,8 @@ import warnings
 import numpy as np
 import scipy.linalg as sc_lin
 from .tools import (volterra_basis, vector_to_all_kernels, nb_coeff_in_kernel,
-                    nb_coeff_in_all_kernels, assert_enough_data_samples,
-                    _as_list)
+                    nb_coeff_in_all_kernels, assert_enough_data_samples)
+from ..utilities.tools import _as_list
 from ..utilities.mathbox import binomial
 
 
