@@ -24,7 +24,8 @@ class PyviTestCase(unittest.TestCase):
 
     module = pyvi
     needed_properties = ['__author__', '__maintainer__', '__version__',
-                         'utilities', 'separation', 'identification']
+                         'utilities', 'volterra', 'separation',
+                         'identification']
     should_be_absent_properties = []
 
     def test_should_be_present_properties(self):
@@ -44,6 +45,14 @@ class UtilitiesTestCase(PyviTestCase):
     needed_properties = ['rms', 'db', 'safe_db', 'binomial', 'multinomial',
                          'array_symmetrization', 'separation_error',
                          'identification_error', 'inherit_docstring']
+    should_be_absent_properties = []
+
+
+class VolterraTestCase(PyviTestCase):
+
+    module = pyvi.volterra
+    needed_properties = ['kernel_nb_coeff', 'series_nb_coeff', 'vec2kernel',
+                         'vec2series', 'kernel2vec', 'volterra_basis']
     should_be_absent_properties = []
 
 
