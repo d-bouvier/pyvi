@@ -1,6 +1,11 @@
 # -*- coding: utf-8 -*-
 """
-Tools for handling Volterra series and kernels.
+Miscellaneous tools.
+
+Functions
+---------
+_as_list :
+    Check that given variable is a list or a tuple.
 
 Notes
 -----
@@ -15,10 +20,11 @@ Developed for Python 3.6.1
 
 def _as_list(val, N):
     """
-    Check that ``val`` is a list or a tuple of length ``N``.
+    Check that given variable is a list or a tuple.
 
-    If ``val`` is not an instance of a list or a tuple, this functions returns
-    a list of length ``N``, with every value being ``val`.
+    Check that ``val`` is an instance of list or tuple class with length ``N``.
+    If not, this functions returns a list of length ``N``, with every value
+    being ``val`.
 
     Parameters
     ----------
@@ -36,7 +42,7 @@ def _as_list(val, N):
     if isinstance(val, list) or isinstance(val, tuple):
         if len(val) != N:
             raise ValueError('``val` has length {}, but '.format(len(val)) +
-                             'truncation order N is {}'.format(val))
+                             'truncation order N is {}'.format(N))
         else:
             return list(val)
     else:

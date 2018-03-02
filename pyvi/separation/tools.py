@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Module for measuring order separation error.
+Tools for order separation.
 
 Functions
 ---------

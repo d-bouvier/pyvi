@@ -159,19 +159,19 @@ class Vec2KernelTest(unittest.TestCase):
     def test_triangular_form(self):
         for n in [2, 3]:
             with self.subTest(i=n):
-                result = vec2kernel(self.h_vec[n], self.M, n, out_form='tri')
+                result = vec2kernel(self.h_vec[n], self.M, n, form='tri')
                 self.assertTrue(np.all(result == self.h_tri[n]))
 
     def test_symmetric_form(self):
         for n in [2, 3]:
             with self.subTest(i=n):
-                result = vec2kernel(self.h_vec[n], self.M, n, out_form='sym')
+                result = vec2kernel(self.h_vec[n], self.M, n, form='sym')
                 self.assertTrue(np.all(result == self.h_sym[n]))
 
     def test_None_form(self):
         for n in [2, 3]:
             with self.subTest(i=n):
-                result = vec2kernel(self.h_vec[n], self.M, n, out_form=None)
+                result = vec2kernel(self.h_vec[n], self.M, n, form=None)
                 self.assertTrue(np.all(result == self.h_tri[n]))
 
     def test_error_raised(self):
@@ -199,17 +199,17 @@ class Vec2SeriesTest(Vec2KernelTest):
         self.h_sym[1] = self.h_vec[1]
 
     def test_triangular_form(self):
-        kernels = vec2series(self.f, self.M, self.N, out_form='tri')
+        kernels = vec2series(self.f, self.M, self.N, form='tri')
         result = [np.all(h == self.h_tri[n]) for n, h in kernels.items()]
         self.assertTrue(all(result))
 
     def test_symmetric_form(self):
-        kernels = vec2series(self.f, self.M, self.N, out_form='sym')
+        kernels = vec2series(self.f, self.M, self.N, form='sym')
         result = [np.all(h == self.h_sym[n]) for n, h in kernels.items()]
         self.assertTrue(all(result))
 
     def test_None_form(self):
-        kernels = vec2series(self.f, self.M, self.N, out_form=None)
+        kernels = vec2series(self.f, self.M, self.N, form=None)
         result = [np.all(h == self.h_tri[n]) for n, h in kernels.items()]
         self.assertTrue(all(result))
 
@@ -265,7 +265,7 @@ class Vec2Series_Form_AsList_Test(Vec2KernelTest):
         self.h[3] = self.h_tri[3]
 
     def test_f_as_dict(self):
-        kernels = vec2series(self.f, self.M, self.N, out_form=self.form)
+        kernels = vec2series(self.f, self.M, self.N, form=self.form)
         result = [np.all(h == self.h[n]) for n, h in kernels.items()]
         self.assertTrue(all(result))
 
@@ -298,19 +298,19 @@ class Kernel2VecTest(Vec2KernelTest):
     def test_triangular_form(self):
         for n in [2, 3]:
             with self.subTest(i=n):
-                result = kernel2vec(self.h_tri[n], in_form='tri')
+                result = kernel2vec(self.h_tri[n], form='tri')
                 self.assertTrue(np.all(result == self.h_vec[n]))
 
     def test_symmetric_form(self):
         for n in [2, 3]:
             with self.subTest(i=n):
-                result = kernel2vec(self.h_sym[n], in_form='sym')
+                result = kernel2vec(self.h_sym[n], form='sym')
                 self.assertTrue(np.all(result == self.h_vec[n]))
 
     def test_None_form(self):
         for n in [2, 3]:
             with self.subTest(i=n):
-                result = kernel2vec(self.h_raw[n], in_form=None)
+                result = kernel2vec(self.h_raw[n], form=None)
                 self.assertTrue(np.all(result == self.h_vec[n]))
 
     def test_error_raised(self):

@@ -75,7 +75,7 @@ def KLS(input_sig, output_sig, M, N, phi=None, form='sym'):
     f = _KLS_core_computation(phi, output_sig)
 
     # Re-arranging vector f into volterra kernels
-    kernels = vec2series(f, M, N, out_form=form)
+    kernels = vec2series(f, M, N, form=form)
 
     return kernels
 
@@ -155,7 +155,7 @@ def orderKLS(input_sig, output_by_order, M, N, phi=None, form='sym'):
         f[n] = _orderKLS_core_computation(phi_n, output_by_order[n-1])
 
     # Re-arranging vector f into volterra kernels
-    kernels = vec2series(f, M, N, out_form=form)
+    kernels = vec2series(f, M, N, form=form)
 
     return kernels
 
@@ -222,7 +222,7 @@ def termKLS(input_sig, output_by_term, M, N, phi=None, form='sym',
     f = _termKLS_core_computation(phi, output_by_term, N, cast_mode)
 
     # Re-arranging vector f into volterra kernels
-    kernels = vec2series(f, M, N, out_form=form)
+    kernels = vec2series(f, M, N, form=form)
 
     return kernels
 
@@ -304,7 +304,7 @@ def iterKLS(input_sig, output_by_phase, M, N, phi=None, form='sym',
             _cplx_to_real(temp_sig, cast_mode=cast_mode))
 
     # Re-arranging vector f into volterra kernels
-    kernels = vec2series(f, M, N, out_form=form)
+    kernels = vec2series(f, M, N, form=form)
 
     return kernels
 

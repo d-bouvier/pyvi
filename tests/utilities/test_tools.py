@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Test script for pyvi/volterra/methods.py
+Test script for pyvi/utilities/tools.py
 
 Notes
 -----

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Module for handling identification error, kernels and volterra basis.
+Tools for kernel identification.
 
 Functions
 ---------

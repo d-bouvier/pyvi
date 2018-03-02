@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Module for computing volterra basis.
+Module for computing volterra combinatorial basis.
 
 Notes
 -----
