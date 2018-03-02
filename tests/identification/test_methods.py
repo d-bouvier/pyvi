@@ -17,7 +17,7 @@ import numpy as np
 import pyvi.identification.methods as identif
 import pyvi.separation.methods as sep
 from pyvi.utilities.mathbox import array_symmetrization
-from pyvi.identification.tools import _as_list
+from pyvi.utilities.tools import _as_list
 
 
 #==============================================================================

@@ -29,9 +29,10 @@ Developed for Python 3.6.1
 import warnings
 import numpy as np
 import scipy.linalg as sc_lin
-from .tools import (volterra_basis, vector_to_all_kernels, nb_coeff_in_kernel,
-                    nb_coeff_in_all_kernels, assert_enough_data_samples,
-                    _as_list)
+from .tools import assert_enough_data_samples
+from ..volterra.combinatorics import volterra_basis
+from ..volterra.tools import kernel_nb_coeff, series_nb_coeff, vec2series
+from ..utilities.tools import _as_list
 from ..utilities.mathbox import binomial
 
 
@@ -74,7 +75,7 @@ def KLS(input_sig, output_sig, M, N, phi=None, form='sym'):
     f = _KLS_core_computation(phi, output_sig)
 
     # Re-arranging vector f into volterra kernels
-    kernels = vector_to_all_kernels(f, M, N, form=form)
+    kernels = vec2series(f, M, N, form=form)
 
     return kernels
 
@@ -82,7 +83,7 @@ def KLS(input_sig, output_sig, M, N, phi=None, form='sym'):
 def _KLS_check_feasability(nb_data, M, N, form='sym'):
     """Auxiliary function of KLS() for checking feasability."""
 
-    nb_coeff = nb_coeff_in_all_kernels(M, N, form=form)
+    nb_coeff = series_nb_coeff(M, N, form=form)
     assert_enough_data_samples(nb_data, nb_coeff, M, N, name='KLS')
 
 
@@ -154,7 +155,7 @@ def orderKLS(input_sig, output_by_order, M, N, phi=None, form='sym'):
         f[n] = _orderKLS_core_computation(phi_n, output_by_order[n-1])
 
     # Re-arranging vector f into volterra kernels
-    kernels = vector_to_all_kernels(f, M, N, form=form)
+    kernels = vec2series(f, M, N, form=form)
 
     return kernels
 
@@ -164,7 +165,7 @@ def _orderKLS_check_feasability(nb_data, M, N, form='sym', name='orderKLS'):
 
     nb_coeff = 0
     for m, n in zip(_as_list(M, N), range(1, N+1)):
-        nb_coeff = max(nb_coeff, nb_coeff_in_kernel(m, n, form=form))
+        nb_coeff = max(nb_coeff, kernel_nb_coeff(m, n, form=form))
     assert_enough_data_samples(nb_data, nb_coeff, M, N, name=name)
 
 
@@ -221,7 +222,7 @@ def termKLS(input_sig, output_by_term, M, N, phi=None, form='sym',
     f = _termKLS_core_computation(phi, output_by_term, N, cast_mode)
 
     # Re-arranging vector f into volterra kernels
-    kernels = vector_to_all_kernels(f, M, N, form=form)
+    kernels = vec2series(f, M, N, form=form)
 
     return kernels
 
@@ -303,7 +304,7 @@ def iterKLS(input_sig, output_by_phase, M, N, phi=None, form='sym',
             _cplx_to_real(temp_sig, cast_mode=cast_mode))
 
     # Re-arranging vector f into volterra kernels
-    kernels = vector_to_all_kernels(f, M, N, form=form)
+    kernels = vec2series(f, M, N, form=form)
 
     return kernels
 
