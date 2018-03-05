@@ -153,6 +153,37 @@ def vec2kernel(vec, m, n, form=None):
         return kernel
 
 
+def vec2dict_of_vec(vec, M, N):
+    """
+    Rearranges a vector of all Volterra coefficients into N vectors by order.
+
+    Parameters
+    ----------
+    vec : numpy.ndarray
+        Vector regrouping all triangular coefficients of the Volterra kernels.
+    M : int or list(int)
+        Memory length for each kernels (in samples).
+    N : int
+        Truncation order.
+
+    Returns
+    -------
+    dict_of_vec : dict(int: numpy.ndarray)
+        Dictionnary regrouping vectors of Volterra coefficient for each order.
+    """
+
+    _M = _as_list(M, N)
+    list_nb_coeff = series_nb_coeff(_M, N, form='tri', out_by_order=True)
+
+    dict_of_vec = dict()
+    start = 0
+    for n, nb_coeff in zip(range(1, N+1), list_nb_coeff):
+        dict_of_vec[n] = vec[start:start+nb_coeff]
+        start += nb_coeff
+
+    return dict_of_vec
+
+
 def vec2series(vec, M, N, form=None):
     """
     Rearranges a vector of all Volterra coefficients into a dict of tensors.
@@ -179,15 +210,9 @@ def vec2series(vec, M, N, form=None):
 
     _M = _as_list(M, N)
     _form = _as_list(form, N)
-    list_nb_coeff = series_nb_coeff(_M, N, form='tri', out_by_order=True)
 
     if isinstance(vec, np.ndarray):
-        vec = vec.copy()
-        dict_of_vec = dict()
-        start = 0
-        for n, nb_coeff in zip(range(1, N+1), list_nb_coeff):
-            dict_of_vec[n] = vec[start:start+nb_coeff]
-            start += nb_coeff
+        dict_of_vec = vec2dict_of_vec(vec, _M, N)
     elif isinstance(vec, dict):
         dict_of_vec = vec
     else:
