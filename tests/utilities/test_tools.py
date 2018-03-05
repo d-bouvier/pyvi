@@ -13,6 +13,7 @@ Developed for Python 3.6.1
 #==============================================================================
 
 import unittest
+import numpy as np
 from pyvi.utilities.tools import _as_list
 
 
@@ -41,6 +42,16 @@ class AsListTest(unittest.TestCase):
     def test_tuple_returns_list(self):
         val = (1, 2, 3)
         self.assertIsInstance(_as_list(val, len(val)), list)
+
+    def test_numpy_array_returns_list(self):
+        val = np.array([1, 2, 3])
+        self.assertIsInstance(_as_list(val, len(val)), list)
+
+    def test_str_returns_list_of_str(self):
+        val = 'test'
+        N = 4
+        should_be_result = list((val,)*N)
+        self.assertListEqual(_as_list(val, N), should_be_result)
 
     def test_error_if_wrong_length(self):
         val = [1, 2, 3]

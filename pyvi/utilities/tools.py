@@ -29,6 +29,8 @@ Developed for Python 3.6.1
 #==============================================================================
 
 from functools import wraps
+from collections.abc import Sequence
+import numpy as np
 
 
 #==============================================================================
@@ -110,7 +112,7 @@ def _as_list(val, N):
         List of length ``N``.
     """
 
-    if isinstance(val, list) or isinstance(val, tuple):
+    if isinstance(val, (Sequence, np.ndarray)) and not isinstance(val, str):
         if len(val) != N:
             raise ValueError('``val` has length {}, but '.format(len(val)) +
                              'truncation order N is {}'.format(N))
