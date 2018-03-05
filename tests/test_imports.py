@@ -44,8 +44,10 @@ class UtilitiesTestCase(PyviTestCase):
     module = pyvi.utilities
     needed_properties = ['rms', 'db', 'safe_db', 'binomial', 'multinomial',
                          'array_symmetrization', 'separation_error',
-                         'identification_error']
-    should_be_absent_properties = []
+                         'identification_error', 'LaguerreBasis', 'KautzBasis',
+                         'GeneralizedBasis', 'create_orthogonal_basis']
+    should_be_absent_properties = ['_AbstractOrthogonalBasis',
+                                   'inherint_docstring']
 
 
 class VolterraTestCase(PyviTestCase):
@@ -68,7 +70,7 @@ class IdentificationTestCase(PyviTestCase):
 
     module = pyvi.identification
     needed_properties = ['KLS', 'orderKLS', 'termKLS', 'iterKLS']
-    should_be_absent_properties = ['_as_list']
+    should_be_absent_properties = []
 
 
 #==============================================================================
