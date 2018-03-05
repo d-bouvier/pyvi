@@ -55,7 +55,7 @@ def assert_enough_data_samples(nb_data, max_nb_est, M, N, name):
                          ', it should have at least {} '.format(max_nb_est) +
                          'for a truncation to order {} '.format(N) +
                          'and a {}-samples memory length'.format(M) +
-                         'using {} method.'.format(name))
+                         "using '{}' mode.".format(name))
 
 
 def complex2real(sig_cplx, cast_mode='real-imag'):

@@ -26,12 +26,12 @@ Developed for Python 3.6.1
 # Importations
 #==============================================================================
 
+import warnings
 import numpy as np
 import scipy.linalg as sc_lin
 from .tools import assert_enough_data_samples, complex2real
 from ..volterra.combinatorics import volterra_basis
-from ..volterra.tools import kernel_nb_coeff, series_nb_coeff, vec2series
-from ..utilities.tools import _as_list
+from ..volterra.tools import series_nb_coeff, vec2dict_of_vec, vec2series
 from ..utilities.mathbox import binomial
 
 
@@ -39,9 +39,167 @@ from ..utilities.mathbox import binomial
 # Functions
 #==============================================================================
 
-def KLS(input_sig, output_sig, M, N, phi=None, form='sym'):
+def _ls_solver(A, y):
+    if A.size:
+        x, _, _, _ = sc_lin.lstsq(A, y)
+        return x
+    else:
+        return np.zeros((0,))
+
+
+def _qr_solver(A, y):
+    if A.size:
+        q, r = sc_lin.qr(A, mode='economic')
+        z = np.dot(q.T, y)
+        return sc_lin.solve_triangular(r, z)
+    else:
+        return np.zeros((0,))
+
+
+def _core_direct_mode(phi_by_order, out_sig, solver_func, N, M):
+
+    mat = np.concatenate([val for n, val in sorted(phi_by_order.items())],
+                         axis=1)
+    kernels_vec = solver_func(mat, out_sig)
+    return vec2dict_of_vec(kernels_vec, M, N)
+
+
+def _core_order_mode(phi_by_order, out_by_order, solver_func):
+
+    kernels_vec = dict()
+    for n, phi in phi_by_order.items():
+        kernels_vec[n] = solver_func(phi, out_by_order[n-1])
+    return kernels_vec
+
+
+def _core_term_mode(phi_by_term, out_by_term, solver_func, N, cast_mode):
+
+    for (n, k) in phi_by_term.keys():
+        phi_by_term[n, k] = complex2real(phi_by_term[n, k],
+                                         cast_mode=cast_mode)
+        out_by_term[n, k] = complex2real(out_by_term[n, k],
+                                         cast_mode=cast_mode)
+
+    kernels_vec = dict()
+    for n in range(1, N+1):
+        k_vec = list(range(1+n//2))
+        phi_n = np.concatenate([phi_by_term[(n, k)] for k in k_vec], axis=0)
+        out_n = np.concatenate([out_by_term[(n, k)] for k in k_vec], axis=0)
+        kernels_vec[n] = solver_func(phi_n, out_n)
+
+    return kernels_vec
+
+
+def _core_iter_mode(phi_by_term, out_by_phase, solver_func, N, cast_mode):
+
+    kernels_vec = dict()
+
+    for n in range(N, 0, -1):
+        temp_sig = out_by_phase[n].copy()
+
+        for n2 in range(n+2, N+1, 2):
+            k = (n2-n)//2
+            temp_sig -= binomial(n2, k) * np.dot(phi_by_term[(n2, k)],
+                                                 kernels_vec[n2])
+
+        kernels_vec[n] = solver_func(
+            complex2real(phi_by_term[(n, 0)], cast_mode=cast_mode),
+            complex2real(temp_sig, cast_mode=cast_mode))
+
+    return kernels_vec
+
+
+def create_method(N, M=None, mode='direct', solver='LS', out_form='vec',
+                  projection=None, cast_mode='real-imag'):
+
+    # Handling of contradictory parameters
+    _no_M = M is None
+    _no_proj = projection is None
+    if _no_M and _no_proj:
+        raise ValueError('Neither the kernel memory length (parameter ``M``)' +
+                         ' nor an orthogonal basis for projection (parameter' +
+                         ' ``projection``) were specified.')
+    if not _no_proj:
+        if not _no_M:
+            message = 'Both parameters ``projection`` and ``M`` were ' + \
+                      'specified, which is redundant; parameter ``M`` ' + \
+                      'will not be taken into account'
+            warnings.warn(message, UserWarning)
+            M = None
+        if not out_form == 'vec':
+            message = "Parameters ``out_form`` was set to '{}', but a " + \
+                      "projection is used; thus ``out_form`` is set to 'vec'."
+            warnings.warn(message.format(out_form), UserWarning)
+            out_form == 'vec'
+
+    # Function for computation of the required minimum number of data samples
+    if mode == 'direct':
+        _compute_required_nb_data = lambda x: sum(x)
+    elif mode in {'order', 'term'}:
+        _compute_required_nb_data = lambda x: max(x)
+    elif mode == 'iter':
+        _compute_required_nb_data = lambda x: max(x / (1+np.arange(1, N+1)//2))
+
+    # Function for the computation of the combinatorial basis
+    if _no_proj:
+        if mode in {'direct', 'order'}:
+            _compute_phi = lambda x: volterra_basis(x, M, N, sorted_by='order')
+        elif mode in {'term', 'iter'}:
+            _compute_phi = lambda x: volterra_basis(x, M, N, sorted_by='term')
+    else:
+        raise NotImplementedError
+
+    # Solver method
+    if solver == 'LS':
+        func_solver = _ls_solver
+    elif solver == 'QR':
+        func_solver = _qr_solver
+
+    # Function for the core computation
+    if mode == 'direct':
+        _identification = lambda phi, out, solver: _core_direct_mode(phi, out,
+                                                                     solver,
+                                                                     N, M)
+    elif mode == 'order':
+        _identification = _core_order_mode
+    elif mode == 'term':
+        _identification = lambda phi, out, solver: _core_term_mode(phi, out,
+                                                                   solver, N,
+                                                                   cast_mode)
+    elif mode == 'iter':
+        _identification = lambda phi, out, solver: _core_iter_mode(phi, out,
+                                                                   solver, N,
+                                                                   cast_mode)
+
+    # Function for putting the kernels in the wanted form
+    if not _no_proj or out_form == 'vec':
+        vec2out = lambda x: x
+    else:
+        vec2out = lambda x: vec2series(x, M, N, form=out_form)
+
+    # Creation of the identificaiton method function
+    def method(input_sig, output, phi=None):
+
+        # Checking that there is enough data samples
+        nb_data = input_sig.size
+        list_nb_coeff = series_nb_coeff(M, N, form='tri', out_by_order=True)
+        required_nb_data = _compute_required_nb_data(list_nb_coeff)
+        assert_enough_data_samples(nb_data, required_nb_data, M, N, name=mode)
+
+        # Input combinatoric
+        if phi is None:
+            phi = _compute_phi(input_sig)
+
+        vec = _identification(phi, output, func_solver)
+
+        return vec2out(vec)
+
+    return method
+
+
+def KLS(input_sig, output_sig, M, N, phi=None, out_form='sym'):
     """
-    Kernel identification via Least-Squares method using a QR decomposition.
+    Wrapper for identification via Least-Squares using a QR decomposition.
 
     Parameters
     ----------
@@ -63,62 +221,14 @@ def KLS(input_sig, output_sig, M, N, phi=None, form='sym'):
     kernels : dict(int: numpy.ndarray)
         Dictionnary linking the Volterra kernel of order ``n`` to key ``n``.
     """
-
-    # Checking that there is enough data samples
-    _KLS_check_feasability(input_sig.shape[0], M, N, form=form)
-
-    # Input combinatoric
-    phi = _KLS_construct_phi(input_sig, M, N, phi=phi)
-
-    # Identification
-    f = _KLS_core_computation(phi, output_sig)
-
-    # Re-arranging vector f into volterra kernels
-    kernels = vec2series(f, M, N, form=form)
-
-    return kernels
+    method = create_method(N, M=M, mode='direct', solver='QR',
+                           out_form=out_form)
+    return method(input_sig, output_sig, phi=phi)
 
 
-def _KLS_check_feasability(nb_data, M, N, form='sym'):
-    """Auxiliary function of KLS() for checking feasability."""
-
-    nb_coeff = series_nb_coeff(M, N, form=form)
-    assert_enough_data_samples(nb_data, nb_coeff, M, N, name='KLS')
-
-
-def _KLS_construct_phi(signal, M, N, phi=None):
-    """Auxiliary function of KLS() for Volterra basis computation."""
-
-    if phi is None:
-        phi_dict = volterra_basis(signal, M, N, mode='order')
-    elif isinstance(phi, dict):
-        phi_dict = phi
-    elif isinstance(phi, np.ndarray):
-        return phi
-    return np.concatenate([val for n, val in sorted(phi_dict.items())], axis=1)
-
-
-def _KLS_core_computation(combinatorial_matrix, output_sig):
-    """Auxiliary function of KLS() for the core computation."""
-
-    if combinatorial_matrix.size:
-        # QR decomposition
-        q, r = sc_lin.qr(combinatorial_matrix, mode='economic')
-
-        # Projection on combinatorial basis
-        y = np.dot(q.T, output_sig)
-
-        # Forward inverse
-        return sc_lin.solve_triangular(r, y)
-    else:
-        return np.zeros((0,))
-
-
-#=============================================#
-
-def orderKLS(input_sig, output_by_order, M, N, phi=None, form='sym'):
+def orderKLS(input_sig, output_by_order, M, N, phi=None, out_form='sym'):
     """
-    Performs KLS method on each nonlinear homogeneous order.
+    Wrapper for KLS method on each nonlinear homogeneous order.
 
     Parameters
     ----------
@@ -141,51 +251,15 @@ def orderKLS(input_sig, output_by_order, M, N, phi=None, form='sym'):
         Dictionnary linking the Volterra kernel of order ``n`` to key ``n``.
     """
 
-    # Checking that there is enough data samples
-    _orderKLS_check_feasability(input_sig.shape[0], M, N, form=form)
-
-    # Input combinatoric
-    if phi is None:
-        phi = _orderKLS_construct_phi(input_sig, M, N)
-
-    # Identification on each order
-    f = dict()
-    for n, phi_n in phi.items():
-        f[n] = _orderKLS_core_computation(phi_n, output_by_order[n-1])
-
-    # Re-arranging vector f into volterra kernels
-    kernels = vec2series(f, M, N, form=form)
-
-    return kernels
+    method = create_method(N, M=M, mode='order', solver='QR',
+                           out_form=out_form)
+    return method(input_sig, output_by_order, phi=phi)
 
 
-def _orderKLS_check_feasability(nb_data, M, N, form='sym', name='orderKLS'):
-    """Auxiliary function of orderKLS() for checking feasability."""
-
-    nb_coeff = 0
-    for m, n in zip(_as_list(M, N), range(1, N+1)):
-        nb_coeff = max(nb_coeff, kernel_nb_coeff(m, n, form=form))
-    assert_enough_data_samples(nb_data, nb_coeff, M, N, name=name)
-
-
-def _orderKLS_construct_phi(signal, M, N):
-    """Auxiliary function of orderKLS() for Volterra basis computation."""
-
-    return volterra_basis(signal, M, N, mode='order')
-
-
-def _orderKLS_core_computation(combinatorial_matrix, output_sig):
-    """Auxiliary function of orderKLS()) for the core computation."""
-
-    return _KLS_core_computation(combinatorial_matrix, output_sig)
-
-
-#=============================================#
-
-def termKLS(input_sig, output_by_term, M, N, phi=None, form='sym',
+def termKLS(input_sig, output_by_term, M, N, phi=None, out_form='sym',
             cast_mode='real-imag'):
     """
-    Performs KLS method on each combinatorial term.
+    Wrapper for KLS method on each combinatorial term.
 
     Parameters
     ----------
@@ -210,56 +284,15 @@ def termKLS(input_sig, output_by_term, M, N, phi=None, form='sym',
         Dictionnary linking the Volterra kernel of order ``n`` to key ``n``.
     """
 
-    # Checking that there is enough data samples
-    _termKLS_check_feasability(input_sig.shape[0], M, N, form=form)
-
-    # Input combinatoric
-    if phi is None:
-        phi = _termKLS_construct_phi(input_sig, M, N)
-
-    # Identification
-    f = _termKLS_core_computation(phi, output_by_term, N, cast_mode)
-
-    # Re-arranging vector f into volterra kernels
-    kernels = vec2series(f, M, N, form=form)
-
-    return kernels
+    method = create_method(N, M=M, mode='term', solver='QR', out_form=out_form,
+                           cast_mode=cast_mode)
+    return method(input_sig, output_by_term, phi=phi)
 
 
-def _termKLS_check_feasability(nb_data, M, N, form='sym'):
-    """Auxiliary function of termKLS() for checking feasability."""
-
-    _orderKLS_check_feasability(nb_data, M, N, form=form, name='termKLS')
-
-
-def _termKLS_construct_phi(signal, M, N):
-    """Auxiliary function of termKLS() for Volterra basis computation."""
-
-    return volterra_basis(signal, M, N, mode='term')
-
-
-def _termKLS_core_computation(phi, output_by_term, N, cast_mode):
-    """Auxiliary function of termKLS() using 'mmse' mode."""
-
-    f = dict()
-
-    # Identification on each combinatorial term
-    for n in range(1, N+1):
-        phi_n = np.concatenate([phi[(n, k)] for k in range(1+n//2)], axis=0)
-        sig_n = np.concatenate([output_by_term[(n, k)] for k in range(1+n//2)],
-                                axis=0)
-        f[n] = _KLS_core_computation(complex2real(phi_n, cast_mode=cast_mode),
-                                     complex2real(sig_n, cast_mode=cast_mode))
-
-    return f
-
-
-#=============================================#
-
-def iterKLS(input_sig, output_by_phase, M, N, phi=None, form='sym',
+def iterKLS(input_sig, output_by_phase, M, N, phi=None, out_form='sym',
             cast_mode='real-imag'):
     """
-    Performs KLS method recursively on homogeneous-phase signals.
+    Wrapper for KLS method recursively on homogeneous-phase signals.
 
     Parameters
     ----------
@@ -284,44 +317,6 @@ def iterKLS(input_sig, output_by_phase, M, N, phi=None, form='sym',
         Dictionnary linking the Volterra kernel of order ``n`` to key ``n``.
     """
 
-    # Checking that there is enough data samples
-    _iterKLS_check_feasability(input_sig.shape[0], M, N, form=form)
-
-    # Input combinatoric
-    if phi is None:
-        phi = _iterKLS_construct_phi(input_sig, M, N)
-
-    # Identification recursive on each homogeneous-phase signal
-    f = dict()
-    for n in range(N, 0, -1):
-        temp_sig = output_by_phase[n].copy()
-        for n2 in range(n+2, N+1, 2):
-            k = (n2-n)//2
-            temp_sig -= binomial(n2, k) * np.dot(phi[(n2, k)], f[n2])
-        f[n] = _KLS_core_computation(
-            complex2real(phi[(n, 0)], cast_mode=cast_mode),
-            complex2real(temp_sig, cast_mode=cast_mode))
-
-    # Re-arranging vector f into volterra kernels
-    kernels = vec2series(f, M, N, form=form)
-
-    return kernels
-
-
-def _iterKLS_check_feasability(nb_data, M, N, form='sym'):
-    """Auxiliary function of iterKLS() for checking feasability."""
-
-    _orderKLS_check_feasability(nb_data, M, N, form='sym', name='iterKLS')
-
-
-def _iterKLS_construct_phi(signal, M, N):
-    """Auxiliary function of iterKLS() for Volterra basis computation."""
-
-    return _termKLS_construct_phi(signal, M, N)
-
-
-#=============================================#
-
-
-
-
+    method = create_method(N, M=M, mode='iter', solver='QR', out_form=out_form,
+                           cast_mode=cast_mode)
+    return method(input_sig, output_by_phase, phi=phi)
