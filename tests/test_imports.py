@@ -44,7 +44,7 @@ class UtilitiesTestCase(PyviTestCase):
     module = pyvi.utilities
     needed_properties = ['rms', 'db', 'safe_db', 'binomial', 'multinomial',
                          'array_symmetrization', 'separation_error',
-                         'identification_error', 'inherit_docstring']
+                         'identification_error']
     should_be_absent_properties = []
 
 

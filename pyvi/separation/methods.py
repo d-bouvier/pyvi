@@ -39,7 +39,7 @@ import scipy.fftpack as sc_fft
 import scipy.signal as sc_sig
 from .tools import create_vandermonde_mixing_mat
 from ..utilities.mathbox import binomial, multinomial
-from ..utilities.decorators import inherit_docstring
+from ..utilities.tools import inherit_docstring
 
 
 #==============================================================================
