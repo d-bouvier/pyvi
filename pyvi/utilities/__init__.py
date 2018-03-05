@@ -1,3 +1,3 @@
 from .mathbox import *
 from .measures import *
-from .decorators import *
+from .orthogonal_basis import *

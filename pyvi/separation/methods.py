@@ -7,18 +7,14 @@ separation methods.
 
 Class
 -----
-_SeparationMethod :
-    Asbstract base class for order separation methods.
 AS :
     Class for Amplitude-based Separation method.
 CPS :
     Class for Complex Phase-based Separation method using complex signals.
 HPS :
     Class for Phase-based Separation method into homophase signals.
-_AbstractPS :
-    Abstract base class for Phase-based Separation method using real signals.
 PS :
-    Class for Phase-based Separation method using real signals (and 2D-DFT).
+    Class for Phase-based Separation method using real signals and 2D-DFT.
 PAS :
     Class for Phase-and-Amplitude-based Separation method using real signals.
 
@@ -39,7 +35,7 @@ import scipy.fftpack as sc_fft
 import scipy.signal as sc_sig
 from .tools import create_vandermonde_mixing_mat
 from ..utilities.mathbox import binomial, multinomial
-from ..utilities.decorators import inherit_docstring
+from ..utilities.tools import inherit_docstring
 
 
 #==============================================================================
