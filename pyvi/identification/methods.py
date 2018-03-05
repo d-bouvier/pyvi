@@ -26,10 +26,9 @@ Developed for Python 3.6.1
 # Importations
 #==============================================================================
 
-import warnings
 import numpy as np
 import scipy.linalg as sc_lin
-from .tools import assert_enough_data_samples
+from .tools import assert_enough_data_samples, complex2real
 from ..volterra.combinatorics import volterra_basis
 from ..volterra.tools import kernel_nb_coeff, series_nb_coeff, vec2series
 from ..utilities.tools import _as_list
@@ -249,8 +248,8 @@ def _termKLS_core_computation(phi, output_by_term, N, cast_mode):
         phi_n = np.concatenate([phi[(n, k)] for k in range(1+n//2)], axis=0)
         sig_n = np.concatenate([output_by_term[(n, k)] for k in range(1+n//2)],
                                 axis=0)
-        f[n] = _KLS_core_computation(_cplx_to_real(phi_n, cast_mode=cast_mode),
-                                     _cplx_to_real(sig_n, cast_mode=cast_mode))
+        f[n] = _KLS_core_computation(complex2real(phi_n, cast_mode=cast_mode),
+                                     complex2real(sig_n, cast_mode=cast_mode))
 
     return f
 
@@ -300,8 +299,8 @@ def iterKLS(input_sig, output_by_phase, M, N, phi=None, form='sym',
             k = (n2-n)//2
             temp_sig -= binomial(n2, k) * np.dot(phi[(n2, k)], f[n2])
         f[n] = _KLS_core_computation(
-            _cplx_to_real(phi[(n, 0)], cast_mode=cast_mode),
-            _cplx_to_real(temp_sig, cast_mode=cast_mode))
+            complex2real(phi[(n, 0)], cast_mode=cast_mode),
+            complex2real(temp_sig, cast_mode=cast_mode))
 
     # Re-arranging vector f into volterra kernels
     kernels = vec2series(f, M, N, form=form)
@@ -323,34 +322,6 @@ def _iterKLS_construct_phi(signal, M, N):
 
 #=============================================#
 
-def _cplx_to_real(sig_cplx, cast_mode='real-imag'):
-    """
-    Cast a numpy.ndarray of complex type to real type with a specified mode.
 
-    Parameters
-    ----------
-    sig_cplx : numpy.ndarray
-        Array to cast to real numbers.
-    cast_mode : {'real', 'imag', 'real-imag'}, optional (default='real-imag')
-        Choose how complex number are casted to real numbers.
-
-    Returns
-    -------
-    sig_casted : numpy.ndarray
-        Array ``sig_cplx`` casted to real numbers following ``cast_mode``.
-    """
-
-    if cast_mode not in {'real', 'imag', 'real-imag'}:
-        warnings.warn("Unknown cast_mode, mode 'real-imag' used.", UserWarning)
-        cast_mode = 'real'
-
-    if cast_mode == 'real':
-        return np.real(sig_cplx)
-    elif cast_mode == 'imag':
-        return np.real(sig_cplx)
-    elif cast_mode == 'real-imag':
-        return np.concatenate((np.real(sig_cplx), np.imag(sig_cplx)), axis=0)
-    elif cast_mode == 'cplx':
-        return sig_cplx
 
 
