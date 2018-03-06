@@ -14,7 +14,8 @@ Developed for Python 3.6.1
 
 import unittest
 import numpy as np
-from pyvi.identification.tools import assert_enough_data_samples, complex2real
+from pyvi.identification.tools import (_assert_enough_data_samples,
+                                       _complex2real)
 
 
 #==============================================================================
@@ -24,7 +25,7 @@ from pyvi.identification.tools import assert_enough_data_samples, complex2real
 class AssertEnoughDataSamplesTest(unittest.TestCase):
 
     def test_error_raised(self):
-        self.assertRaises(ValueError, assert_enough_data_samples, 8, 9,
+        self.assertRaises(ValueError, _assert_enough_data_samples, 8, 9,
                           3, 2, 'KLS')
 
 
@@ -37,27 +38,27 @@ class Complex2RealTest(unittest.TestCase):
         self.real_imag = np.array([1, 3, 2, 4])
 
     def test_default_mode(self):
-        result = complex2real(self.val)
+        result = _complex2real(self.val)
         self.assertTrue(np.all(result == self.real_imag))
 
     def test_real_mode(self):
-        result = complex2real(self.val, cast_mode='real')
+        result = _complex2real(self.val, cast_mode='real')
         self.assertTrue(np.all(result == self.real))
 
     def test_imag_mode(self):
-        result = complex2real(self.val, cast_mode='imag')
+        result = _complex2real(self.val, cast_mode='imag')
         self.assertTrue(np.all(result == self.imag))
 
     def test_real_imag_mode(self):
-        result = complex2real(self.val, cast_mode='real-imag')
+        result = _complex2real(self.val, cast_mode='real-imag')
         self.assertTrue(np.all(result == self.real_imag))
 
     def test_cplx_mode(self):
-        result = complex2real(self.val, cast_mode='cplx')
+        result = _complex2real(self.val, cast_mode='cplx')
         self.assertTrue(np.all(result == self.val))
 
     def test_warns(self):
-        self.assertWarns(UserWarning, complex2real, self.val, cast_mode='')
+        self.assertWarns(UserWarning, _complex2real, self.val, cast_mode='')
 
 
 #==============================================================================

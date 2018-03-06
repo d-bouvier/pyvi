@@ -28,89 +28,49 @@ Developed for Python 3.6.1
 
 import warnings
 import numpy as np
-import scipy.linalg as sc_lin
-from .tools import assert_enough_data_samples, complex2real
+from .tools import (_assert_enough_data_samples, _core_direct_mode,
+                    _core_order_mode, _core_term_mode, _core_iter_mode,
+                    _ls_solver, _qr_solver)
 from ..volterra.combinatorics import volterra_basis
-from ..volterra.tools import series_nb_coeff, vec2dict_of_vec, vec2series
-from ..utilities.mathbox import binomial
+from ..volterra.tools import series_nb_coeff, vec2series
 
 
 #==============================================================================
 # Functions
 #==============================================================================
 
-def _ls_solver(A, y):
-    if A.size:
-        x, _, _, _ = sc_lin.lstsq(A, y)
-        return x
-    else:
-        return np.zeros((0,))
-
-
-def _qr_solver(A, y):
-    if A.size:
-        q, r = sc_lin.qr(A, mode='economic')
-        z = np.dot(q.T, y)
-        return sc_lin.solve_triangular(r, z)
-    else:
-        return np.zeros((0,))
-
-
-def _core_direct_mode(phi_by_order, out_sig, solver_func, N, M):
-
-    mat = np.concatenate([val for n, val in sorted(phi_by_order.items())],
-                         axis=1)
-    kernels_vec = solver_func(mat, out_sig)
-    return vec2dict_of_vec(kernels_vec, M, N)
-
-
-def _core_order_mode(phi_by_order, out_by_order, solver_func):
-
-    kernels_vec = dict()
-    for n, phi in phi_by_order.items():
-        kernels_vec[n] = solver_func(phi, out_by_order[n-1])
-    return kernels_vec
-
-
-def _core_term_mode(phi_by_term, out_by_term, solver_func, N, cast_mode):
-
-    for (n, k) in phi_by_term.keys():
-        phi_by_term[n, k] = complex2real(phi_by_term[n, k],
-                                         cast_mode=cast_mode)
-        out_by_term[n, k] = complex2real(out_by_term[n, k],
-                                         cast_mode=cast_mode)
-
-    kernels_vec = dict()
-    for n in range(1, N+1):
-        k_vec = list(range(1+n//2))
-        phi_n = np.concatenate([phi_by_term[(n, k)] for k in k_vec], axis=0)
-        out_n = np.concatenate([out_by_term[(n, k)] for k in k_vec], axis=0)
-        kernels_vec[n] = solver_func(phi_n, out_n)
-
-    return kernels_vec
-
-
-def _core_iter_mode(phi_by_term, out_by_phase, solver_func, N, cast_mode):
-
-    kernels_vec = dict()
-
-    for n in range(N, 0, -1):
-        temp_sig = out_by_phase[n].copy()
-
-        for n2 in range(n+2, N+1, 2):
-            k = (n2-n)//2
-            temp_sig -= binomial(n2, k) * np.dot(phi_by_term[(n2, k)],
-                                                 kernels_vec[n2])
-
-        kernels_vec[n] = solver_func(
-            complex2real(phi_by_term[(n, 0)], cast_mode=cast_mode),
-            complex2real(temp_sig, cast_mode=cast_mode))
-
-    return kernels_vec
-
-
 def create_method(N, M=None, mode='direct', solver='LS', out_form='vec',
                   projection=None, cast_mode='real-imag'):
+    """
+    Factory function for creating Volterra series identification method.
+
+    The identification methods created rely on a matrix representation of the
+    input-to-output relation of a Volterra series; it uses linear algebra
+    tools to estimate the kernels coefficients.
+
+    Parameters
+    ----------
+    input_data : numpy.ndarray
+        Input signal.
+    output_by_phase : numpy.ndarray
+        Output signal separated in homogeneous-phase signals.
+    M : int or list(int)
+        Memory length for each kernels (in samples).
+    N : int
+        Truncation order.
+    phi : {None, dict(int: numpy.ndarray)}, optional (default=None)
+        If None, ``phi`` is computed from ``input_data``; else, ``phi`` is used.
+    form : {'sym', 'tri', 'symmetric', 'triangular'}, optional (default='sym')
+        Form of the returned Volterra kernel (symmetric or triangular).
+    cast_mode : {'real', 'imag', 'real-imag'}, optional (default='real-imag')
+        Choose how complex number are casted to real numbers.
+
+    Returns
+    -------
+    method : function
+        Custom identification method; it accepts input and output data as
+        parameters, and returns the estimated kernels.
+    """
 
     # Handling of contradictory parameters
     _no_M = M is None
@@ -178,17 +138,17 @@ def create_method(N, M=None, mode='direct', solver='LS', out_form='vec',
         vec2out = lambda x: vec2series(x, M, N, form=out_form)
 
     # Creation of the identificaiton method function
-    def method(input_sig, output, phi=None):
 
+    def method(input_data, output, phi=None):
         # Checking that there is enough data samples
-        nb_data = input_sig.size
+        nb_data = input_data.size
         list_nb_coeff = series_nb_coeff(M, N, form='tri', out_by_order=True)
         required_nb_data = _compute_required_nb_data(list_nb_coeff)
-        assert_enough_data_samples(nb_data, required_nb_data, M, N, name=mode)
+        _assert_enough_data_samples(nb_data, required_nb_data, M, N, name=mode)
 
         # Input combinatoric
         if phi is None:
-            phi = _compute_phi(input_sig)
+            phi = _compute_phi(input_data)
 
         vec = _identification(phi, output, func_solver)
 
