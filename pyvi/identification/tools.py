@@ -22,88 +22,22 @@ Developed for Python 3.6.1
 import warnings
 import numpy as np
 import scipy.linalg as sc_lin
-from ..utilities.mathbox import binomial
-from ..volterra.tools import vec2dict_of_vec
 
 
 #==============================================================================
 # Functions
 #==============================================================================
 
-def _core_direct_mode(phi_by_order, out_sig, solver_func, N, M):
-    """Core computation of the identification method using 'direct' mode.
-
-    This auxiliary function does a joint kernel estimation on the overall
-    output of the system."""
-
-    mat = np.concatenate([val for n, val in sorted(phi_by_order.items())],
-                         axis=1)
-    kernels_vec = _solver(mat, out_sig, solver_func)
-    return vec2dict_of_vec(kernels_vec, M, N)
-
-
-def _core_order_mode(phi_by_order, out_by_order, solver_func):
-    """Core computation of the identification method using 'iter' mode.
-
-    This auxiliary function does a separate kernel estimation on the nonlinear
-    homogeneous order."""
-
-    kernels_vec = dict()
-    for n, phi in phi_by_order.items():
-        kernels_vec[n] = _solver(phi, out_by_order[n-1], solver_func)
-    return kernels_vec
-
-
-def _core_term_mode(phi_by_term, out_by_term, solver_func, N, cast_mode):
-    """Core computation of the identification method using 'iter' mode.
-
-    This auxiliary function does a separate kernel estimation on the nonlinear
-    combinatorial terms for each order."""
-
-    for (n, k) in phi_by_term.keys():
-        phi_by_term[n, k] = _complex2real(phi_by_term[n, k],
-                                          cast_mode=cast_mode)
-        out_by_term[n, k] = _complex2real(out_by_term[n, k],
-                                          cast_mode=cast_mode)
-
-    kernels_vec = dict()
-    for n in range(1, N+1):
-        k_vec = list(range(1+n//2))
-        phi_n = np.concatenate([phi_by_term[(n, k)] for k in k_vec], axis=0)
-        out_n = np.concatenate([out_by_term[(n, k)] for k in k_vec], axis=0)
-        kernels_vec[n] = _solver(phi_n, out_n, solver_func)
-
-    return kernels_vec
-
-
-def _core_iter_mode(phi_by_term, out_by_phase, solver_func, N, cast_mode):
-    """Core computation of the identification method using 'iter' mode.
-
-    This auxiliary function does an iterative kernel estimation on the
-    homophase signals. The iterative step begins at order ``N`` and ends at
-    order 1."""
-
-    kernels_vec = dict()
-
-    for n in range(N, 0, -1):
-        temp_sig = out_by_phase[n].copy()
-
-        for n2 in range(n+2, N+1, 2):
-            k = (n2-n)//2
-            temp_sig -= binomial(n2, k) * np.dot(phi_by_term[(n2, k)],
-                                                 kernels_vec[n2])
-
-        kernels_vec[n] = _solver(
-            _complex2real(phi_by_term[(n, 0)], cast_mode=cast_mode),
-            _complex2real(temp_sig, cast_mode=cast_mode), solver_func)
-
-    return kernels_vec
-
-
 def _solver(A, y, solver):
     """Solve Ax=y using ``solver`` if A is not an empty matrix."""
     if A.size:
-        return solver(A, y)
+        if solver in {'LS', 'ls'}:
+            return _ls_solver(A, y)
+        elif solver in {'QR', 'qr'}:
+            return _qr_solver(A, y)
+        else:
+            message = "Unknown solver {}; available solvers are 'LS' or 'QR'."
+            raise ValueError(message.format(solver))
     else:
         return np.zeros((0,))
 
@@ -123,8 +57,6 @@ def _qr_solver(A, y):
     else:
         return np.zeros((0,))
 
-
-#========================================#
 
 def _assert_enough_data_samples(nb_data, max_nb_est, M, N, name):
     """
