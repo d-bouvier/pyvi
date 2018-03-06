@@ -14,13 +14,38 @@ Developed for Python 3.6.1
 
 import unittest
 import numpy as np
-from pyvi.identification.tools import (_assert_enough_data_samples,
+from pyvi.identification.tools import (_solver, _assert_enough_data_samples,
                                        _complex2real)
 
 
 #==============================================================================
 # Test Class
 #==============================================================================
+
+class SolverTest(unittest.TestCase):
+
+    atol = 1e-15
+
+    def setUp(self):
+        self.A = np.array([[1., 0.5],
+                           [0.33, 2.]])
+        self.x = np.ones((2,))
+        self.y = np.dot(self.A, self.x)
+        self.list_solvers = ['LS', 'ls', 'QR', 'qr']
+
+    def test_correct_output(self):
+        for solver in self.list_solvers:
+            with self.subTest(i=solver):
+                x_est = _solver(self.A, self.y, solver)
+                result = np.allclose(self.x, x_est, atol=self.atol, rtol=0)
+                self.assertTrue(result)
+
+    def test_A_empty(self):
+        self.assertEqual(_solver(np.zeros((0,)), self.y, 'ls').size, 0)
+
+    def test_wrong_solver(self):
+        self.assertRaises(ValueError, _solver, self.A, self.y, '')
+
 
 class AssertEnoughDataSamplesTest(unittest.TestCase):
 

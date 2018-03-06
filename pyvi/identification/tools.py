@@ -4,9 +4,15 @@ Tools for kernel identification.
 
 Functions
 ---------
-assert_enough_data_samples :
+_solver :
+    Solve Ax=y using specified method if A is not an empty array.
+_ls_solver :
+    Compute least-squares solution of Ax=y.
+_qr_solver :
+    Compute solution of Ax=y using a QR decomposition of A.
+_assert_enough_data_samples :
     Assert that there is enough data samples for the identification.
-cplx_to_real :
+_cplx_to_real :
     Cast a complex numpy.ndarray to a specific type using a given mode.
 
 Notes
@@ -29,7 +35,8 @@ import scipy.linalg as sc_lin
 #==============================================================================
 
 def _solver(A, y, solver):
-    """Solve Ax=y using ``solver`` if A is not an empty matrix."""
+    """Solve Ax=y using specified method if A is not an empty array."""
+
     if A.size:
         if solver in {'LS', 'ls'}:
             return _ls_solver(A, y)
@@ -44,18 +51,17 @@ def _solver(A, y, solver):
 
 def _ls_solver(A, y):
     """Compute least-squares solution of Ax=y."""
+
     x, _, _, _ = sc_lin.lstsq(A, y)
     return x
 
 
 def _qr_solver(A, y):
     """Compute solution of Ax=y using a QR decomposition of A."""
-    if A.size:
-        q, r = sc_lin.qr(A, mode='economic')
-        z = np.dot(q.T, y)
-        return sc_lin.solve_triangular(r, z)
-    else:
-        return np.zeros((0,))
+
+    q, r = sc_lin.qr(A, mode='economic')
+    z = np.dot(q.T, y)
+    return sc_lin.solve_triangular(r, z)
 
 
 def _assert_enough_data_samples(nb_data, max_nb_est, M, N, name):
