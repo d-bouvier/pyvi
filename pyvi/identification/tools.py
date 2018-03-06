@@ -10,8 +10,6 @@ _ls_solver :
     Compute least-squares solution of Ax=y.
 _qr_solver :
     Compute solution of Ax=y using a QR decomposition of A.
-_assert_enough_data_samples :
-    Assert that there is enough data samples for the identification.
 _cplx_to_real :
     Cast a complex numpy.ndarray to a specific type using a given mode.
 
@@ -62,37 +60,6 @@ def _qr_solver(A, y):
     q, r = sc_lin.qr(A, mode='economic')
     z = np.dot(q.T, y)
     return sc_lin.solve_triangular(r, z)
-
-
-def _assert_enough_data_samples(nb_data, max_nb_est, M, N, name):
-    """
-    Assert that there is enough data samples for the identification.
-
-    Parameters
-    ----------
-    nb_data : int
-        Number of data samples in the input signal used for identification.
-    max_nb_est : int
-        Maximum size of linear problem to solve.
-    M : int or list(int)
-        Memory length for each kernels (in samples).
-    N : int
-        Truncation order.
-    name : str
-        Name of the identification method.
-
-    Raises
-    ------
-    ValueError
-        If L is inferior to the number of Volterra coefficients.
-    """
-
-    if nb_data < max_nb_est:
-        raise ValueError('Input signal has {} data samples'.format(nb_data) +
-                         ', it should have at least {} '.format(max_nb_est) +
-                         'for a truncation to order {} '.format(N) +
-                         'and a {}-samples memory length'.format(M) +
-                         "using '{}' mode.".format(name))
 
 
 def _complex2real(sig_cplx, cast_mode='real-imag'):

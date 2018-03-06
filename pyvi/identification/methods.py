@@ -28,7 +28,7 @@ Developed for Python 3.6.1
 
 import warnings
 import numpy as np
-from .tools import (_assert_enough_data_samples, _solver, _complex2real)
+from .tools import _solver, _complex2real
 from ..volterra.combinatorics import volterra_basis
 from ..volterra.tools import series_nb_coeff, vec2series, vec2dict_of_vec
 from ..utilities.mathbox import binomial
@@ -224,7 +224,7 @@ def _identification(input_data, output_data, M, N, required_nb_data_func,
     nb_data = input_data.size
     list_nb_coeff = series_nb_coeff(M, N, form='tri', out_by_order=True)
     required_nb_data = required_nb_data_func(list_nb_coeff)
-    _assert_enough_data_samples(nb_data, required_nb_data, M, N, name=mode)
+    _assert_enough_data_samples(nb_data, required_nb_data, M, N)
 
     # Create dictionary of combinatorial matrix
     if phi is None:

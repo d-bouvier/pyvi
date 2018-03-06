@@ -14,8 +14,7 @@ Developed for Python 3.6.1
 
 import unittest
 import numpy as np
-from pyvi.identification.tools import (_solver, _assert_enough_data_samples,
-                                       _complex2real)
+from pyvi.identification.tools import _solver, _complex2real
 
 
 #==============================================================================
@@ -45,13 +44,6 @@ class SolverTest(unittest.TestCase):
 
     def test_wrong_solver(self):
         self.assertRaises(ValueError, _solver, self.A, self.y, '')
-
-
-class AssertEnoughDataSamplesTest(unittest.TestCase):
-
-    def test_error_raised(self):
-        self.assertRaises(ValueError, _assert_enough_data_samples, 8, 9,
-                          3, 2, 'KLS')
 
 
 class Complex2RealTest(unittest.TestCase):
