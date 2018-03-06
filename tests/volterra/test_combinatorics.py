@@ -32,16 +32,20 @@ class VolterraBasisTest(unittest.TestCase):
         sig_r = np.arange(1, self.L+1)
         sig_c = np.arange(self.L) + 2j * np.arange(self.L)
         self.order_keys = {1: 0, 2: 0, 3: 0, 4: 0}
-        self.order_r = volterra_basis(sig_r, self.M, self.N, mode='order')
-        self.order_c = volterra_basis(sig_c, self.M, self.N, mode='order')
-        self.order_r_2 = volterra_basis(sig_r, self.M_2, self.N, mode='order')
-        self.order_c_2 = volterra_basis(sig_c, self.M_2, self.N, mode='order')
+        self.order_r = volterra_basis(sig_r, self.M, self.N, sorted_by='order')
+        self.order_c = volterra_basis(sig_c, self.M, self.N, sorted_by='order')
+        self.order_r_2 = volterra_basis(sig_r, self.M_2, self.N,
+                                        sorted_by='order')
+        self.order_c_2 = volterra_basis(sig_c, self.M_2, self.N,
+                                        sorted_by='order')
         self.term_keys = {(1, 0): 0, (2, 0): 0, (2, 1): 0, (3, 0): 0,
                           (3, 1): 0, (4, 0): 0, (4, 1): 0, (4, 2): 0}
-        self.term_r = volterra_basis(sig_r, self.M, self.N, mode='term')
-        self.term_c = volterra_basis(sig_c, self.M, self.N, mode='term')
-        self.term_r_2 = volterra_basis(sig_r, self.M_2, self.N, mode='term')
-        self.term_c_2 = volterra_basis(sig_c, self.M_2, self.N, mode='term')
+        self.term_r = volterra_basis(sig_r, self.M, self.N, sorted_by='term')
+        self.term_c = volterra_basis(sig_c, self.M, self.N, sorted_by='term')
+        self.term_r_2 = volterra_basis(sig_r, self.M_2, self.N,
+                                       sorted_by='term')
+        self.term_c_2 = volterra_basis(sig_c, self.M_2, self.N,
+                                       sorted_by='term')
 
     def test_output_type_for_orders(self):
         for i, value in enumerate([self.order_r, self.order_c, self.order_r_2,

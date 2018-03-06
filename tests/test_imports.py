@@ -69,7 +69,9 @@ class SeparationTestCase(PyviTestCase):
 class IdentificationTestCase(PyviTestCase):
 
     module = pyvi.identification
-    needed_properties = ['KLS', 'orderKLS', 'termKLS', 'iterKLS']
+    needed_properties = ['direct_method', 'order_method', 'term_method',
+                         'iter_method', 'KLS', 'orderKLS', 'termKLS',
+                         'iterKLS']
     should_be_absent_properties = []
 
 
