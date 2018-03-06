@@ -23,7 +23,7 @@ from ..utilities.tools import _as_list
 # Functions
 #==============================================================================
 
-def volterra_basis(signal, M, N, sorted_by='order'):
+def volterra_basis(signal, N, M, sorted_by='order'):
     """
     Base function for creating dictionnary of Volterra basis matrix.
 
@@ -31,10 +31,10 @@ def volterra_basis(signal, M, N, sorted_by='order'):
     ----------
     signal : array_like
         Input signal from which to construct the Volterras basis.
-    M : int or list(int)
-        Memory length for each kernels (in samples).
     N : int
         Truncation order.
+    M : int or list(int)
+        Memory length for each kernels (in samples).
     sorted_by : {'order', 'term'}, optional (default='order')
         Choose if matrices are computed for each order or combinatorial term.
 
@@ -67,8 +67,8 @@ def volterra_basis(signal, M, N, sorted_by='order'):
 
     # Loop on nonlinear orders
     for n, m, m_bis in zip(range(2, N+1), M[1:], M_bis[1:]):
-        nb_coeff = kernel_nb_coeff(m, n, form='tri')
-        nb_coeff_bis = kernel_nb_coeff(m_bis, n, form='tri')
+        nb_coeff = kernel_nb_coeff(n, m, form='tri')
+        nb_coeff_bis = kernel_nb_coeff(n, m_bis, form='tri')
         delay = np.concatenate(tuple(max_delay[n-1].values()))
         ind_bis = np.where(delay < m_bis)[0]
         dec_bis = len(ind_bis)

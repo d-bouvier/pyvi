@@ -48,7 +48,7 @@ from ..utilities.mathbox import binomial
 # Functions
 #==============================================================================
 
-def direct_method(input_sig, output_sig, M, N, **kwargs):
+def direct_method(input_sig, output_sig, N, M, **kwargs):
     """
     Direct kernel identification on the output signal.
 
@@ -58,10 +58,10 @@ def direct_method(input_sig, output_sig, M, N, **kwargs):
         Input signal.
     output_sig : numpy.ndarray
         Output signal; should have the same shape as ``input_sig``.
-    M : int or list(int)
-        Memory length for each kernels (in samples).
     N : int
         Truncation order.
+    M : int or list(int)
+        Memory length for each kernels (in samples).
 
     Returns
     -------
@@ -79,13 +79,13 @@ def direct_method(input_sig, output_sig, M, N, **kwargs):
         mat = np.concatenate([val for n, val in sorted(phi_by_order.items())],
                              axis=1)
         kernels_vec = _solver(mat, out_sig, solver)
-        return vec2dict_of_vec(kernels_vec, M, N)
+        return vec2dict_of_vec(kernels_vec, N, M)
 
-    return _identification(input_sig, output_sig, M, N, required_nb_data_func,
+    return _identification(input_sig, output_sig, N, M, required_nb_data_func,
                            core_func, 'order', **kwargs)
 
 
-def order_method(input_sig, output_by_order, M, N, **kwargs):
+def order_method(input_sig, output_by_order, N, M, **kwargs):
     """
     Separate kernel identification on each nonlinear homogeneous order.
 
@@ -97,10 +97,10 @@ def order_method(input_sig, output_by_order, M, N, **kwargs):
         Nonlinear homogeneous orders of the output signal; the first dimension
         of the array should be of length ``N``, and each slice along this
         dimension should have the same shape as ``input_sig``.
-    M : int or list(int)
-        Memory length for each kernels (in samples).
     N : int
         Truncation order.
+    M : int or list(int)
+        Memory length for each kernels (in samples).
 
     Returns
     -------
@@ -120,11 +120,11 @@ def order_method(input_sig, output_by_order, M, N, **kwargs):
             kernels_vec[n] = _solver(phi, out_by_order[n-1], solver)
         return kernels_vec
 
-    return _identification(input_sig, output_by_order, M, N,
+    return _identification(input_sig, output_by_order, N, M,
                            required_nb_data_func, core_func, 'order', **kwargs)
 
 
-def term_method(input_sig, output_by_term, M, N, **kwargs):
+def term_method(input_sig, output_by_term, N, M, **kwargs):
     """
     Separate kernel identification on each nonlinear combinatorial term.
 
@@ -137,10 +137,10 @@ def term_method(input_sig, output_by_term, M, N, **kwargs):
         contained in the dictionar should have the same shape as ``input_sig``;
         the dictionary should contains all keys ``(n, q)`` for
         ``n in range(1, N+1)`` and ``q in range(1+n//2)``.
-    M : int or list(int)
-        Memory length for each kernels (in samples).
     N : int
         Truncation order.
+    M : int or list(int)
+        Memory length for each kernels (in samples).
 
     Returns
     -------
@@ -173,11 +173,11 @@ def term_method(input_sig, output_by_term, M, N, **kwargs):
 
         return kernels_vec
 
-    return _identification(input_sig, output_by_term, M, N,
+    return _identification(input_sig, output_by_term, N, M,
                            required_nb_data_func, core_func, 'term', **kwargs)
 
 
-def iter_method(input_sig, output_by_phase, M, N, **kwargs):
+def iter_method(input_sig, output_by_phase, N, M, **kwargs):
     """
     Recursive kernel identification on homophase signals.
 
@@ -191,10 +191,10 @@ def iter_method(input_sig, output_by_phase, M, N, **kwargs):
         dimension should have the same shape as ``input_sig``; homophase
         signals should be order with corresponding phases as follows:
         ``[0, 1, ... N, -N, ..., -1]``.
-    M : int or list(int)
-        Memory length for each kernels (in samples).
     N : int
         Truncation order.
+    M : int or list(int)
+        Memory length for each kernels (in samples).
 
     Returns
     -------
@@ -225,18 +225,18 @@ def iter_method(input_sig, output_by_phase, M, N, **kwargs):
 
         return kernels_vec
 
-    return _identification(input_sig, output_by_phase, M, N,
+    return _identification(input_sig, output_by_phase, N, M,
                            required_nb_data_func, core_func, 'term', **kwargs)
 
 
-def _identification(input_data, output_data, M, N, required_nb_data_func,
+def _identification(input_data, output_data, N, M, required_nb_data_func,
                     core_func, sorted_by, solver='LS', out_form='vec',
                     projection=None, phi=None, cast_mode='real-imag'):
     """Core function for kernel identification in linear algebra formalism."""
 
     # Check that there is enough data to do the identification
     nb_data = input_data.size
-    list_nb_coeff = series_nb_coeff(M, N, form='tri', out_by_order=True)
+    list_nb_coeff = series_nb_coeff(N, M, form='tri', out_by_order=True)
     required_nb_data = required_nb_data_func(list_nb_coeff)
     if nb_data < required_nb_data:
         raise ValueError('Input signal has {} data samples'.format(nb_data) +
@@ -245,7 +245,7 @@ def _identification(input_data, output_data, M, N, required_nb_data_func,
 
     # Create dictionary of combinatorial matrix
     if phi is None:
-        phi = volterra_basis(input_data, M, N, sorted_by=sorted_by)
+        phi = volterra_basis(input_data, N, M, sorted_by=sorted_by)
     else:
         pass
         #TODO check correct
@@ -257,49 +257,49 @@ def _identification(input_data, output_data, M, N, required_nb_data_func,
     if out_form == 'vec':
         return kernels_vec
     else:
-        return vec2series(kernels_vec, M, N, form=out_form)
+        return vec2series(kernels_vec, N, M, form=out_form)
 
 
 #========================================#
 
-def KLS(input_sig, output_sig, M, N, **kwargs):
+def KLS(input_sig, output_sig, N, M, **kwargs):
     """
     Kernel identification via Least-Squares method using a QR decomposition.
     """
 
     kwargs['solver'] = 'QR'
     kwargs['out_form'] = 'sym'
-    return direct_method(input_sig, output_sig, M, N, **kwargs)
+    return direct_method(input_sig, output_sig, N, M, **kwargs)
 
 
-def orderKLS(input_sig, output_by_order, M, N, **kwargs):
+def orderKLS(input_sig, output_by_order, N, M, **kwargs):
     """
     Performs KLS method on each nonlinear homogeneous order.
     """
 
     kwargs['solver'] = 'QR'
     kwargs['out_form'] = 'sym'
-    return order_method(input_sig, output_by_order, M, N, **kwargs)
+    return order_method(input_sig, output_by_order, N, M, **kwargs)
 
 
-def termKLS(input_sig, output_by_term, M, N, **kwargs):
+def termKLS(input_sig, output_by_term, N, M, **kwargs):
     """
     Performs KLS method on each combinatorial term.
     """
 
     kwargs['solver'] = 'QR'
     kwargs['out_form'] = 'sym'
-    return term_method(input_sig, output_by_term, M, N, **kwargs)
+    return term_method(input_sig, output_by_term, N, M, **kwargs)
 
 
-def iterKLS(input_sig, output_by_phase, M, N, **kwargs):
+def iterKLS(input_sig, output_by_phase, N, M, **kwargs):
     """
     Performs KLS method recursively on homophase signals.
     """
 
     kwargs['solver'] = 'QR'
     kwargs['out_form'] = 'sym'
-    return iter_method(input_sig, output_by_phase, M, N, **kwargs)
+    return iter_method(input_sig, output_by_phase, N, M, **kwargs)
 
 
 #========================================#

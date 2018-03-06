@@ -43,8 +43,8 @@ class KLSTest(unittest.TestCase):
         self.kernels_true = generate_kernels(self.N, self.M)
 
     def _identification(self):
-        self.kernels_est = identif.KLS(self.input_sig, self.output_sig, self.M,
-                                       self.N)
+        self.kernels_est = identif.KLS(self.input_sig, self.output_sig, self.N,
+                                       self.M)
 
     def setUp(self):
         self._init_parameters()
@@ -92,7 +92,7 @@ class orderKLSTest(KLSTest):
     def _identification(self):
         self.kernels_est = identif.orderKLS(self.input_sig,
                                             self.output_sig_by_order,
-                                            self.M, self.N)
+                                            self.N, self.M)
 
 
 class orderKLSTest_M_as_list(orderKLSTest):
@@ -129,7 +129,7 @@ class termKLSTest(KLSTest):
     def _identification(self):
         self.kernels_est = identif.termKLS(self.input_sig,
                                            self.output_sig_by_term,
-                                           self.M, self.N)
+                                           self.N, self.M)
 
 
 class termKLSTest_M_as_list(termKLSTest):
@@ -161,7 +161,7 @@ class iterKLSTest(termKLSTest):
     def _identification(self):
         self.kernels_est = identif.iterKLS(self.input_sig,
                                            self.output_sig_by_phase,
-                                           self.M, self.N)
+                                           self.N, self.M)
 
 
 class iterKLSTest_M_as_list(iterKLSTest):
