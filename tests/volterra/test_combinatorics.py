@@ -32,16 +32,20 @@ class VolterraBasisTest(unittest.TestCase):
         sig_r = np.arange(1, self.L+1)
         sig_c = np.arange(self.L) + 2j * np.arange(self.L)
         self.order_keys = {1: 0, 2: 0, 3: 0, 4: 0}
-        self.order_r = volterra_basis(sig_r, self.M, self.N, mode='order')
-        self.order_c = volterra_basis(sig_c, self.M, self.N, mode='order')
-        self.order_r_2 = volterra_basis(sig_r, self.M_2, self.N, mode='order')
-        self.order_c_2 = volterra_basis(sig_c, self.M_2, self.N, mode='order')
+        self.order_r = volterra_basis(sig_r, self.N, self.M, sorted_by='order')
+        self.order_c = volterra_basis(sig_c, self.N, self.M, sorted_by='order')
+        self.order_r_2 = volterra_basis(sig_r, self.N, self.M_2,
+                                        sorted_by='order')
+        self.order_c_2 = volterra_basis(sig_c, self.N, self.M_2,
+                                        sorted_by='order')
         self.term_keys = {(1, 0): 0, (2, 0): 0, (2, 1): 0, (3, 0): 0,
                           (3, 1): 0, (4, 0): 0, (4, 1): 0, (4, 2): 0}
-        self.term_r = volterra_basis(sig_r, self.M, self.N, mode='term')
-        self.term_c = volterra_basis(sig_c, self.M, self.N, mode='term')
-        self.term_r_2 = volterra_basis(sig_r, self.M_2, self.N, mode='term')
-        self.term_c_2 = volterra_basis(sig_c, self.M_2, self.N, mode='term')
+        self.term_r = volterra_basis(sig_r, self.N, self.M, sorted_by='term')
+        self.term_c = volterra_basis(sig_c, self.N, self.M, sorted_by='term')
+        self.term_r_2 = volterra_basis(sig_r, self.N, self.M_2,
+                                       sorted_by='term')
+        self.term_c_2 = volterra_basis(sig_c, self.N, self.M_2,
+                                       sorted_by='term')
 
     def test_output_type_for_orders(self):
         for i, value in enumerate([self.order_r, self.order_c, self.order_r_2,
@@ -71,28 +75,28 @@ class VolterraBasisTest(unittest.TestCase):
         for i, value in enumerate([self.order_r, self.order_c]):
             for n, basis in value.items():
                 with self.subTest(i=(i, n)):
-                    nb_coeff = kernel_nb_coeff(self.M, n, form='sym')
+                    nb_coeff = kernel_nb_coeff(n, self.M, form='sym')
                     self.assertEqual(basis.shape, (self.L, nb_coeff))
 
     def test_basis_shapes_for_orders_2(self):
         for i, value in enumerate([self.order_r_2, self.order_c_2]):
             for n, basis in value.items():
                 with self.subTest(i=(i, n)):
-                    nb_coeff = kernel_nb_coeff(self.M_2[n-1], n, form='sym')
+                    nb_coeff = kernel_nb_coeff(n, self.M_2[n-1], form='sym')
                     self.assertEqual(basis.shape, (self.L, nb_coeff))
 
     def test_basis_shapes_for_terms(self):
         for i, value in enumerate([self.term_r, self.term_c]):
             for (n, q), basis in value.items():
                 with self.subTest(i=(i, (n, q))):
-                    nb_coeff = kernel_nb_coeff(self.M, n, form='sym')
+                    nb_coeff = kernel_nb_coeff(n, self.M, form='sym')
                     self.assertEqual(basis.shape, (self.L, nb_coeff))
 
     def test_basis_shapes_for_terms_2(self):
         for i, value in enumerate([self.term_r_2, self.term_c_2]):
             for (n, q), basis in value.items():
                 with self.subTest(i=(i, (n, q))):
-                    nb_coeff = kernel_nb_coeff(self.M_2[n-1], n, form='sym')
+                    nb_coeff = kernel_nb_coeff(n, self.M_2[n-1], form='sym')
                     self.assertEqual(basis.shape, (self.L, nb_coeff))
 
     def test_same_result_with_term_and_order_on_real_signals(self):

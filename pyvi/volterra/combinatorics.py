@@ -23,7 +23,7 @@ from ..utilities.tools import _as_list
 # Functions
 #==============================================================================
 
-def volterra_basis(signal, M, N, mode):
+def volterra_basis(signal, N, M, sorted_by='order'):
     """
     Base function for creating dictionnary of Volterra basis matrix.
 
@@ -31,11 +31,11 @@ def volterra_basis(signal, M, N, mode):
     ----------
     signal : array_like
         Input signal from which to construct the Volterras basis.
-    M : int or list(int)
-        Memory length for each kernels (in samples).
     N : int
         Truncation order.
-    mode : {'order', 'term'}
+    M : int or list(int)
+        Memory length for each kernels (in samples).
+    sorted_by : {'order', 'term'}, optional (default='order')
         Choose if matrices are computed for each order or combinatorial term.
 
     Returns
@@ -67,8 +67,8 @@ def volterra_basis(signal, M, N, mode):
 
     # Loop on nonlinear orders
     for n, m, m_bis in zip(range(2, N+1), M[1:], M_bis[1:]):
-        nb_coeff = kernel_nb_coeff(m, n, form='tri')
-        nb_coeff_bis = kernel_nb_coeff(m_bis, n, form='tri')
+        nb_coeff = kernel_nb_coeff(n, m, form='tri')
+        nb_coeff_bis = kernel_nb_coeff(n, m_bis, form='tri')
         delay = np.concatenate(tuple(max_delay[n-1].values()))
         ind_bis = np.where(delay < m_bis)[0]
         dec_bis = len(ind_bis)
@@ -79,7 +79,7 @@ def volterra_basis(signal, M, N, mode):
         # Initialization
         phi[(n, 0)] = np.zeros((len_sig, nb_coeff), dtype=dtype)
         phi_bis[(n, 0)] = np.zeros((len_sig, nb_coeff_bis), dtype=dtype)
-        if mode == 'term':
+        if sorted_by == 'term':
             for k in range(1, 1 + n//2):
                 phi[n, k] = np.zeros((len_sig, nb_coeff), dtype=dtype)
                 phi_bis[n, k] = np.zeros((len_sig, nb_coeff_bis), dtype=dtype)
@@ -88,7 +88,7 @@ def volterra_basis(signal, M, N, mode):
         phi_bis[(n, 0)][:, :dec_bis] = \
             signal * phi_bis[(n-1, 0)][:, ind_bis]
         phi[(n, 0)][:, :dec] = phi_bis[(n, 0)][:, ind]
-        if mode == 'term':
+        if sorted_by == 'term':
             # Terms 1 <= k < (n+1)//2
             for k in range(1, (n+1)//2):
                 phi_bis[(n, k)][:, :dec_bis] = \
@@ -110,17 +110,17 @@ def volterra_basis(signal, M, N, mode):
         phi[(n, 0)] = _copy_and_shift_columns(phi[(n, 0)], slices_list)
         phi_bis[(n, 0)] = _copy_and_shift_columns(phi_bis[(n, 0)],
                                                   slices_list_bis)
-        if mode == 'term':
+        if sorted_by == 'term':
             for k in range(1, 1 + n//2):
                 phi[(n, k)] = _copy_and_shift_columns(phi[(n, k)],
                                                       slices_list)
                 phi_bis[(n, k)] = _copy_and_shift_columns(phi_bis[(n, k)],
                                                           slices_list_bis)
 
-    if mode == 'term':
+    if sorted_by == 'term':
         for (n, k) in phi.keys():
             phi[(n, k)] = phi[(n, k)] / binomial(n, k)
-    elif mode == 'order':
+    elif sorted_by == 'order':
         for n in range(1, N+1):
             phi[n] = phi.pop((n, 0))
 
