@@ -37,7 +37,6 @@ Developed for Python 3.6.1
 # Importations
 #==============================================================================
 
-import warnings
 import numpy as np
 from .tools import _solver, _complex2real
 from ..volterra.combinatorics import volterra_basis
