@@ -23,29 +23,40 @@ from ..utilities.tools import _as_list
 # Functions
 #==============================================================================
 
+
+def hammerstein_basis(signal, N, M, sorted_by='order'):
+    """
+    Dictionary of combinatorial basis matrix for Hammerstein system.
+    """
+
+    _M = _as_list(M, N)
+    signal = signal.copy()
+    len_sig = signal.shape[0]
+    signal.shape = (len_sig, 1)
+
+    phi = dict()
+    for n, m in zip(range(1, N+1), _M):
+        phi[(n, 0)] = _combinatorial_mat_diag_terms(signal**n, m)
+        if sorted_by == 'term':
+            # Terms 1 <= k < (n+1)//2
+            for k in range(1, (n+1)//2):
+                tmp = signal**(n-k) * signal.conj()**k
+                phi[(n, k)] = _combinatorial_mat_diag_terms(tmp, m)
+            # Term k = n//2
+            if not n % 2:
+                tmp = np.real(signal * signal.conj())**(n//2)
+                phi[(n, n//2)] = _combinatorial_mat_diag_terms(tmp, m)
+
+    if sorted_by == 'order':
+        phi = _phi_by_order_post_processing(phi, N)
+
+    return phi
+
+
 def volterra_basis(signal, N, M, sorted_by='order'):
     """
-    Computes dictionary of combinatorial basis matrix for Volterra system.
-
-    Parameters
-    ----------
-    signal : array_like
-        Input signal from which to construct the Volterras basis.
-    N : int
-        Truncation order.
-    M : int or list(int)
-        Memory length for each kernels (in samples).
-    sorted_by : {'order', 'term'}, optional (default='order')
-        Choose if matrices are computed for each nonlinear homogeneous order
-        or nonlinear combinatorial term.
-
-    Returns
-    -------
-    kernels : dict(int or (int, int): numpy.ndarray)
-        Dictionary of combinatorial basis matrix for each order or
-        combinatorial term.
+    Dictionary of combinatorial basis matrix for Volterra system.
     """
-
 
     def _copy_and_shift_columns(n, m, dec):
         """Create delayed versions of columns by copying and shifting them."""
@@ -128,18 +139,20 @@ def volterra_basis(signal, N, M, sorted_by='order'):
         current_max_delay = np.concatenate(tuple(max_delay[n].values()))
         phi[(n, k)] = val[:, np.where(current_max_delay < _M_save[n-1])[0]]
 
-    return _phi_post_processing(phi, N, sorted_by)
-
-
-def _phi_post_processing(phi, N, sorted_by):
-    """Post processing of the dictionary ``phi``."""
-
     if sorted_by == 'term':
         for (n, k) in phi.keys():
-            phi[(n, k)] = phi[(n, k)] / binomial(n, k)
+                phi[(n, k)] = phi[(n, k)] / binomial(n, k)
     elif sorted_by == 'order':
-        for n in range(1, N+1):
-            phi[n] = phi.pop((n, 0))
+        phi = _phi_by_order_post_processing(phi, N)
+
+    return phi
+
+
+def _phi_by_order_post_processing(phi, N):
+    """Post processing of the dictionary ``phi`` if it by nonlinear order."""
+
+    for n in range(1, N+1):
+        phi[n] = phi.pop((n, 0))
 
     return phi
 
