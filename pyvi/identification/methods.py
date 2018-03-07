@@ -193,10 +193,10 @@ def iter_method(input_sig, output_by_phase, N, M, **kwargs):
         Input signal.
     output_by_phase : numpy.ndarray
         Homophase signals constituting the output signal; the first dimension
-        of the array should be of length ``2N+1``, and each slice along this
-        dimension should have the same shape as ``input_sig``; homophase
-        signals should be order with corresponding phases as follows:
-        ``[0, 1, ... N, -N, ..., -1]``.
+        of the array should be of length ``2N+1`` (if the whole phase spectrum
+        is given, in the order ``[0, 1, ... N, -N, ..., -1]``) or ``N+1``
+        (if only the null-and-positive phases are given); each slice along
+        the first dimension should have the same shape as ``input_sig``.
     N : int
         Truncation order.
     M : int or list(int)
@@ -217,18 +217,27 @@ def iter_method(input_sig, output_by_phase, N, M, **kwargs):
         """Core computation of the identification."""
 
         kernels_vec = dict()
+        _out_by_phase = out_by_phase.copy()
+
         for n in range(N, 0, -1):
-            temp_sig = out_by_phase[n].copy()
+            current_phi = _complex2real(phi_by_term[(n, 0)],
+                                        cast_mode=cast_mode)
+            current_phase_sig = _complex2real(_out_by_phase[n],
+                                              cast_mode=cast_mode)
 
-            for n2 in range(n+2, N+1, 2):
-                k = (n2-n)//2
-                temp_sig -= binomial(n2, k) * np.dot(phi_by_term[(n2, k)],
-                                                     kernels_vec[n2])
+            if n == 2:
+                current_phi = np.concatenate(
+                    (current_phi, binomial(n, n//2) * phi_by_term[(n, n//2)]),
+                    axis=0)
+                current_phase_sig = np.concatenate(
+                    (current_phase_sig, _out_by_phase[0]), axis=0)
 
-            kernels_vec[n] = _solver(
-                _complex2real(phi_by_term[(n, 0)], cast_mode=cast_mode),
-                _complex2real(temp_sig, cast_mode=cast_mode), solver)
+            kernels_vec[n] = _solver(current_phi, current_phase_sig, solver)
 
+            for k in range(1, 1+n//2):
+                p = n - 2*k
+                _out_by_phase[p] -= \
+                    binomial(n, k)*np.dot(phi_by_term[(n, k)], kernels_vec[n])
         return kernels_vec
 
     return _identification(input_sig, output_by_phase, N, M,
@@ -245,10 +254,10 @@ def phase_method(input_sig, output_by_phase, N, M, **kwargs):
         Input signal.
     output_by_phase : numpy.ndarray
         Homophase signals constituting the output signal; the first dimension
-        of the array should be of length ``2N+1``, and each slice along this
-        dimension should have the same shape as ``input_sig``; homophase
-        signals should be order with corresponding phases as follows:
-        ``[0, 1, ... N, -N, ..., -1]``.
+        of the array should be of length ``2N+1`` (if the whole phase spectrum
+        is given, in the order ``[0, 1, ... N, -N, ..., -1]``) or ``N+1``
+        (if only the null-and-positive phases are given); each slice along
+        the first dimension should have the same shape as ``input_sig``.
     N : int
         Truncation order.
     M : int or list(int)
