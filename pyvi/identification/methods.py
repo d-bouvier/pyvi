@@ -193,10 +193,10 @@ def iter_method(input_sig, output_by_phase, N, M, **kwargs):
         Input signal.
     output_by_phase : numpy.ndarray
         Homophase signals constituting the output signal; the first dimension
-        of the array should be of length ``2N+1``, and each slice along this
-        dimension should have the same shape as ``input_sig``; homophase
-        signals should be order with corresponding phases as follows:
-        ``[0, 1, ... N, -N, ..., -1]``.
+        of the array should be of length ``2N+1`` (if the whole phase spectrum
+        is given, in the order ``[0, 1, ... N, -N, ..., -1]``) or ``N+1``
+        (if only the null-and-positive phases are given); each slice along
+        the first dimension should have the same shape as ``input_sig``.
     N : int
         Truncation order.
     M : int or list(int)
@@ -245,10 +245,10 @@ def phase_method(input_sig, output_by_phase, N, M, **kwargs):
         Input signal.
     output_by_phase : numpy.ndarray
         Homophase signals constituting the output signal; the first dimension
-        of the array should be of length ``2N+1``, and each slice along this
-        dimension should have the same shape as ``input_sig``; homophase
-        signals should be order with corresponding phases as follows:
-        ``[0, 1, ... N, -N, ..., -1]``.
+        of the array should be of length ``2N+1`` (if the whole phase spectrum
+        is given, in the order ``[0, 1, ... N, -N, ..., -1]``) or ``N+1``
+        (if only the null-and-positive phases are given); each slice along
+        the first dimension should have the same shape as ``input_sig``.
     N : int
         Truncation order.
     M : int or list(int)
