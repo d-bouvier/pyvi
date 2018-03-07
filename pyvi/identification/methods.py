@@ -39,7 +39,7 @@ Developed for Python 3.6.1
 
 import numpy as np
 from .tools import _solver, _complex2real
-from ..volterra.combinatorics import volterra_basis
+from ..volterra.combinatorial_basis import volterra_basis
 from ..volterra.tools import series_nb_coeff, vec2series, vec2dict_of_vec
 from ..utilities.mathbox import binomial
 

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Test script for pyvi/volterra/combinatorics.py
+Test script for pyvi/volterra/combinatorial_basis.py
 
 Notes
 -----
@@ -14,7 +14,7 @@ Developed for Python 3.6.1
 
 import unittest
 import numpy as np
-from pyvi.volterra.combinatorics import volterra_basis
+from pyvi.volterra.combinatorial_basis import volterra_basis
 from pyvi.volterra.tools import kernel_nb_coeff
 
 
