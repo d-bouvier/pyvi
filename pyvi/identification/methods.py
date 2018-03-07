@@ -6,6 +6,10 @@ This package creates identification methods for Volterra kernels. It relies
 on a matrix representation of the input-to-output relation of a Volterra
 series, and uses linear algebra tools to estimate the kernels coefficients.
 
+It contains five methods using different type of output data; it also defines
+wrappers for the family of KLS methods, where some parameters already fixed
+(``solver`` is set to 'QR' and ``out_form`` to 'sym').
+
 Functions
 ---------
 direct_method :
@@ -16,8 +20,8 @@ term_method :
     Separate kernel identification on each nonlinear combinatorial term.
 iter_method :
     Recursive kernel identification on homophase signals.
-Following functions are wrappers for the previous ones, with parameters
-'solver' set to 'QR' and 'out_form' to 'sym'.
+phase_method :
+    Separate kernel identification on odd and even homophase signals.
 KLS :
     Kernel identification via Least-Squares method using a QR decomposition.
 orderKLS :
@@ -26,6 +30,8 @@ termKLS :
     Performs KLS method on each combinatorial term.
 iterKLS :
     Performs KLS method recursively on homophase signals.
+phaseKLS :
+    Performs KLS method separately on odd and even homophase signals.
 
 Notes
 -----
@@ -39,7 +45,7 @@ Developed for Python 3.6.1
 
 import numpy as np
 from .tools import _solver, _complex2real
-from ..volterra.combinatorics import volterra_basis
+from ..volterra.combinatorial_basis import volterra_basis
 from ..volterra.tools import series_nb_coeff, vec2series, vec2dict_of_vec
 from ..utilities.mathbox import binomial
 
@@ -187,10 +193,10 @@ def iter_method(input_sig, output_by_phase, N, M, **kwargs):
         Input signal.
     output_by_phase : numpy.ndarray
         Homophase signals constituting the output signal; the first dimension
-        of the array should be of length ``2N+1``, and each slice along this
-        dimension should have the same shape as ``input_sig``; homophase
-        signals should be order with corresponding phases as follows:
-        ``[0, 1, ... N, -N, ..., -1]``.
+        of the array should be of length ``2N+1`` (if the whole phase spectrum
+        is given, in the order ``[0, 1, ... N, -N, ..., -1]``) or ``N+1``
+        (if only the null-and-positive phases are given); each slice along
+        the first dimension should have the same shape as ``input_sig``.
     N : int
         Truncation order.
     M : int or list(int)
@@ -211,17 +217,88 @@ def iter_method(input_sig, output_by_phase, N, M, **kwargs):
         """Core computation of the identification."""
 
         kernels_vec = dict()
+        _out_by_phase = out_by_phase.copy()
+
         for n in range(N, 0, -1):
-            temp_sig = out_by_phase[n].copy()
+            current_phi = _complex2real(phi_by_term[(n, 0)],
+                                        cast_mode=cast_mode)
+            current_phase_sig = _complex2real(_out_by_phase[n],
+                                              cast_mode=cast_mode)
 
-            for n2 in range(n+2, N+1, 2):
-                k = (n2-n)//2
-                temp_sig -= binomial(n2, k) * np.dot(phi_by_term[(n2, k)],
-                                                     kernels_vec[n2])
+            if n == 2:
+                current_phi = np.concatenate(
+                    (current_phi, binomial(n, n//2) * phi_by_term[(n, n//2)]),
+                    axis=0)
+                current_phase_sig = np.concatenate(
+                    (current_phase_sig, _out_by_phase[0]), axis=0)
 
-            kernels_vec[n] = _solver(
-                _complex2real(phi_by_term[(n, 0)], cast_mode=cast_mode),
-                _complex2real(temp_sig, cast_mode=cast_mode), solver)
+            kernels_vec[n] = _solver(current_phi, current_phase_sig, solver)
+
+            for k in range(1, 1+n//2):
+                p = n - 2*k
+                _out_by_phase[p] -= \
+                    binomial(n, k)*np.dot(phi_by_term[(n, k)], kernels_vec[n])
+        return kernels_vec
+
+    return _identification(input_sig, output_by_phase, N, M,
+                           required_nb_data_func, core_func, 'term', **kwargs)
+
+
+def phase_method(input_sig, output_by_phase, N, M, **kwargs):
+    """
+    Separate kernel identification on odd and even homophase signals.
+
+    Parameters
+    ----------
+    input_sig : numpy.ndarray
+        Input signal.
+    output_by_phase : numpy.ndarray
+        Homophase signals constituting the output signal; the first dimension
+        of the array should be of length ``2N+1`` (if the whole phase spectrum
+        is given, in the order ``[0, 1, ... N, -N, ..., -1]``) or ``N+1``
+        (if only the null-and-positive phases are given); each slice along
+        the first dimension should have the same shape as ``input_sig``.
+    N : int
+        Truncation order.
+    M : int or list(int)
+        Memory length for each kernels (in samples).
+
+    Returns
+    -------
+    kernels : dict(int: numpy.ndarray)
+        Dictionary of estimated kernels, where each key is the nonlinear order.
+    {}
+    """
+
+    def required_nb_data_func(list_nb_coeff):
+        """Compute the minimum number of data required."""
+        return max(list_nb_coeff)
+
+    def core_func(phi_by_term, out_by_phase, solver, cast_mode):
+        """Core computation of the identification."""
+
+        L = out_by_phase.shape[1]
+        sizes = series_nb_coeff(N, M, form='tri', out_by_order=True)
+        kernels_vec = dict()
+
+        for is_odd in [False, True]:
+            curr_phases = range(is_odd, N+1, 2)
+            curr_y = np.concatenate([out_by_phase[p] for p in curr_phases],
+                                    axis=0)
+            curr_phi = np.bmat(
+                [[phi_by_term.get((p+2*k, k), np.zeros((L, sizes[p+2*k-1]))) *
+                  binomial(p+2*k, k) for k in range(1-(p+1)//2, 1+(N-p)//2)]
+                 for p in curr_phases])
+
+            curr_f = _solver(_complex2real(curr_phi, cast_mode=cast_mode),
+                             _complex2real(curr_y, cast_mode=cast_mode),
+                             solver)
+
+            index = 0
+            for n in range(1 if is_odd else 2, N+1, 2):
+                nb_term = sizes[n-1]
+                kernels_vec[n] = curr_f[index:index+nb_term]
+                index += nb_term
 
         return kernels_vec
 
@@ -262,13 +339,18 @@ def _identification(input_data, output_data, N, M, required_nb_data_func,
 
 #========================================#
 
-def KLS(input_sig, output_sig, N, M, **kwargs):
-    """
-    Kernel identification via Least-Squares method using a QR decomposition.
-    """
-
+def _kwargs_for_KLS(**kwargs):
     kwargs['solver'] = 'QR'
     kwargs['out_form'] = 'sym'
+    return kwargs
+
+
+def KLS(input_sig, output_sig, N, M, **kwargs):
+    """
+    Kernel identification via Least-Squares using a QR decomposition.
+    """
+
+    kwargs = _kwargs_for_KLS(**kwargs)
     return direct_method(input_sig, output_sig, N, M, **kwargs)
 
 
@@ -277,8 +359,7 @@ def orderKLS(input_sig, output_by_order, N, M, **kwargs):
     Performs KLS method on each nonlinear homogeneous order.
     """
 
-    kwargs['solver'] = 'QR'
-    kwargs['out_form'] = 'sym'
+    kwargs = _kwargs_for_KLS(**kwargs)
     return order_method(input_sig, output_by_order, N, M, **kwargs)
 
 
@@ -287,8 +368,7 @@ def termKLS(input_sig, output_by_term, N, M, **kwargs):
     Performs KLS method on each combinatorial term.
     """
 
-    kwargs['solver'] = 'QR'
-    kwargs['out_form'] = 'sym'
+    kwargs = _kwargs_for_KLS(**kwargs)
     return term_method(input_sig, output_by_term, N, M, **kwargs)
 
 
@@ -297,9 +377,17 @@ def iterKLS(input_sig, output_by_phase, N, M, **kwargs):
     Performs KLS method recursively on homophase signals.
     """
 
-    kwargs['solver'] = 'QR'
-    kwargs['out_form'] = 'sym'
+    kwargs = _kwargs_for_KLS(**kwargs)
     return iter_method(input_sig, output_by_phase, N, M, **kwargs)
+
+
+def phaseKLS(input_sig, output_by_phase, N, M, **kwargs):
+    """
+    Performs KLS method separately on odd and even homophase signals.
+    """
+
+    kwargs = _kwargs_for_KLS(**kwargs)
+    return phase_method(input_sig, output_by_phase, N, M, **kwargs)
 
 
 #========================================#
@@ -332,12 +420,12 @@ kwargs_docstring_cast_mode = """
         Choose how complex number are casted to real numbers; if set to
         'real-imag', arrays for the real and imaginary part will be stacked."""
 
-for mode in ('direct', 'order', 'term', 'iter'):
+for mode in ('direct', 'order', 'term', 'iter', 'phase'):
     method = locals()[mode + '_method']
     kwargs_docstring = kwargs_docstring_common
     if mode in {'direct', 'order'}:
         kwargs_docstring += kwargs_docstring_phi_order
-    elif mode in {'term', 'iter'}:
+    elif mode in {'term', 'iter', 'phase'}:
         kwargs_docstring += kwargs_docstring_phi_term
         kwargs_docstring += kwargs_docstring_cast_mode
     method.__doc__ = method.__doc__.format(kwargs_docstring)
@@ -352,8 +440,8 @@ _wrapper_doc_post = """
     pyvi.identification.{}_method
     """
 
-for method, mode in zip((KLS, orderKLS, termKLS, iterKLS),
-                        ('direct', 'order', 'term', 'iter')):
+for method, mode in zip((KLS, orderKLS, termKLS, iterKLS, phaseKLS),
+                        ('direct', 'order', 'term', 'iter', 'phase')):
     method.__doc__ += _wrapper_doc_pre.format(mode)
     corresponding_method_doc = locals()[mode + '_method'].__doc__
     method.__doc__ += '\n'.join(corresponding_method_doc.splitlines()[2:])

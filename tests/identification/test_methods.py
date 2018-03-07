@@ -176,6 +176,30 @@ class iterKLSTest_M_as_list(iterKLSTest):
                 self.assertEqual(self.kernels_est[n].shape, (m,)*n)
 
 
+class phaseKLSTest(iterKLSTest):
+
+    def _init_parameters(self):
+        iterKLSTest._init_parameters(self)
+        self.atol = 1e-12
+
+    def _identification(self):
+        self.kernels_est = identif.phaseKLS(self.input_sig,
+                                            self.output_sig_by_phase,
+                                            self.N, self.M)
+
+
+class phaseKLSTest_M_as_list(phaseKLSTest):
+
+    def _init_parameters(self):
+        super()._init_parameters()
+        self.M = [2, 0, 3]
+
+    def test_check_shape_kernels(self):
+        for m, n in zip(self.M, range(1, self.N+1)):
+            with self.subTest(i=n):
+                self.assertEqual(self.kernels_est[n].shape, (m,)*n)
+
+
 #==============================================================================
 # Functions
 #==============================================================================
