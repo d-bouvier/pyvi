@@ -6,6 +6,10 @@ This package creates identification methods for Volterra kernels. It relies
 on a matrix representation of the input-to-output relation of a Volterra
 series, and uses linear algebra tools to estimate the kernels coefficients.
 
+It contains five methods using different type of output data; it also defines
+wrappers for the family of KLS methods, where some parameters already fixed
+(``solver`` is set to 'QR' and ``out_form`` to 'sym').
+
 Functions
 ---------
 direct_method :
@@ -16,8 +20,8 @@ term_method :
     Separate kernel identification on each nonlinear combinatorial term.
 iter_method :
     Recursive kernel identification on homophase signals.
-Following functions are wrappers for the previous ones, with parameters
-'solver' set to 'QR' and 'out_form' to 'sym'.
+phase_method :
+    Separate kernel identification on odd and even homophase signals.
 KLS :
     Kernel identification via Least-Squares method using a QR decomposition.
 orderKLS :
@@ -26,6 +30,8 @@ termKLS :
     Performs KLS method on each combinatorial term.
 iterKLS :
     Performs KLS method recursively on homophase signals.
+phaseKLS :
+    Performs KLS method separately on odd and even homophase signals.
 
 Notes
 -----
@@ -231,7 +237,7 @@ def iter_method(input_sig, output_by_phase, N, M, **kwargs):
 
 def phase_method(input_sig, output_by_phase, N, M, **kwargs):
     """
-    Recursive kernel identification on homophase signals.
+    Separate kernel identification on odd and even homophase signals.
 
     Parameters
     ----------
@@ -268,7 +274,7 @@ def phase_method(input_sig, output_by_phase, N, M, **kwargs):
 
         for is_odd in [False, True]:
             curr_phases = range(is_odd, N+1, 2)
-            curr_y = np.concatenate([output_by_phase[p] for p in curr_phases],
+            curr_y = np.concatenate([out_by_phase[p] for p in curr_phases],
                                     axis=0)
             curr_phi = np.bmat(
                 [[phi_by_term.get((p+2*k, k), np.zeros((L, sizes[p+2*k-1]))) *
@@ -324,13 +330,18 @@ def _identification(input_data, output_data, N, M, required_nb_data_func,
 
 #========================================#
 
-def KLS(input_sig, output_sig, N, M, **kwargs):
-    """
-    Kernel identification via Least-Squares method using a QR decomposition.
-    """
-
+def _kwargs_for_KLS(**kwargs):
     kwargs['solver'] = 'QR'
     kwargs['out_form'] = 'sym'
+    return kwargs
+
+
+def KLS(input_sig, output_sig, N, M, **kwargs):
+    """
+    Kernel identification via Least-Squares using a QR decomposition.
+    """
+
+    kwargs = _kwargs_for_KLS(**kwargs)
     return direct_method(input_sig, output_sig, N, M, **kwargs)
 
 
@@ -339,8 +350,7 @@ def orderKLS(input_sig, output_by_order, N, M, **kwargs):
     Performs KLS method on each nonlinear homogeneous order.
     """
 
-    kwargs['solver'] = 'QR'
-    kwargs['out_form'] = 'sym'
+    kwargs = _kwargs_for_KLS(**kwargs)
     return order_method(input_sig, output_by_order, N, M, **kwargs)
 
 
@@ -349,8 +359,7 @@ def termKLS(input_sig, output_by_term, N, M, **kwargs):
     Performs KLS method on each combinatorial term.
     """
 
-    kwargs['solver'] = 'QR'
-    kwargs['out_form'] = 'sym'
+    kwargs = _kwargs_for_KLS(**kwargs)
     return term_method(input_sig, output_by_term, N, M, **kwargs)
 
 
@@ -359,16 +368,16 @@ def iterKLS(input_sig, output_by_phase, N, M, **kwargs):
     Performs KLS method recursively on homophase signals.
     """
 
-    kwargs['solver'] = 'QR'
-    kwargs['out_form'] = 'sym'
+    kwargs = _kwargs_for_KLS(**kwargs)
     return iter_method(input_sig, output_by_phase, N, M, **kwargs)
 
 
 def phaseKLS(input_sig, output_by_phase, N, M, **kwargs):
-    """Performs KLS method separately on odd and even homophase signals."""
+    """
+    Performs KLS method separately on odd and even homophase signals.
+    """
 
-    kwargs['solver'] = 'QR'
-    kwargs['out_form'] = 'sym'
+    kwargs = _kwargs_for_KLS(**kwargs)
     return phase_method(input_sig, output_by_phase, N, M, **kwargs)
 
 
@@ -422,7 +431,7 @@ _wrapper_doc_post = """
     pyvi.identification.{}_method
     """
 
-for method, mode in zip((KLS, orderKLS, termKLS, iterKLS),
+for method, mode in zip((KLS, orderKLS, termKLS, iterKLS, phaseKLS),
                         ('direct', 'order', 'term', 'iter', 'phase')):
     method.__doc__ += _wrapper_doc_pre.format(mode)
     corresponding_method_doc = locals()[mode + '_method'].__doc__
