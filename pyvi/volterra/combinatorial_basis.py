@@ -208,6 +208,68 @@ def volterra_basis(signal, N, M, sorted_by):
     return phi
 
 
+
+def projected_volterra_basis(signal, N, orthogonal_basis, sorted_by):
+    """
+    Dictionary of combinatorial basis matrix for projected Volterra system.
+    """
+
+    phi = dict()
+    sig_proj = dict()
+
+    if isinstance(orthogonal_basis, _OrthogonalBasis):
+        phi[(1, 0)] = orthogonal_basis.projection(signal).T
+        for n in range(2, N+1):
+            sig_proj[n] = phi[(1, 0)]
+        K_list = _as_list(orthogonal_basis.K, N)
+    else:
+        _orthogonal_basis = _as_list(orthogonal_basis, N)
+        phi[(1, 0)] = orthogonal_basis[0].projection(signal).T
+        for n in range(2, N+1):
+            sig_proj[n] = _orthogonal_basis[n-1].projection(signal).T
+        K_list = [basis.K for basis in _orthogonal_basis]
+
+    list_nb_coeff = series_nb_coeff(N, K_list, form='tri', out_by_order=True)
+
+    for n in range(2, N+1):
+        nb_coeff = list_nb_coeff[n-1]
+        curr_K = K_list[n-1]
+        phi[(n, 0)] = np.zeros(signal.shape + (nb_coeff,), signal.dtype)
+
+        if sorted_by == 'term':
+            for k in range(1, (n+1)//2):
+                phi[(n, k)] = np.zeros(signal.shape + (nb_coeff,),
+                                       signal.dtype)
+            if not n % 2:
+                phi[(n, n//2)] = np.zeros(signal.shape + (nb_coeff,))
+
+        ind = 0
+        for idx in itr.combinations_with_replacement(range(curr_K), n):
+            phi[(n, 0)][:, ind] = np.prod(sig_proj[n][:, idx], axis=1)
+            if sorted_by == 'term':
+                # Terms 1 <= k < (n+1)//2
+                for k in range(1, (n+1)//2):
+                    tmp = sig_proj[n][:, idx]
+                    total = 0
+                    for idx_conj in itr.combinations(range(n), k):
+                        tmp2 = tmp.copy()
+                        tmp2[:, idx_conj] = tmp2[:, idx_conj].conj()
+                        phi[(n, k)][:, ind] += np.prod(tmp2, axis=1)
+                        total += 1
+                    phi[(n, k)][:, ind] /= total
+                # Term k = n//2
+                if not n % 2:
+                    phi[(n, n//2)][:, ind] = np.real(
+                        np.prod(sig_proj[n][:, idx[:n//2]], axis=1) *
+                        np.prod(sig_proj[n][:, idx[n//2:]].conj(), axis=1))
+            ind += 1
+
+    if sorted_by == 'order':
+        phi = _phi_by_order_post_processing(phi, N)
+
+    return phi
+
+
 def _phi_by_order_post_processing(phi, N):
     """Post processing of the dictionary ``phi`` if it by nonlinear order."""
 
