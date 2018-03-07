@@ -200,7 +200,7 @@ class HammersteinBasisCorrectOutputTest(HammersteinBasisCplxSigTest,
     pass
 
 
-class ProjectedVolterraBasisTest(VolterraBasisTest):
+class ProjVolterraBasisTest(VolterraBasisTest):
 
     L = 200
     pole = 0.1
@@ -229,12 +229,12 @@ class ProjectedVolterraBasisTest(VolterraBasisTest):
                                                 atol=self.atol))
 
 
-class ProjectedVolterraBasisListTest(ProjectedVolterraBasisTest):
+class ProjVolterraBasisListTest(ProjVolterraBasisTest):
 
     M = [3, 5, 0, 5]
 
 
-class ProjectedVolterraBasisCplxSigTest(ProjectedVolterraBasisListTest):
+class ProjVolterraBasisCplxSigTest(ProjVolterraBasisListTest):
 
     test_same_result_between_all_terms_with_real_signals = property()
 
@@ -242,7 +242,7 @@ class ProjectedVolterraBasisCplxSigTest(ProjectedVolterraBasisListTest):
         return super().sig_creation() + 1j * super().sig_creation()
 
 
-class ProjectedVolterraBasisCorrectOutputTest(ProjectedVolterraBasisTest):
+class ProjVolterraBasisCorrectOutputTest(ProjVolterraBasisTest):
 
     L = 3
     N = 3
@@ -319,6 +319,58 @@ class ProjectedVolterraBasisCorrectOutputTest(ProjectedVolterraBasisTest):
             with self.subTest(i=(n, k)):
                 self.assertTrue(np.allclose(val, self.true[(n, k)],
                                             rtol=self.rtol, atol=self.atol))
+
+
+class ProjHammersteinBasisTest(ProjVolterraBasisTest):
+
+    def compute_basis_func(self, sig, sorted_by):
+        if isinstance(self.M, int):
+            orthogonal_basis = LaguerreBasis(self.pole, self.M)
+        else:
+            orthogonal_basis = [LaguerreBasis(self.pole, m) for m in self.M]
+        return projected_hammerstein_basis(sig, self.N, orthogonal_basis,
+                                           sorted_by=sorted_by)
+
+    def compute_nb_coeff(self, n):
+        return self._M[n-1]
+
+
+class ProjHammersteinBasisListTest(ProjHammersteinBasisTest):
+
+    M = [3, 5, 0, 5]
+
+
+class ProjHammersteinBasisCplxSigTest(ProjHammersteinBasisListTest):
+
+    test_same_result_between_all_terms_with_real_signals = property()
+
+    def sig_creation(self):
+        return super().sig_creation() + 1j * super().sig_creation()
+
+
+class ProjHammersteinBasisCorrectOutputTest(ProjHammersteinBasisCplxSigTest,
+                                            ProjVolterraBasisTest):
+
+    true = {(1, 0): np.array(
+                [[0.+0.j, 0.99498744+0.99498744j, 2.08947362+2.08947362j],
+                 [0.+0.j, 0.09949874+0.09949874j, -0.7760902-0.7760902j],
+                 [0.+0.j, 0.00994987+0.00994987j, -0.17611278-0.17611278j]]).T,
+            (2, 0): np.array(
+                [[0.+0.j, 0.+1.98997487j, 0.+8.15889698j],
+                 [0.+0.j, 0.+0.19899749j, 0.-1.15418543j],
+                 [0.+0.j, 0.+0.01989975j, 0.-0.31242606j]]).T,
+            (2, 1): np.array(
+                 [[0., 1.98997487, 8.15889698],
+                  [0., 0.19899749, -1.15418543],
+                  [0., 0.01989975, -0.31242606]]).T,
+            (3, 0): np.array(
+                 [[0., -1.98997487+1.98997487j, -16.11879648+16.11879648j],
+                  [0., -0.19899749+0.19899749j, 0.35819548-0.35819548j],
+                  [0., -0.01989975+0.01989975j, 0.23282706-0.23282706j]]).T,
+            (3, 1): np.array(
+                 [[0, 1.98997487+1.98997487j, 16.11879648+16.11879648j],
+                  [0, 0.19899749+0.19899749j, -0.35819548-0.35819548j],
+                  [0, 0.01989975+0.01989975j, -0.23282706-0.23282706j]]).T}
 
 
 #==============================================================================

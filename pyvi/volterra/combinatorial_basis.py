@@ -208,6 +208,33 @@ def volterra_basis(signal, N, M, sorted_by):
     return phi
 
 
+def projected_hammerstein_basis(signal, N, orthogonal_basis, sorted_by):
+    """
+    Dictionary of combinatorial basis matrix for projected Hammerstein system.
+    """
+
+    _orthogonal_basis = _as_list(orthogonal_basis, N)
+    signal = signal.copy()
+
+    phi = dict()
+    for n, basis in zip(range(1, N+1), _orthogonal_basis):
+        phi[(n, 0)] = basis.projection(signal**n).T
+
+        if sorted_by == 'term':
+            # Terms 1 <= k < (n+1)//2
+            for k in range(1, (n+1)//2):
+                tmp = signal**(n-k) * signal.conj()**k
+                phi[(n, k)] = basis.projection(tmp).T
+            # Term k = n//2
+            if not n % 2:
+                tmp = np.real(signal * signal.conj())**(n//2)
+                phi[(n, n//2)] = basis.projection(tmp).T
+
+    if sorted_by == 'order':
+        phi = _phi_by_order_post_processing(phi, N)
+
+    return phi
+
 
 def projected_volterra_basis(signal, N, orthogonal_basis, sorted_by):
     """
