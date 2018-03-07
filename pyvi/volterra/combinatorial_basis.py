@@ -12,19 +12,79 @@ Developed for Python 3.6.1
 # Importations
 #==============================================================================
 
+import itertools as itr
 import numpy as np
 import scipy.linalg as sc_lin
-from .tools import kernel_nb_coeff
+from .tools import kernel_nb_coeff, series_nb_coeff
+from ..utilities.orthogonal_basis import _OrthogonalBasis
 from ..utilities.mathbox import binomial
 from ..utilities.tools import _as_list
+
+
+#==============================================================================
+# Variables
+#==============================================================================
+
+_STRING_VOLTERRA = {'volterra', 'Volterra', 'VOLTERRA'}
+_STRING_HAMMERSTEIN = {'hammerstein', 'Hammerstein', 'HAMMERSTEIN'}
 
 
 #==============================================================================
 # Functions
 #==============================================================================
 
+def compute_combinatorial_basis(signal, N, M, system_type='volterra',
+                                orthogonal_basis=None, sorted_by='order'):
+    """
+    Creates dictionary of combinatorial basis matrix.
 
-def hammerstein_basis(signal, N, M, sorted_by='order'):
+    Parameters
+    ----------
+    signal : array_like
+        Input signal from which to construct the Volterras basis.
+    N : int
+        Truncation order.
+    M : int or list(int)
+        Memory length for each kernels (in samples).
+    system_type : {'volterra', 'hammerstein'}, optional (default='volterra')
+        Assumed type of the system; if set to 'volterra', combinatorial basis
+        contains all possible input products; if set to 'hammerstein',
+        combinatorial basis only contains those corresponding to diagonal
+        kernel values.
+    orthogonal_basis : instance (or list of instances) of _OrthogonalBasis
+        Orthogonal basis unto which kernels are projected; can be specified
+        globally for all orders, or separately for each order via a list of
+        different orthogonal basis.
+    sorted_by : {'order', 'term'}, optional (default='order')
+        Choose if matrices are computed for each nonlinear homogeneous order
+        or nonlinear combinatorial term.
+
+    Returns
+    -------
+    kernels : dict(int or (int, int): numpy.ndarray)
+        Dictionary of combinatorial basis matrix for each order or
+        combinatorial term.
+    """
+
+    if system_type not in set.union(_STRING_VOLTERRA, _STRING_HAMMERSTEIN):
+        message = "Unknown system type {}; available types are 'volterra' " + \
+                  "or 'hammerstein'."
+        raise ValueError(message.format(system_type))
+    if orthogonal_basis is None:
+        if system_type in _STRING_VOLTERRA:
+            return volterra_basis(signal, N, M, sorted_by=sorted_by)
+        elif system_type in _STRING_HAMMERSTEIN:
+            return hammerstein_basis(signal, N, M, sorted_by=sorted_by)
+    else:
+        if system_type in _STRING_VOLTERRA:
+            return projected_volterra_basis(signal, N, orthogonal_basis,
+                                            sorted_by=sorted_by)
+        elif system_type in _STRING_HAMMERSTEIN:
+            return projected_hammerstein_basis(signal, N, orthogonal_basis,
+                                               sorted_by=sorted_by)
+
+
+def hammerstein_basis(signal, N, M, sorted_by):
     """
     Dictionary of combinatorial basis matrix for Hammerstein system.
     """
@@ -53,7 +113,7 @@ def hammerstein_basis(signal, N, M, sorted_by='order'):
     return phi
 
 
-def volterra_basis(signal, N, M, sorted_by='order'):
+def volterra_basis(signal, N, M, sorted_by):
     """
     Dictionary of combinatorial basis matrix for Volterra system.
     """
