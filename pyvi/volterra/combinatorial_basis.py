@@ -25,7 +25,7 @@ from ..utilities.tools import _as_list
 
 def volterra_basis(signal, N, M, sorted_by='order'):
     """
-    Base function for creating dictionnary of Volterra basis matrix.
+    Computes dictionary of combinatorial basis matrix for Volterra system.
 
     Parameters
     ----------
@@ -36,86 +36,76 @@ def volterra_basis(signal, N, M, sorted_by='order'):
     M : int or list(int)
         Memory length for each kernels (in samples).
     sorted_by : {'order', 'term'}, optional (default='order')
-        Choose if matrices are computed for each order or combinatorial term.
+        Choose if matrices are computed for each nonlinear homogeneous order
+        or nonlinear combinatorial term.
 
     Returns
     -------
     kernels : dict(int or (int, int): numpy.ndarray)
-        Dictionnary of Volterra basis matrix order or combinaorial term.
+        Dictionary of combinatorial basis matrix for each order or
+        combinatorial term.
     """
 
-    M = _as_list(M, N)
+    _M_save = _as_list(M, N)
     signal = signal.copy()
     len_sig = signal.shape[0]
     signal.shape = (len_sig, 1)
     dtype = signal.dtype
 
-    M_bis = [M[-1]]
-    for m in M[-2::-1]:
-        M_bis.append(max(m, M_bis[-1]))
-    M_bis = M_bis[::-1]
+    _M = [_M_save[-1]]
+    for m in _M_save[-2::-1]:
+        _M.append(max(m, _M[-1]))
+    _M = _M[::-1]
 
     phi = dict()
-    phi_bis = dict()
-    phi[(1, 0)] = sc_lin.toeplitz(signal, np.zeros((1, M[0])))
-    phi_bis[(1, 0)] = sc_lin.toeplitz(signal, np.zeros((1, M_bis[0])))
+    phi[(1, 0)] = sc_lin.toeplitz(signal, np.zeros((1, _M[0])))
 
     max_delay = dict()
     for n in range(1, N+1):
         max_delay[n] = dict()
-    max_delay[1][0] = np.arange(M_bis[0])
+    max_delay[1][0] = np.arange(_M[0])
 
     # Loop on nonlinear orders
-    for n, m, m_bis in zip(range(2, N+1), M[1:], M_bis[1:]):
+    for n, m in zip(range(2, N+1), _M[1:]):
         nb_coeff = kernel_nb_coeff(n, m, form='tri')
-        nb_coeff_bis = kernel_nb_coeff(n, m_bis, form='tri')
         delay = np.concatenate(tuple(max_delay[n-1].values()))
-        ind_bis = np.where(delay < m_bis)[0]
-        dec_bis = len(ind_bis)
-        max_delay[n][0] = delay[ind_bis]
-        ind = np.where(max_delay[n][0] < m)[0]
+        ind = np.where(delay < m)[0]
+
+        max_delay[n][0] = delay[ind]
         dec = len(ind)
 
         # Initialization
         phi[(n, 0)] = np.zeros((len_sig, nb_coeff), dtype=dtype)
-        phi_bis[(n, 0)] = np.zeros((len_sig, nb_coeff_bis), dtype=dtype)
         if sorted_by == 'term':
             for k in range(1, 1 + n//2):
-                phi[n, k] = np.zeros((len_sig, nb_coeff), dtype=dtype)
-                phi_bis[n, k] = np.zeros((len_sig, nb_coeff_bis), dtype=dtype)
+                phi[(n, k)] = np.zeros((len_sig, nb_coeff), dtype=dtype)
 
         # Computation
-        phi_bis[(n, 0)][:, :dec_bis] = \
-            signal * phi_bis[(n-1, 0)][:, ind_bis]
-        phi[(n, 0)][:, :dec] = phi_bis[(n, 0)][:, ind]
+        phi[(n, 0)][:, :dec] = signal * phi[(n-1, 0)][:, ind]
         if sorted_by == 'term':
             # Terms 1 <= k < (n+1)//2
             for k in range(1, (n+1)//2):
-                phi_bis[(n, k)][:, :dec_bis] = \
-                    signal * phi_bis[(n-1, k)][:, ind_bis] + \
-                    signal.conj() * phi_bis[(n-1, k-1)][:, ind_bis]
-                phi[(n, k)][:, :dec] = phi_bis[(n, k)][:, ind]
+                phi[(n, k)][:, :dec] = \
+                    signal * phi[(n-1, k)][:, ind] + \
+                    signal.conj() * phi[(n-1, k-1)][:, ind]
             # Term k = n//2
             if not n % 2:
-                phi_bis[(n, n//2)][:, :dec_bis] = 2 * np.real(
-                    signal.conj() * phi_bis[(n-1, n//2-1)][:, ind_bis])
-                phi[(n, n//2)][:, :dec] = phi_bis[(n, n//2)][:, ind]
+                phi[(n, n//2)][:, :dec] = 2 * np.real(
+                    signal.conj() * phi[(n-1, n//2-1)][:, ind])
 
         # Copy of identic values
         max_delay[n], slices_list = _copy_and_shift_params(max_delay[n], m,
                                                            dec)
-        _, slices_list_bis = _copy_and_shift_params(max_delay[n], m_bis,
-                                                    dec_bis)
+        # print(n, max_delay[n])
 
         phi[(n, 0)] = _copy_and_shift_columns(phi[(n, 0)], slices_list)
-        phi_bis[(n, 0)] = _copy_and_shift_columns(phi_bis[(n, 0)],
-                                                  slices_list_bis)
         if sorted_by == 'term':
             for k in range(1, 1 + n//2):
-                phi[(n, k)] = _copy_and_shift_columns(phi[(n, k)],
-                                                      slices_list)
-                phi_bis[(n, k)] = _copy_and_shift_columns(phi_bis[(n, k)],
-                                                          slices_list_bis)
+                phi[(n, k)] = _copy_and_shift_columns(phi[(n, k)], slices_list)
+
+    for (n, k), val in phi.items():
+        current_max_delay = np.concatenate(tuple(max_delay[n].values()))
+        phi[(n, k)] = val[:, np.where(current_max_delay < _M_save[n-1])[0]]
 
     if sorted_by == 'term':
         for (n, k) in phi.keys():
@@ -147,5 +137,4 @@ def _copy_and_shift_columns(tmp_phi, slices_list):
 
     for slices in slices_list:
         tmp_phi[slices[0], slices[1]] = tmp_phi[slices[2], slices[3]]
-
     return tmp_phi
