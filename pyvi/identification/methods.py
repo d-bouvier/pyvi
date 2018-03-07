@@ -229,6 +229,68 @@ def iter_method(input_sig, output_by_phase, N, M, **kwargs):
                            required_nb_data_func, core_func, 'term', **kwargs)
 
 
+def phase_method(input_sig, output_by_phase, N, M, **kwargs):
+    """
+    Recursive kernel identification on homophase signals.
+
+    Parameters
+    ----------
+    input_sig : numpy.ndarray
+        Input signal.
+    output_by_phase : numpy.ndarray
+        Homophase signals constituting the output signal; the first dimension
+        of the array should be of length ``2N+1``, and each slice along this
+        dimension should have the same shape as ``input_sig``; homophase
+        signals should be order with corresponding phases as follows:
+        ``[0, 1, ... N, -N, ..., -1]``.
+    N : int
+        Truncation order.
+    M : int or list(int)
+        Memory length for each kernels (in samples).
+
+    Returns
+    -------
+    kernels : dict(int: numpy.ndarray)
+        Dictionary of estimated kernels, where each key is the nonlinear order.
+    {}
+    """
+
+    def required_nb_data_func(list_nb_coeff):
+        """Compute the minimum number of data required."""
+        return max(list_nb_coeff)
+
+    def core_func(phi_by_term, out_by_phase, solver, cast_mode):
+        """Core computation of the identification."""
+
+        L = out_by_phase.shape[1]
+        sizes = series_nb_coeff(N, M, form='tri', out_by_order=True)
+        kernels_vec = dict()
+
+        for is_odd in [False, True]:
+            curr_phases = range(is_odd, N+1, 2)
+            curr_y = np.concatenate([output_by_phase[p] for p in curr_phases],
+                                    axis=0)
+            curr_phi = np.bmat(
+                [[phi_by_term.get((p+2*k, k), np.zeros((L, sizes[p+2*k-1]))) *
+                  binomial(p+2*k, k) for k in range(1-(p+1)//2, 1+(N-p)//2)]
+                 for p in curr_phases])
+
+            curr_f = _solver(_complex2real(curr_phi, cast_mode=cast_mode),
+                             _complex2real(curr_y, cast_mode=cast_mode),
+                             solver)
+
+            index = 0
+            for n in range(1 if is_odd else 2, N+1, 2):
+                nb_term = sizes[n-1]
+                kernels_vec[n] = curr_f[index:index+nb_term]
+                index += nb_term
+
+        return kernels_vec
+
+    return _identification(input_sig, output_by_phase, N, M,
+                           required_nb_data_func, core_func, 'term', **kwargs)
+
+
 def _identification(input_data, output_data, N, M, required_nb_data_func,
                     core_func, sorted_by, solver='LS', out_form='vec',
                     projection=None, phi=None, cast_mode='real-imag'):
@@ -302,6 +364,14 @@ def iterKLS(input_sig, output_by_phase, N, M, **kwargs):
     return iter_method(input_sig, output_by_phase, N, M, **kwargs)
 
 
+def phaseKLS(input_sig, output_by_phase, N, M, **kwargs):
+    """Performs KLS method separately on odd and even homophase signals."""
+
+    kwargs['solver'] = 'QR'
+    kwargs['out_form'] = 'sym'
+    return phase_method(input_sig, output_by_phase, N, M, **kwargs)
+
+
 #========================================#
 
 kwargs_docstring_common = """
@@ -332,12 +402,12 @@ kwargs_docstring_cast_mode = """
         Choose how complex number are casted to real numbers; if set to
         'real-imag', arrays for the real and imaginary part will be stacked."""
 
-for mode in ('direct', 'order', 'term', 'iter'):
+for mode in ('direct', 'order', 'term', 'iter', 'phase'):
     method = locals()[mode + '_method']
     kwargs_docstring = kwargs_docstring_common
     if mode in {'direct', 'order'}:
         kwargs_docstring += kwargs_docstring_phi_order
-    elif mode in {'term', 'iter'}:
+    elif mode in {'term', 'iter', 'phase'}:
         kwargs_docstring += kwargs_docstring_phi_term
         kwargs_docstring += kwargs_docstring_cast_mode
     method.__doc__ = method.__doc__.format(kwargs_docstring)
@@ -353,7 +423,7 @@ _wrapper_doc_post = """
     """
 
 for method, mode in zip((KLS, orderKLS, termKLS, iterKLS),
-                        ('direct', 'order', 'term', 'iter')):
+                        ('direct', 'order', 'term', 'iter', 'phase')):
     method.__doc__ += _wrapper_doc_pre.format(mode)
     corresponding_method_doc = locals()[mode + '_method'].__doc__
     method.__doc__ += '\n'.join(corresponding_method_doc.splitlines()[2:])
