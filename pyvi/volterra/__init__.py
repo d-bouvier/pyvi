@@ -1,2 +1,2 @@
-from .combinatorics import *
+from .combinatorial_basis import *
 from .tools import *
