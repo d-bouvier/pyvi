@@ -14,9 +14,8 @@ Developed for Python 3.6.1
 
 import unittest
 import numpy as np
-from pyvi.utilities.orthogonal_basis import (_AbstractOrthogonalBasis,
-                                             LaguerreBasis, KautzBasis,
-                                             GeneralizedBasis,
+from pyvi.utilities.orthogonal_basis import (_OrthogonalBasis, LaguerreBasis,
+                                             KautzBasis, GeneralizedBasis,
                                              create_orthogonal_basis)
 
 
@@ -62,7 +61,7 @@ class CreateOrthogonalBasisTest(unittest.TestCase):
 class _OrthogonalBasisGlobalTest():
 
     params_list = []
-    basis = _AbstractOrthogonalBasis
+    basis = _OrthogonalBasis
     L = 2000
     atol = 1e-14
     rtol = 1e-14
@@ -84,20 +83,20 @@ class _OrthogonalBasisGlobalTest():
                                             rtol=self.rtol, atol=self.atol))
 
 
-class LaguerreBasisTest(_OrthogonalBasisGlobalTest, unittest.TestCase):
+class LaguerreBasisTest(_OrthogonalBasis, unittest.TestCase):
     params_list = [(0.1, 2), (0.1, 5), (0.1, 10), (0.2, 5), (0.5, 5),
                    (0.9, 5), (0.95, 5)]
     basis = LaguerreBasis
 
 
-class KautzBasisTest(_OrthogonalBasisGlobalTest, unittest.TestCase):
+class KautzBasisTest(_OrthogonalBasis, unittest.TestCase):
     params_list = [(0.1*np.exp(1j*np.pi/4), 2), (0.1*np.exp(1j*np.pi/4), 10),
                    (0.5*np.exp(1j*np.pi/4), 10), (0.9*np.exp(1j*np.pi/4), 10),
                    (0.95*np.exp(1j*np.pi/4), 10), (0.7 + 0.1j, 10), (0.7, 10)]
     basis = KautzBasis
 
 
-class GeneralizedBasisTest(_OrthogonalBasisGlobalTest, unittest.TestCase):
+class GeneralizedBasisTest(_OrthogonalBasis, unittest.TestCase):
     params_list = [[0.1], [0.1, 0.2, 0.5], [0.1, 0.9, 0.1, 0.5, 0.1],
                    [0.1*np.exp(1j*np.pi/4)], [0.1*np.exp(1j*np.pi/4), 0.1],
                    [0.1 + 0.1j, 0.2 + 0.2j, 0.5 + 0.1j, 0.1 + 0.5j],

@@ -37,7 +37,7 @@ from .tools import inherit_docstring
 # Class
 #==============================================================================
 
-class _AbstractOrthogonalBasis():
+class _OrthogonalBasis():
     """
     Abstract class for orthogonal basis.
     """
@@ -57,19 +57,24 @@ class _AbstractOrthogonalBasis():
             Signal projection; projected elements are along the first axis.
         """
 
-        return np.zeros((self.K,) + signal.shape)
+        return np.zeros((self.K,) + signal.shape, signal.dtype)
 
 
     @classmethod
     def _filtering(cls, signal, system):
         """Filter ``signal`` by ``system``."""
 
-        _, filtered_signal, _ = sc_sig.dlsim(system, signal)
+        if any(np.iscomplex(signal)):
+            _, filtered_signal_r, _ = sc_sig.dlsim(system, np.real(signal))
+            _, filtered_signal_i, _ = sc_sig.dlsim(system, np.imag(signal))
+            filtered_signal = filtered_signal_r + 1j * filtered_signal_i
+        else:
+            _, filtered_signal, _ = sc_sig.dlsim(system, signal)
         filtered_signal.shape = signal.shape
         return filtered_signal
 
 
-class LaguerreBasis(_AbstractOrthogonalBasis):
+class LaguerreBasis(_OrthogonalBasis):
     """
     Class for Orthogonal Laguerre Basis.
 
@@ -115,7 +120,7 @@ class LaguerreBasis(_AbstractOrthogonalBasis):
         return projection
 
 
-class KautzBasis(_AbstractOrthogonalBasis):
+class KautzBasis(_OrthogonalBasis):
     """
     Class for Orthogonal Kautz Basis.
 
@@ -171,7 +176,7 @@ class KautzBasis(_AbstractOrthogonalBasis):
         return projection
 
 
-class GeneralizedBasis(_AbstractOrthogonalBasis):
+class GeneralizedBasis(_OrthogonalBasis):
     """
     Class for Generalized Orthogonal Basis.
 
