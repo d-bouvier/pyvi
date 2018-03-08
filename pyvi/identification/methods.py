@@ -158,18 +158,21 @@ def term_method(input_sig, output_by_term, N, **kwargs):
     def core_func(phi_by_term, out_by_term, solver, cast_mode='', **kwargs):
         """Core computation of the identification."""
 
-        for (n, k) in phi_by_term.keys():
-            phi_by_term[n, k] = _complex2real(phi_by_term[n, k],
-                                              cast_mode=cast_mode)
-            out_by_term[n, k] = _complex2real(out_by_term[n, k],
-                                              cast_mode=cast_mode)
-
         kernels_vec = dict()
+        _phi_by_term = dict()
+        _out_by_term = dict()
+
+        for (n, k) in phi_by_term.keys():
+            _phi_by_term[n, k] = _complex2real(phi_by_term[n, k],
+                                               cast_mode=cast_mode)
+            _out_by_term[n, k] = _complex2real(out_by_term[n, k],
+                                               cast_mode=cast_mode)
+
         for n in range(1, N+1):
             k_vec = list(range(1+n//2))
-            phi_n = np.concatenate([phi_by_term[(n, k)] for k in k_vec],
+            phi_n = np.concatenate([_phi_by_term[(n, k)] for k in k_vec],
                                    axis=0)
-            out_n = np.concatenate([out_by_term[(n, k)] for k in k_vec],
+            out_n = np.concatenate([_out_by_term[(n, k)] for k in k_vec],
                                    axis=0)
             kernels_vec[n] = _solver(phi_n, out_n, solver)
 

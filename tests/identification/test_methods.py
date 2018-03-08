@@ -12,10 +12,15 @@ Developed for Python 3.6.1
 # Importations
 #==============================================================================
 
+import itertools as itr
 import unittest
 import numpy as np
-import pyvi.identification.methods as identif
-import pyvi.separation.methods as sep
+from pyvi.identification.methods import (direct_method, order_method,
+                                         term_method, iter_method,
+                                         phase_method)
+from pyvi.separation.methods import HPS, PS
+from pyvi.volterra.tools import kernel2vec
+from pyvi.volterra.combinatorial_basis import volterra_basis
 from pyvi.utilities.mathbox import array_symmetrization
 from pyvi.utilities.tools import _as_list
 
@@ -24,195 +29,144 @@ from pyvi.utilities.tools import _as_list
 # Test Class
 #==============================================================================
 
-class KLSTest(unittest.TestCase):
+class DirectMethodTest(unittest.TestCase):
 
-    def _init_parameters(self):
-        self.M = 2
-        self.N = 3
-        self.L = 50
-        self.rtol = 0
-        self.atol = 1e-14
+    N = 4
+    M = 3
+    L = 100
+    rtol = 0
+    atol = 1e-12
+    method = staticmethod(direct_method)
+    solvers = {'LS', 'QR'}
+    cast_modes = {'real', 'imag', 'real-imag'}
 
     def _create_input(self):
         self.input_sig = np.random.normal(size=(self.L,))
 
     def _create_output(self):
-        self.output_sig = generate_output(self.input_sig, self.N, self.M)
-
-    def _generate_true_kernels(self):
-        self.kernels_true = generate_kernels(self.N, self.M)
+        self.output_data = generate_output(self.input_sig, self.kernels_vec,
+                                           self.N, self.M)
 
     def _identification(self):
-        self.kernels_est = identif.KLS(self.input_sig, self.output_sig, self.N,
-                                       M=self.M)
+        self.list_kernels_est = dict()
+        for solver, cast_mode in itr.product(self.solvers, self.cast_modes):
+            self.list_kernels_est[(solver, cast_mode)] = \
+                self.method(self.input_sig, self.output_data, self.N,
+                            solver=solver, cast_mode=cast_mode, **self.kwargs)
 
     def setUp(self):
-        self._init_parameters()
+        self.kwargs = {'M': self.M, 'out_form': 'sym'}
+        self.kernels_true, self.kernels_vec = generate_kernels(self.N, self.M)
+        self._M = _as_list(self.M, self.N)
         self._create_input()
         self._create_output()
-        self._generate_true_kernels()
         self._identification()
 
     def test_check_keys_dict(self):
-        keys = {}
-        for n in range(1, self.N+1):
-            keys[n] = 0
-        self.assertEqual(self.kernels_est.keys(), keys.keys())
+        keys = set(range(1, self.N+1))
+        for key, kernels_est in self.list_kernels_est.items():
+            with self.subTest(i=key):
+                self.assertSetEqual(set(kernels_est.keys()), keys)
 
     def test_check_shape_kernels(self):
-        for n, h in self.kernels_est.items():
-            with self.subTest(i=n):
-                self.assertEqual(h.shape, (self.M,)*n)
+        for key, kernels_est in self.list_kernels_est.items():
+            for n, h in kernels_est.items():
+                with self.subTest(i=(n, key)):
+                    self.assertEqual(h.shape, (self._M[n-1],)*n)
 
     def test_correct_output(self):
-        for n, h in self.kernels_est.items():
-            with self.subTest(i=n):
-                self.assertTrue(np.allclose(h, self.kernels_true[n],
-                                            rtol=self.rtol, atol=self.atol))
+        for key, kernels_est in self.list_kernels_est.items():
+            for n, h in kernels_est.items():
+                with self.subTest(i=(n, key)):
+                    self.assertTrue(np.allclose(h, self.kernels_true[n],
+                                                rtol=self.rtol,
+                                                atol=self.atol))
 
 
-class KLSTest_M_as_list(KLSTest):
+class OrderMethodTest(DirectMethodTest):
 
-    def _init_parameters(self):
-        super()._init_parameters()
-        self.M = [2, 0, 3]
-
-    def test_check_shape_kernels(self):
-        for m, n in zip(self.M, range(1, self.N+1)):
-            with self.subTest(i=n):
-                self.assertEqual(self.kernels_est[n].shape, (m,)*n)
-
-
-class orderKLSTest(KLSTest):
+    method = staticmethod(order_method)
 
     def _create_output(self):
-        self.output_sig_by_order = generate_output(self.input_sig, self.N,
-                                                   self.M, by_order=True)
-
-    def _identification(self):
-        self.kernels_est = identif.orderKLS(self.input_sig,
-                                            self.output_sig_by_order,
-                                            self.N, M=self.M)
+        self.output_data = generate_output(self.input_sig, self.kernels_vec,
+                                           self.N, self.M, by_order=True)
 
 
-class orderKLSTest_M_as_list(orderKLSTest):
+class TermMethodTest(DirectMethodTest):
 
-    def _init_parameters(self):
-        super()._init_parameters()
-        self.M = [2, 0, 3]
-
-    def test_check_shape_kernels(self):
-        for m, n in zip(self.M, range(1, self.N+1)):
-            with self.subTest(i=n):
-                self.assertEqual(self.kernels_est[n].shape, (m,)*n)
-
-
-class termKLSTest(KLSTest):
-
-    def _init_parameters(self):
-        KLSTest._init_parameters(self)
-        self.atol = 1e-12
+    method = staticmethod(term_method)
 
     def _create_input(self):
         self.input_sig = np.random.normal(size=(self.L,)) + \
                          1j * np.random.normal(size=(self.L,))
 
     def _create_output(self):
-        method = sep.PAS(N=self.N)
-        input_coll = method.gen_inputs(self.input_sig)
-        output_coll = np.zeros(input_coll.shape, dtype='complex')
+        sep_method = PS(self.N)
+        input_coll = sep_method.gen_inputs(self.input_sig)
+        output_coll = np.zeros(input_coll.shape)
         for ind in range(input_coll.shape[0]):
-            output_coll[ind] = generate_output(input_coll[ind], self.N, self.M)
-        _, self.output_sig_by_term = method.process_outputs(output_coll,
-                                                            raw_mode=True)
-
-    def _identification(self):
-        self.kernels_est = identif.termKLS(self.input_sig,
-                                           self.output_sig_by_term,
-                                           self.N, M=self.M)
+            output_coll[ind] = generate_output(input_coll[ind],
+                                               self.kernels_vec, self.N,
+                                               self.M)
+        _, self.output_data = sep_method.process_outputs(output_coll,
+                                                         raw_mode=True)
 
 
-class termKLSTest_M_as_list(termKLSTest):
+class IterMethodTest(TermMethodTest):
 
-    def _init_parameters(self):
-        super()._init_parameters()
-        self.M = [2, 0, 3]
-
-    def test_check_shape_kernels(self):
-        for m, n in zip(self.M, range(1, self.N+1)):
-            with self.subTest(i=n):
-                self.assertEqual(self.kernels_est[n].shape, (m,)*n)
-
-
-class iterKLSTest(termKLSTest):
-
-    def _init_parameters(self):
-        termKLSTest._init_parameters(self)
-        self.atol = 1e-12
+    method = staticmethod(iter_method)
 
     def _create_output(self):
-        method = sep.HPS(N=self.N)
-        input_coll = method.gen_inputs(self.input_sig)
-        output_coll = np.zeros(input_coll.shape, dtype='complex')
+        sep_method = HPS(self.N)
+        input_coll = sep_method.gen_inputs(self.input_sig)
+        output_coll = np.zeros(input_coll.shape)
         for ind in range(input_coll.shape[0]):
-            output_coll[ind] = generate_output(input_coll[ind], self.N, self.M)
-        self.output_sig_by_phase = method.process_outputs(output_coll)
-
-    def _identification(self):
-        self.kernels_est = identif.iterKLS(self.input_sig,
-                                           self.output_sig_by_phase,
-                                           self.N, M=self.M)
+            output_coll[ind] = generate_output(input_coll[ind],
+                                               self.kernels_vec, self.N,
+                                               self.M)
+        self.output_data = sep_method.process_outputs(output_coll)
 
 
-class iterKLSTest_M_as_list(iterKLSTest):
+class PhaseMethodTest(IterMethodTest):
 
-    def _init_parameters(self):
-        super()._init_parameters()
-        self.M = [2, 0, 3]
-
-    def test_check_shape_kernels(self):
-        for m, n in zip(self.M, range(1, self.N+1)):
-            with self.subTest(i=n):
-                self.assertEqual(self.kernels_est[n].shape, (m,)*n)
+    method = staticmethod(phase_method)
 
 
-class phaseKLSTest(iterKLSTest):
+class DirectMethod_ListM_Test(DirectMethodTest):
 
-    def _init_parameters(self):
-        iterKLSTest._init_parameters(self)
-        self.atol = 1e-12
-
-    def _identification(self):
-        self.kernels_est = identif.phaseKLS(self.input_sig,
-                                            self.output_sig_by_phase,
-                                            self.N, M=self.M)
+    M = [3, 5, 0, 5]
 
 
-class phaseKLSTest_M_as_list(phaseKLSTest):
+class OrderMethod_ListM_Test(OrderMethodTest, DirectMethod_ListM_Test):
 
-    def _init_parameters(self):
-        super()._init_parameters()
-        self.M = [2, 0, 3]
+    pass
 
-    def test_check_shape_kernels(self):
-        for m, n in zip(self.M, range(1, self.N+1)):
-            with self.subTest(i=n):
-                self.assertEqual(self.kernels_est[n].shape, (m,)*n)
+
+class TermMethod_ListM_Test(TermMethodTest, DirectMethod_ListM_Test):
+
+    pass
+
+
+class IterMethod_ListM_Test(IterMethodTest, DirectMethod_ListM_Test):
+
+    pass
+
+
+class PhaseMethod_ListM_Test(PhaseMethodTest, DirectMethod_ListM_Test):
+
+    pass
 
 
 #==============================================================================
 # Functions
 #==============================================================================
 
-def generate_output(input_sig, N, M, by_order=False):
-    M = _as_list(M, N)
-    output_by_order = np.zeros((N, len(input_sig)), dtype=input_sig.dtype)
-    for m, n in zip(M, range(N)):
-        if m:
-            output_by_order[n, :] = input_sig**(n+1)
-            output_by_order[n, m-1:] += input_sig[:1-m]**(n+1)
-        if m and n:
-            output_by_order[n, m-1:] -= 2*input_sig[:1-m]**n * input_sig[m-1:]
+def generate_output(input_sig, kernels_vec, N, M, by_order=False):
+    phi = volterra_basis(input_sig, N, M, sorted_by='order')
+    L = phi[1].shape[0]
+    output_by_order = np.zeros((N, L))
+    for n in range(N):
+        output_by_order[n, :] = np.dot(phi[n+1], kernels_vec[n+1])
     if by_order:
         return output_by_order
     else:
@@ -220,9 +174,10 @@ def generate_output(input_sig, N, M, by_order=False):
 
 
 def generate_kernels(N, M):
-    M = _as_list(M, N)
+    _M = _as_list(M, N)
     kernels = dict()
-    for m, n in zip(M, range(N)):
+    kernels_vec = dict()
+    for m, n in zip(_M, range(N)):
         temp = np.zeros((m,)*(n+1))
         if m:
             temp[(0,)*(n+1)] = 1
@@ -230,7 +185,8 @@ def generate_kernels(N, M):
         if m and n:
             temp[(0,) + (m-1,)*n] = -2
         kernels[n+1] = array_symmetrization(temp)
-    return kernels
+        kernels_vec[n+1] = kernel2vec(kernels[n+1], form='sym')
+    return kernels, kernels_vec
 
 
 #==============================================================================
