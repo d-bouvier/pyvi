@@ -159,14 +159,8 @@ def term_method(input_sig, output_by_term, N, **kwargs):
         """Core computation of the identification."""
 
         kernels_vec = dict()
-        _phi_by_term = dict()
-        _out_by_term = dict()
-
-        for (n, k) in phi_by_term.keys():
-            _phi_by_term[n, k] = _complex2real(phi_by_term[n, k],
-                                               cast_mode=cast_mode)
-            _out_by_term[n, k] = _complex2real(out_by_term[n, k],
-                                               cast_mode=cast_mode)
+        _phi_by_term = _cast_complex2real(phi_by_term, cast_mode)
+        _out_by_term = _cast_complex2real(out_by_term, cast_mode)
 
         for n in range(1, N+1):
             k_vec = list(range(1+n//2))
@@ -214,17 +208,17 @@ def iter_method(input_sig, output_by_phase, N, **kwargs):
         """Core computation of the identification."""
 
         kernels_vec = dict()
+        _phi_by_term = _cast_complex2real(phi_by_term, cast_mode)
         _out_by_phase = out_by_phase.copy()
 
         for n in range(N, 0, -1):
-            current_phi = _complex2real(phi_by_term[(n, 0)],
-                                        cast_mode=cast_mode)
+            current_phi = _phi_by_term[(n, 0)]
             current_phase_sig = _complex2real(_out_by_phase[n],
                                               cast_mode=cast_mode)
 
             if n == 2:
                 current_phi = np.concatenate(
-                    (current_phi, binomial(n, n//2) * phi_by_term[(n, n//2)]),
+                    (current_phi, binomial(n, n//2) * _phi_by_term[(n, n//2)]),
                     axis=0)
                 current_phase_sig = np.concatenate(
                     (current_phase_sig, _out_by_phase[0]), axis=0)
@@ -273,20 +267,30 @@ def phase_method(input_sig, output_by_phase, N, **kwargs):
         """Core computation of the identification."""
 
         L = out_by_phase.shape[1]
+        L = 2*L if cast_mode == 'real-imag' else L
         kernels_vec = dict()
+        _phi_by_term = _cast_complex2real(phi_by_term, cast_mode)
 
         for is_odd in [False, True]:
-            curr_phases = range(is_odd, N+1, 2)
-            curr_y = np.concatenate([out_by_phase[p] for p in curr_phases],
-                                    axis=0)
+            curr_phases = range(2-is_odd, N+1, 2)
+            curr_y = np.concatenate([_complex2real(out_by_phase[p],
+                                                   cast_mode=cast_mode)
+                                     for p in curr_phases], axis=0)
+
             curr_phi = np.bmat(
-                [[phi_by_term.get((p+2*k, k), np.zeros((L, sizes[p+2*k-1]))) *
+                [[_phi_by_term.get((p+2*k, k), np.zeros((L, sizes[p+2*k-1]))) *
                   binomial(p+2*k, k) for k in range(1-(p+1)//2, 1+(N-p)//2)]
                  for p in curr_phases])
 
-            curr_f = _solver(_complex2real(curr_phi, cast_mode=cast_mode),
-                             _complex2real(curr_y, cast_mode=cast_mode),
-                             solver)
+            if not is_odd:
+                curr_y = np.concatenate((out_by_phase[0], curr_y), axis=0)
+                n_even = range(2, N+1, 2)
+                temp = np.concatenate([_phi_by_term[n, n//2] *
+                                       binomial(n, n//2) for n in n_even],
+                                      axis=1)
+                curr_phi = np.concatenate((temp, curr_phi), axis=0)
+
+            curr_f = _solver(curr_phi, curr_y, solver)
 
             index = 0
             for n in range(1 if is_odd else 2, N+1, 2):
@@ -338,6 +342,19 @@ def _identification(input_data, output_data, N, required_nb_data_func,
         return kernels_vec
     else:
         return vec2series(kernels_vec, N, M, form=out_form)
+
+
+def _cast_complex2real(val_by_term, cast_mode):
+    """Cast dictionary of values sorted by term from complex to real. """
+
+    _val_by_term = dict()
+    for (n, k) in val_by_term.keys():
+        if (not n % 2) and (k == n//2):
+            _val_by_term[(n, k)] = val_by_term[(n, k)]
+        else:
+            _val_by_term[(n, k)] = _complex2real(val_by_term[(n, k)],
+                                                 cast_mode=cast_mode)
+    return _val_by_term
 
 
 #========================================#
