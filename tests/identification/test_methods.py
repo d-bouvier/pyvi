@@ -19,10 +19,10 @@ from pyvi.identification.methods import (direct_method, order_method,
                                          term_method, iter_method,
                                          phase_method)
 from pyvi.separation.methods import HPS, PS
-from pyvi.volterra.tools import kernel2vec
-from pyvi.volterra.combinatorial_basis import volterra_basis
-from pyvi.utilities.mathbox import array_symmetrization
-from pyvi.utilities.tools import _as_list
+from pyvi.volterra.combinatorial_basis import (_check_parameters,
+                                               _compute_list_nb_coeff,
+                                               compute_combinatorial_basis)
+from pyvi.utilities.orthogonal_basis import LaguerreBasis
 
 
 #==============================================================================
@@ -32,35 +32,41 @@ from pyvi.utilities.tools import _as_list
 class DirectMethodTest(unittest.TestCase):
 
     N = 4
-    M = 3
     L = 100
     rtol = 0
     atol = 1e-12
     method = staticmethod(direct_method)
     solvers = {'LS', 'QR'}
     cast_modes = {'real', 'imag', 'real-imag'}
+    sigma = 1.
+
+    def _set_kwargs(self):
+        return {'M': 3}
+
+    def _generate_kernels(self):
+        return generate_kernels(self.N, **self.kwargs)
 
     def _create_input(self):
-        self.input_sig = np.random.normal(size=(self.L,))
+        return np.random.normal(scale=self.sigma, size=(self.L,))
 
-    def _create_output(self):
-        self.output_data = generate_output(self.input_sig, self.kernels_vec,
-                                           self.N, self.M)
+    def _create_output(self, input_sig):
+        return generate_output(input_sig, self.kernels_vec, self.N,
+                               **self.kwargs)
 
     def _identification(self):
-        self.list_kernels_est = dict()
+        list_kernels_est = dict()
         for solver, cast_mode in itr.product(self.solvers, self.cast_modes):
-            self.list_kernels_est[(solver, cast_mode)] = \
+            list_kernels_est[(solver, cast_mode)] = \
                 self.method(self.input_sig, self.output_data, self.N,
                             solver=solver, cast_mode=cast_mode, **self.kwargs)
+        return list_kernels_est
 
     def setUp(self):
-        self.kwargs = {'M': self.M, 'out_form': 'sym'}
-        self.kernels_true, self.kernels_vec = generate_kernels(self.N, self.M)
-        self._M = _as_list(self.M, self.N)
-        self._create_input()
-        self._create_output()
-        self._identification()
+        self.kwargs = self._set_kwargs()
+        self.kernels_vec, self.length = self._generate_kernels()
+        self.input_sig = self._create_input()
+        self.output_data = self._create_output(self.input_sig)
+        self.list_kernels_est = self._identification()
 
     def test_check_keys_dict(self):
         keys = set(range(1, self.N+1))
@@ -72,13 +78,13 @@ class DirectMethodTest(unittest.TestCase):
         for key, kernels_est in self.list_kernels_est.items():
             for n, h in kernels_est.items():
                 with self.subTest(i=(n, key)):
-                    self.assertEqual(h.shape, (self._M[n-1],)*n)
+                    self.assertEqual(h.shape, (self.length[n-1],))
 
     def test_correct_output(self):
         for key, kernels_est in self.list_kernels_est.items():
             for n, h in kernels_est.items():
                 with self.subTest(i=(n, key)):
-                    self.assertTrue(np.allclose(h, self.kernels_true[n],
+                    self.assertTrue(np.allclose(h, self.kernels_vec[n],
                                                 rtol=self.rtol,
                                                 atol=self.atol))
 
@@ -87,9 +93,9 @@ class OrderMethodTest(DirectMethodTest):
 
     method = staticmethod(order_method)
 
-    def _create_output(self):
-        self.output_data = generate_output(self.input_sig, self.kernels_vec,
-                                           self.N, self.M, by_order=True)
+    def _create_output(self, input_sig):
+        return generate_output(input_sig, self.kernels_vec, self.N,
+                               by_order=True, **self.kwargs)
 
 
 class TermMethodTest(DirectMethodTest):
@@ -97,34 +103,31 @@ class TermMethodTest(DirectMethodTest):
     method = staticmethod(term_method)
 
     def _create_input(self):
-        self.input_sig = np.random.normal(size=(self.L,)) + \
-                         1j * np.random.normal(size=(self.L,))
+        return super()._create_input() + 1j * super()._create_input()
 
-    def _create_output(self):
+    def _create_output(self, input_sig):
         sep_method = PS(self.N)
-        input_coll = sep_method.gen_inputs(self.input_sig)
+        input_coll = sep_method.gen_inputs(input_sig)
         output_coll = np.zeros(input_coll.shape)
         for ind in range(input_coll.shape[0]):
-            output_coll[ind] = generate_output(input_coll[ind],
-                                               self.kernels_vec, self.N,
-                                               self.M)
-        _, self.output_data = sep_method.process_outputs(output_coll,
-                                                         raw_mode=True)
+            output_coll[ind] = super()._create_output(input_coll[ind])
+        _, output_data = sep_method.process_outputs(output_coll, raw_mode=True)
+        return output_data
 
 
 class IterMethodTest(TermMethodTest):
 
     method = staticmethod(iter_method)
 
-    def _create_output(self):
+    def _create_output(self, input_sig):
         sep_method = HPS(self.N)
-        input_coll = sep_method.gen_inputs(self.input_sig)
+        input_coll = sep_method.gen_inputs(input_sig)
         output_coll = np.zeros(input_coll.shape)
         for ind in range(input_coll.shape[0]):
             output_coll[ind] = generate_output(input_coll[ind],
                                                self.kernels_vec, self.N,
-                                               self.M)
-        self.output_data = sep_method.process_outputs(output_coll)
+                                               **self.kwargs)
+        return sep_method.process_outputs(output_coll)
 
 
 class PhaseMethodTest(IterMethodTest):
@@ -134,7 +137,8 @@ class PhaseMethodTest(IterMethodTest):
 
 class DirectMethod_ListM_Test(DirectMethodTest):
 
-    M = [3, 5, 0, 5]
+    def _set_kwargs(self):
+        return {'M': [3, 5, 0, 5]}
 
 
 class OrderMethod_ListM_Test(OrderMethodTest, DirectMethod_ListM_Test):
@@ -157,12 +161,70 @@ class PhaseMethod_ListM_Test(PhaseMethodTest, DirectMethod_ListM_Test):
     pass
 
 
+class DirectMethod_Projected_Test(DirectMethodTest):
+
+    def _set_kwargs(self):
+        return {'orthogonal_basis': LaguerreBasis(0.01, 3)}
+
+
+class OrderMethod_Projected_Test(OrderMethodTest, DirectMethod_Projected_Test):
+
+    pass
+
+
+class TermMethod_Projected_Test(TermMethodTest, DirectMethod_Projected_Test):
+
+    pass
+
+
+class IterMethod_Projected_Test(IterMethodTest, DirectMethod_Projected_Test):
+
+    pass
+
+
+class PhaseMethod_Projected_Test(PhaseMethodTest, DirectMethod_Projected_Test):
+
+    pass
+
+
+class DirectMethod_MultiProj_Test(DirectMethodTest):
+
+    def _set_kwargs(self):
+        return {'orthogonal_basis': [LaguerreBasis(0.01, 3),
+                                     LaguerreBasis(0.01, 5),
+                                     LaguerreBasis(0.01, 0),
+                                     LaguerreBasis(0.01, 5)]}
+
+
+class OrderMethod_MultiProj_Test(OrderMethodTest, DirectMethod_MultiProj_Test):
+
+    pass
+
+
+class TermMethod_MultiProj_Test(TermMethodTest, DirectMethod_MultiProj_Test):
+
+    pass
+
+
+class IterMethod_MultiProj_Test(IterMethodTest, DirectMethod_MultiProj_Test):
+
+    pass
+
+
+class PhaseMethod_MultiProj_Test(PhaseMethodTest, DirectMethod_MultiProj_Test):
+
+    pass
+
+
 #==============================================================================
 # Functions
 #==============================================================================
 
-def generate_output(input_sig, kernels_vec, N, M, by_order=False):
-    phi = volterra_basis(input_sig, N, M, sorted_by='order')
+def generate_output(input_sig, kernels_vec, N, M=None, orthogonal_basis=None,
+                    by_order=False):
+    phi = compute_combinatorial_basis(input_sig, N, M=M,
+                                      orthogonal_basis=orthogonal_basis,
+                                      sorted_by='order')
     L = phi[1].shape[0]
     output_by_order = np.zeros((N, L))
     for n in range(N):
@@ -173,20 +235,18 @@ def generate_output(input_sig, kernels_vec, N, M, by_order=False):
         return np.sum(output_by_order, axis=0)
 
 
-def generate_kernels(N, M):
-    _M = _as_list(M, N)
-    kernels = dict()
+def generate_kernels(N, M=None, orthogonal_basis=None):
+    system_type = 'volterra'
+    _M, is_orthogonal_basis_as_list = _check_parameters(N, system_type, M,
+                                                        orthogonal_basis)
+    list_nb_coeff = _compute_list_nb_coeff(N, system_type, _M,
+                                           orthogonal_basis,
+                                           is_orthogonal_basis_as_list)
     kernels_vec = dict()
-    for m, n in zip(_M, range(N)):
-        temp = np.zeros((m,)*(n+1))
-        if m:
-            temp[(0,)*(n+1)] = 1
-            temp[(m-1,)*(n+1)] = 1
-        if m and n:
-            temp[(0,) + (m-1,)*n] = -2
-        kernels[n+1] = array_symmetrization(temp)
-        kernels_vec[n+1] = kernel2vec(kernels[n+1], form='sym')
-    return kernels, kernels_vec
+    for indn, nb_coeff in enumerate(list_nb_coeff):
+        kernels_vec[indn+1] = np.random.uniform(low=-1., high=1.,
+                                                size=nb_coeff)
+    return kernels_vec, list_nb_coeff
 
 
 #==============================================================================
