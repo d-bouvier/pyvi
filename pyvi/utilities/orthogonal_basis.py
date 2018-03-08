@@ -2,6 +2,24 @@
 """
 Module for orthogonal basis creation and projection.
 
+This modules creates class to handle orthogonal basis for signal projection.
+A valid basis object is:
+
+    - an instance of a subclass of :class:`_OrthogonalBasis`, such as
+    :class:`LaguerreBasis`, :class:`KautzBasis` or :class:'GeneralizedBasis';
+    - an instance of a custom object such that the following conditions are
+    met:
+
+        - ``hasattr(basis, 'K') == True``;
+        - ``hasattr(basis, 'projection') == True``;
+        - ``callable(getattr(basis, 'projection', None)) == True``;
+        - ``isinstance(basis.projection(signal), numpy.ndarray) == True``
+        with ``isinstance(signal, numpy.ndarray)``;
+        - ``basis.projection(signal).shape == (basis.K,) + shape``
+        with ``shape = signal.shape``.
+
+    Those conditions can be checked using :func:`is_valid_basis_instance()`.
+
 Class
 -----
 LaguerreBasis :
@@ -15,6 +33,8 @@ Functions
 ---------
 create_orthogonal_basis :
     Returns an orthogonal basis given its poles and its number of elements.
+is_valid_basis_instance :
+    Checks whether `basis` is a usable instance of a basis.
 
 Notes
 -----
@@ -279,3 +299,19 @@ def create_orthogonal_basis(poles, K=None):
         raise TypeError('Parameter ``poles`` is neither a numeric value ' +
                         'nor a list of numeric values.')
 
+
+def is_valid_basis_instance(basis):
+    """Checks whether `basis` is a usable instance of a basis."""
+
+    sig = np.sin(2 * np.pi * np.arange(10)/10)
+    shape = sig.shape
+
+    try:
+        conditions = [hasattr(basis, 'K'), hasattr(basis, 'projection'),
+                      callable(getattr(basis, 'projection', None)),
+                      isinstance(basis.projection(sig), np.ndarray),
+                      basis.projection(sig).shape == (basis.K,)+shape]
+    except:
+        return False
+
+    return all(conditions)

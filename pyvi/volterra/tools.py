@@ -2,18 +2,29 @@
 """
 Tools for handling Volterra series.
 
+The different possible forms of the Volterra kernels are specified as follows:
+    - Triangular form : {'tri', 'triangular', 'Triangular', 'TRI'}
+        The kernel is represented by a triangular tensor, with a number of
+        dimensions equals to its order.
+    - Symmetric form : {'sym', 'symmetric', 'Symmetric', 'SYM'}
+        The kernel is represented by a symmetric tensor, with a number of
+        dimensions equals to its order.
+    - Vector form : {'vec', 'vector', 'Vector', 'VEC'}
+        The kernel is represented by a vector regrouping all nonzero
+        coefficients of the triangular form.
+
 Functions
 ---------
 kernel_nb_coeff :
-    Returns the number of nonzero coefficients in a Volterra kernel.
+    Returns the meaningful number coefficients in a Volterra kernel.
 series_nb_coeff :
-    Returns the number of nonzero coefficients in a Volterra series.
+    Returns the meaningful number of coefficients in a Volterra series.
 vec2kernel :
     Rearranges a vector of Volterra coefficients of order n into a tensor.
 vec2series :
     Rearranges a vector of all Volterra coefficients into a dict of tensors.
 kernel2vec :
-    Rearranges a Volterra kernel in vector form.
+    Rearranges a Volterra kernel from tensor shape to vector form.
 
 Notes
 -----
@@ -35,8 +46,9 @@ from ..utilities.tools import _as_list
 # Variables
 #==============================================================================
 
-_STRING_OPT_TRI = {'triangular', 'tri', 'TRI'}
-_STRING_OPT_SYM = {'symmetric', 'sym', 'SYM'}
+_STRING_OPT_TRI = {'tri', 'triangular', 'Triangular', 'TRI'}
+_STRING_OPT_SYM = {'sym', 'symmetric', 'Symmetric', 'SYM'}
+_STRING_OPT_VEC = {'vec', 'vector', 'Vector', 'VEC'}
 
 
 #==============================================================================
@@ -45,7 +57,7 @@ _STRING_OPT_SYM = {'symmetric', 'sym', 'SYM'}
 
 def kernel_nb_coeff(n, m, form=None):
     """
-    Returns the number of nonzero coefficients in a Volterra kernel.
+    Returns the meaningful number coefficients in a Volterra kernel.
 
     Parameters
     ----------
@@ -53,9 +65,8 @@ def kernel_nb_coeff(n, m, form=None):
         Kernel order.
     m : int
         Memory length of the kernel (in samples).
-    form : {None, 'sym', 'tri'}, optional (default=None)
-        Form to assume for the kernel; symmetric or triangular form have the
-        same number of coefficients; if None, no specific form is assumed.
+    form : {'tri', 'sym', 'vec'}, optional (default=None)
+        Form to assume for the kernel; if None, no specific form is assumed.
 
     Returns
     -------
@@ -63,7 +74,7 @@ def kernel_nb_coeff(n, m, form=None):
         The number of nonzero coefficients.
     """
 
-    if (form in _STRING_OPT_TRI) or (form in _STRING_OPT_SYM):
+    if form in set.union(_STRING_OPT_TRI, _STRING_OPT_SYM, _STRING_OPT_VEC):
         return binomial(m + n - 1, n)
     else:
         return m**n
@@ -71,7 +82,7 @@ def kernel_nb_coeff(n, m, form=None):
 
 def series_nb_coeff(N, M, form=None, out_by_order=False):
     """
-    Returns the number of nonzero coefficients in a Volterra series.
+    Returns the meaningful number of coefficients in a Volterra series.
 
     Parameters
     ----------
@@ -79,11 +90,10 @@ def series_nb_coeff(N, M, form=None, out_by_order=False):
         Truncation order.
     M : int or list(int)
         Memory length for each kernels (in samples).
-    form : {None, 'sym', 'tri'} or list, optional (default=None)
-        Kernel form; symmetric or triangular form have the same number of
-        coefficients; if None, no specific form is assumed. Can be specified
-        globally for all orders, or separately for each order via a list of
-        different values.
+    form : (list of) {'tri', 'sym', 'vec'}, optional (default=None)
+        Form to assume for the kernel; if None, no specific form is assumed;
+        can be specified globally for all orders, or separately for each order
+        via a list of different values.
     out_by_order : boolean, optional (default=False)
         Specify if the output should be the total number of nonzero
         coefficients (if ``out_by_order``is False), or a list of the number of
@@ -121,8 +131,8 @@ def vec2kernel(vec, n, m, form=None):
         Kernel order.
     m : int
         Memory length of the kernel (in samples).
-    form : {None, 'sym', 'tri'}, optional (default=None)
-        Form of the returned kernel; if None, triangular form is used.
+    form : {'tri', 'sym'}, optional (default=None)
+        Form of the returned kernel; if None, triangular form is returned.
 
     Returns
     -------
@@ -131,7 +141,7 @@ def vec2kernel(vec, n, m, form=None):
     """
 
     # Check dimension
-    nb_coeff = kernel_nb_coeff(n, m, form='tri')
+    nb_coeff = kernel_nb_coeff(n, m, form='vec')
     if vec.shape[0] != nb_coeff:
         raise ValueError('The vector of coefficients for Volterra kernel' +
                          'of order {} has wrong length'.format(n) +
@@ -153,32 +163,13 @@ def vec2kernel(vec, n, m, form=None):
         return kernel
 
 
-def vec2dict_of_vec(vec, N, M):
-    """
-    Rearranges a vector of all Volterra coefficients into N vectors by order.
-
-    Parameters
-    ----------
-    vec : numpy.ndarray
-        Vector regrouping all triangular coefficients of the Volterra kernels.
-    N : int
-        Truncation order.
-    M : int or list(int)
-        Memory length for each kernels (in samples).
-
-    Returns
-    -------
-    dict_of_vec : dict(int: numpy.ndarray)
-        Dictionnary regrouping vectors of Volterra coefficient for each order.
-    """
-
-    _M = _as_list(M, N)
-    list_nb_coeff = series_nb_coeff(N, _M, form='tri', out_by_order=True)
+def _vec2dict_of_vec(vec, list_nb_coeff):
+    """Cut a vector of all coefficients into vectors for each order."""
 
     dict_of_vec = dict()
     start = 0
-    for n, nb_coeff in zip(range(1, N+1), list_nb_coeff):
-        dict_of_vec[n] = vec[start:start+nb_coeff]
+    for ind_n, nb_coeff in enumerate(list_nb_coeff):
+        dict_of_vec[ind_n+1] = vec[start:start+nb_coeff]
         start += nb_coeff
 
     return dict_of_vec
@@ -197,10 +188,10 @@ def vec2series(vec, N, M, form=None):
         Truncation order.
     M : int or list(int)
         Memory length for each kernels (in samples).
-    form : {None, 'sym', 'tri'} or list, optional (default=None)
-        Form of the returned kernels; if None, triangular form is used. Can be
-        specified globally for all orders, or separately for each order via a
-        list of different values.
+    form : (list of) {'tri', 'sym'}, optional (default=None)
+        Form of the returned kernel; if None, triangular form is returned.
+        Can be specified globally for all orders, or separately for each order
+        via a list of different values.
 
     Returns
     -------
@@ -212,7 +203,8 @@ def vec2series(vec, N, M, form=None):
     _form = _as_list(form, N)
 
     if isinstance(vec, np.ndarray):
-        dict_of_vec = vec2dict_of_vec(vec, N, _M)
+        list_nb_coeff = series_nb_coeff(N, _M, form='vec', out_by_order=True)
+        dict_of_vec = _vec2dict_of_vec(vec, list_nb_coeff)
     elif isinstance(vec, dict):
         dict_of_vec = vec
     else:
@@ -228,14 +220,14 @@ def vec2series(vec, N, M, form=None):
 
 def kernel2vec(kernel, form=None):
     """
-    Rearranges a Volterra kernel in vector form.
+    Rearranges a Volterra kernel from tensor shape to vector form.
 
     Parameters
     ----------
     kernel : numpy.ndarray
         The kernel to rearrange; should bbe a sqaure tensor.should
-    form : {None, 'sym', 'tri'}, optional (default=None)
-        Form of the given kernel; if None, no specific form is assumed.
+    form : {'tri', 'sym'}, optional (default=None)
+        Form of the returned kernel; if None, no specific form is assumed.
 
     Returns
     -------
@@ -251,15 +243,15 @@ def kernel2vec(kernel, form=None):
     # Initialization
     n = kernel.ndim
     m = kernel.shape[0]
-    nb_coeff = kernel_nb_coeff(n, m, form='tri')
+    nb_coeff = kernel_nb_coeff(n, m, form='vec')
     vec = np.zeros((nb_coeff), dtype=kernel.dtype)
 
     # Symmetrizing kernel if needed
-    if not ((form in _STRING_OPT_TRI) or (form in _STRING_OPT_SYM)):
+    if form not in set.union(_STRING_OPT_TRI, _STRING_OPT_SYM):
         kernel = array_symmetrization(kernel)
 
     # Applying factors if kernel is in symmetric form
-    if not (form in _STRING_OPT_TRI):
+    if form not in _STRING_OPT_TRI:
         factor = np.zeros(kernel.shape)
         for indexes in itr.combinations_with_replacement(range(m), n):
             k = [indexes.count(x) for x in set(indexes)]
@@ -272,4 +264,3 @@ def kernel2vec(kernel, form=None):
         current_ind += 1
 
     return vec
-

@@ -16,7 +16,8 @@ import unittest
 import numpy as np
 from pyvi.utilities.orthogonal_basis import (_OrthogonalBasis, LaguerreBasis,
                                              KautzBasis, GeneralizedBasis,
-                                             create_orthogonal_basis)
+                                             create_orthogonal_basis,
+                                             is_valid_basis_instance)
 
 
 #==============================================================================
@@ -81,6 +82,11 @@ class _OrthogonalBasisGlobalTest():
                 self.assertTrue(np.allclose(orthogonality_mat,
                                             np.identity(basis.K),
                                             rtol=self.rtol, atol=self.atol))
+
+    def test_is_valid_basis_obj(self):
+        for ind, basis in enumerate(self.basis_list):
+            with self.subTest(i=ind):
+                self.assertTrue(is_valid_basis_obj(basis))
 
 
 class LaguerreBasisTest(_OrthogonalBasis, unittest.TestCase):
