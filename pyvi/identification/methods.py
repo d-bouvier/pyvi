@@ -43,12 +43,14 @@ Developed for Python 3.6.1
 # Importations
 #==============================================================================
 
+import warnings
 import numpy as np
 from .tools import _solver, _complex2real
 from ..volterra.combinatorial_basis import (compute_combinatorial_basis,
                                             _check_parameters,
-                                            _compute_list_nb_coeff)
-from ..volterra.tools import vec2series, _vec2dict_of_vec
+                                            _compute_list_nb_coeff,
+                                            _STRING_HAMMERSTEIN)
+from ..volterra.tools import vec2series, _vec2dict_of_vec, _STRING_OPT_VEC
 from ..utilities.mathbox import binomial
 
 
@@ -306,15 +308,22 @@ def phase_method(input_sig, output_by_phase, N, **kwargs):
 
 def _identification(input_data, output_data, N, required_nb_data_func,
                     core_func, sorted_by, solver='LS', out_form='vec', M=None,
-                    orthogonal_basis=None, phi=None, cast_mode='real-imag'):
+                    orthogonal_basis=None, phi=None, cast_mode='real-imag',
+                    system_type='volterra'):
     """Core function for kernel identification in linear algebra formalism."""
 
 
-    _M, is_orthogonal_basis_as_list = _check_parameters(N, 'volterra', M,
+    _M, is_orthogonal_basis_as_list = _check_parameters(N, system_type, M,
                                                         orthogonal_basis)
-    list_nb_coeff = _compute_list_nb_coeff(N, 'volterra', M,
+    list_nb_coeff = _compute_list_nb_coeff(N, system_type, M,
                                            orthogonal_basis,
                                            is_orthogonal_basis_as_list)
+    if system_type in _STRING_HAMMERSTEIN:
+        if out_form not in _STRING_OPT_VEC:
+            message = "Out form {} was specified for a Hammerstein system;" + \
+                      " a vector will however be outputed."
+            warnings.warn(message, UserWarning)
+        out_form = 'vec'
 
     # Check that there is enough data to do the identification
     nb_data = input_data.size
@@ -328,7 +337,8 @@ def _identification(input_data, output_data, N, required_nb_data_func,
     if phi is None:
         phi = compute_combinatorial_basis(input_data, N, M=_M,
                                           orthogonal_basis=orthogonal_basis,
-                                          sorted_by=sorted_by)
+                                          sorted_by=sorted_by,
+                                          system_type=system_type)
     else:
         pass
         #TODO check correct
@@ -338,7 +348,7 @@ def _identification(input_data, output_data, N, required_nb_data_func,
                             cast_mode=cast_mode)
 
     # Output
-    if out_form == 'vec':
+    if out_form in _STRING_OPT_VEC:
         return kernels_vec
     else:
         return vec2series(kernels_vec, N, M, form=out_form)
@@ -446,6 +456,11 @@ kwargs_docstring_cast_mode = """
         Choose how complex number are casted to real numbers; if set to
         'real-imag', arrays for the real and imaginary part will be stacked."""
 kwargs_docstring_common_post = """
+    system_type : {'volterra', 'hammerstein'}, optional (default='volterra')
+        Assumed type of the system; if set to 'volterra', combinatorial basis
+        contains all possible input products; if set to 'hammerstein',
+        combinatorial basis only contains those corresponding to diagonal
+        kernel values.
 
     Either the memory length `M` or parameter `orthogonal_basis` must be
     specified; if both are `None`, the method will issue an error; if both are
