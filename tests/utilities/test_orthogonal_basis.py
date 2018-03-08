@@ -17,7 +17,7 @@ import numpy as np
 from pyvi.utilities.orthogonal_basis import (_OrthogonalBasis, LaguerreBasis,
                                              KautzBasis, GeneralizedBasis,
                                              create_orthogonal_basis,
-                                             is_valid_basis_obj)
+                                             is_valid_basis_instance)
 
 
 #==============================================================================

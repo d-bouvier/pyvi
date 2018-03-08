@@ -17,7 +17,9 @@ import numpy as np
 from pyvi.volterra.combinatorial_basis import (volterra_basis,
                                                hammerstein_basis,
                                                projected_volterra_basis,
-                                               projected_hammerstein_basis)
+                                               projected_hammerstein_basis,
+                                               _check_parameters,
+                                               _compute_list_nb_coeff)
 from pyvi.volterra.tools import kernel_nb_coeff
 from pyvi.utilities.orthogonal_basis import LaguerreBasis
 from pyvi.utilities.tools import _as_list
@@ -113,40 +115,40 @@ class VolterraBasisCorrectOutputTest(VolterraBasisCplxSigTest):
     N = 3
     M = 3
     true = {(1, 0): np.array([[1+1j, 2+2j, 3+3j, 4+4j],
-                              [  0., 1+1j, 2+2j, 3+3j],
-                              [  0.,   0., 1+1j, 2+2j]]).T,
+                              [0., 1+1j, 2+2j, 3+3j],
+                              [0., 0., 1+1j, 2+2j]]).T,
             (2, 0): np.array([[2j, 8j, 18j, 32j],
                               [0., 4j, 12j, 24j],
-                              [0.,  0,  6j, 16j],
-                              [0., 2j,  8j, 18j],
-                              [0., 0.,  4j, 12j],
-                              [0., 0.,  2j,  8j]]).T,
+                              [0., 0, 6j, 16j],
+                              [0., 2j, 8j, 18j],
+                              [0., 0., 4j, 12j],
+                              [0., 0., 2j, 8j]]).T,
             (2, 1): np.array([[2., 8., 18., 32.],
                               [0., 4., 12., 24.],
-                              [0.,  0,  6., 16.],
-                              [0., 2.,  8., 18.],
-                              [0., 0.,  4., 12.],
-                              [0., 0.,  2.,  8.]]).T,
+                              [0., 0, 6., 16.],
+                              [0., 2., 8., 18.],
+                              [0., 0., 4., 12.],
+                              [0., 0., 2., 8.]]).T,
             (3, 0): np.array([[-2+2j, -16+16j, -54+54j, -128+128j],
-                              [   0.,   -8+8j, -36+36j,   -96+96j],
-                              [   0.,      0., -18+18j,   -64+64j],
-                              [   0.,   -4+4j, -24+24j,   -72+72j],
-                              [   0.,      0., -12+12j,   -48+48j],
-                              [   0.,      0.,   -6+6j,   -32+32j],
-                              [   0.,   -2+2j, -16+16j,   -54+54j],
-                              [   0.,      0.,   -8+8j,   -36+36j],
-                              [   0.,      0.,   -4+4j,   -24+24j],
-                              [   0.,      0.,   -2+2j,   -16+16j]]).T,
+                              [0., -8+8j, -36+36j, -96+96j],
+                              [0., 0., -18+18j, -64+64j],
+                              [0., -4+4j, -24+24j, -72+72j],
+                              [0., 0., -12+12j, -48+48j],
+                              [0., 0., -6+6j, -32+32j],
+                              [0., -2+2j, -16+16j, -54+54j],
+                              [0., 0., -8+8j, -36+36j],
+                              [0., 0., -4+4j, -24+24j],
+                              [0., 0., -2+2j, -16+16j]]).T,
             (3, 1): np.array([[2+2j, 16+16j, 54+54j, 128+128j],
-                              [  0.,   8+8j, 36+36j,   96+96j],
-                              [  0.,     0., 18+18j,   64+64j],
-                              [  0.,   4+4j, 24+24j,   72+72j],
-                              [  0.,     0., 12+12j,   48+48j],
-                              [  0.,     0.,   6+6j,   32+32j],
-                              [  0.,   2+2j, 16+16j,   54+54j],
-                              [  0.,     0.,   8+8j,   36+36j],
-                              [  0.,     0.,   4+4j,   24+24j],
-                              [  0.,     0.,   2+2j,   16+16j]]).T}
+                              [0., 8+8j, 36+36j, 96+96j],
+                              [0., 0., 18+18j, 64+64j],
+                              [0., 4+4j, 24+24j, 72+72j],
+                              [0., 0., 12+12j, 48+48j],
+                              [0., 0., 6+6j, 32+32j],
+                              [0., 2+2j, 16+16j, 54+54j],
+                              [0., 0., 8+8j, 36+36j],
+                              [0., 0., 4+4j, 24+24j],
+                              [0., 0., 2+2j, 16+16j]]).T}
     order_keys = {1, 2, 3}
     term_keys = {(1, 0), (2, 0), (2, 1), (3, 0), (3, 1)}
 
@@ -178,20 +180,20 @@ class HammersteinBasis_M_List_Test(HammersteinBasisTest,
 class HammersteinBasisCplxSigTest(HammersteinBasis_M_List_Test,
                                   VolterraBasisCplxSigTest):
     true = {(1, 0): np.array([[1+1j, 2+2j, 3+3j, 4+4j],
-                              [  0., 1+1j, 2+2j, 3+3j],
-                              [  0.,   0., 1+1j, 2+2j]]).T,
+                              [0., 1+1j, 2+2j, 3+3j],
+                              [0., 0., 1+1j, 2+2j]]).T,
             (2, 0): np.array([[2j, 8j, 18j, 32j],
-                              [0., 2j,  8j, 18j],
-                              [0., 0.,  2j,  8j]]).T,
+                              [0., 2j, 8j, 18j],
+                              [0., 0., 2j, 8j]]).T,
             (2, 1): np.array([[2., 8., 18., 32.],
-                              [0., 2.,  8., 18.],
-                              [0., 0.,  2.,  8.]]).T,
+                              [0., 2., 8., 18.],
+                              [0., 0., 2., 8.]]).T,
             (3, 0): np.array([[-2+2j, -16+16j, -54+54j, -128+128j],
-                              [   0.,   -2+2j, -16+16j,   -54+54j],
-                              [   0.,      0.,   -2+2j,   -16+16j]]).T,
+                              [0., -2+2j, -16+16j, -54+54j],
+                              [0., 0., -2+2j, -16+16j]]).T,
             (3, 1): np.array([[2+2j, 16+16j, 54+54j, 128+128j],
-                              [  0.,   2+2j, 16+16j,   54+54j],
-                              [  0.,     0.,   2+2j,   16+16j]]).T}
+                              [0., 2+2j, 16+16j, 54+54j],
+                              [0., 0., 2+2j, 16+16j]]).T}
     pass
 
 
@@ -207,6 +209,7 @@ class ProjVolterraBasisTest(VolterraBasisTest):
     M = 5
     rtol = 0
     atol = 1e-12
+    is_list = False
 
     def compute_basis_func(self, sig, sorted_by):
         if isinstance(self.M, int):
@@ -214,7 +217,7 @@ class ProjVolterraBasisTest(VolterraBasisTest):
         else:
             orthogonal_basis = [LaguerreBasis(self.pole, m) for m in self.M]
         return projected_volterra_basis(sig, self.N, orthogonal_basis,
-                                        sorted_by=sorted_by)
+                                        self.is_list, sorted_by=sorted_by)
 
     def sig_creation(self):
         return np.random.normal(size=(self.L,))
@@ -232,6 +235,7 @@ class ProjVolterraBasisTest(VolterraBasisTest):
 class ProjVolterraBasisListTest(ProjVolterraBasisTest):
 
     M = [3, 5, 0, 5]
+    is_list = True
 
 
 class ProjVolterraBasisCplxSigTest(ProjVolterraBasisListTest):
@@ -302,6 +306,7 @@ class ProjVolterraBasisCorrectOutputTest(ProjVolterraBasisTest):
                     -1.09245256e-02-1.09245256e-02j]]).T}
     order_keys = {1, 2, 3}
     term_keys = {(1, 0), (2, 0), (2, 1), (3, 0), (3, 1)}
+    is_list = False
 
     test_same_result_between_all_terms_with_real_signals = property()
 
@@ -371,6 +376,77 @@ class ProjHammersteinBasisCorrectOutputTest(ProjHammersteinBasisCplxSigTest,
                  [[0, 1.98997487+1.98997487j, 16.11879648+16.11879648j],
                   [0, 0.19899749+0.19899749j, -0.35819548-0.35819548j],
                   [0, 0.01989975+0.01989975j, -0.23282706-0.23282706j]]).T}
+
+
+class CheckParametersTest(unittest.TestCase):
+
+    N = 3
+    basis = LaguerreBasis(0.1, 3)
+
+    def test_wrong_system_type_error(self):
+        self.assertRaises(ValueError, _check_parameters, self.N, '', 5, None)
+
+    def test_no_M_and_no_basis_error(self):
+        self.assertRaises(ValueError, _check_parameters, self.N, 'volterra',
+                          None, None)
+
+    def test_n_M_and_basis_error(self):
+        self.assertWarns(UserWarning, _check_parameters, self.N, 'volterra',
+                         5, self.basis)
+
+    def test_wrong_M_error(self):
+        for M in (0.5, [0.5, 2, 3]):
+            with self.subTest(i=M):
+                self.assertRaises(TypeError, _check_parameters, self.N,
+                                  'volterra', M, None)
+
+    def test_wrong_basis_error(self):
+        for basis in (0.5, [self.basis, self.basis, dict()]):
+            with self.subTest(i=basis):
+                self.assertRaises(TypeError, _check_parameters, self.N,
+                                  'volterra', None, basis)
+
+    def test_is_list_false(self):
+        M, orthogonal_basis_is_list = _check_parameters(self.N, 'volterra',
+                                                        None, self.basis)
+        self.assertFalse(orthogonal_basis_is_list)
+
+    def test_is_list_true(self):
+        M, orthogonal_basis_is_list = _check_parameters(self.N, 'volterra',
+                                                        None, (self.basis,)*3)
+        self.assertTrue(orthogonal_basis_is_list)
+
+
+
+class ComputeListNbCoeffParametersTest(unittest.TestCase):
+
+    N = 3
+    M = 3
+    M_list = [3, 2, 3]
+    basis = LaguerreBasis(0.1, M)
+    basis_list = [LaguerreBasis(0.1, m) for m in M_list]
+    result = {'volterra': [3, 6, 10], 'hammerstein': list([M, ]*N)}
+    result_list = {'volterra': [3, 3, 10], 'hammerstein': M_list}
+
+
+    def test_proj(self):
+        for basis, is_list, result in [(self.basis, False, self.result),
+                                       (self.basis_list, True,
+                                        self.result_list)]:
+            for sys_type in {'volterra', 'hammerstein'}:
+                with self.subTest(i=(sys_type, basis)):
+                    nb_coeff = _compute_list_nb_coeff(self.N, sys_type, None,
+                                                      basis, is_list)
+                    self.assertEqual(nb_coeff, result[sys_type])
+
+    def test_no_proj(self):
+        for M, is_list, result in [(self.M, False, self.result),
+                                   (self.M_list, False, self.result_list)]:
+            for sys_type in {'volterra', 'hammerstein'}:
+                with self.subTest(i=(sys_type, M)):
+                    nb_coeff = _compute_list_nb_coeff(self.N, sys_type, M,
+                                                      None, is_list)
+                    self.assertEqual(nb_coeff, result[sys_type])
 
 
 #==============================================================================
