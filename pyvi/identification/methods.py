@@ -56,7 +56,7 @@ from ..utilities.mathbox import binomial
 # Functions
 #==============================================================================
 
-def direct_method(input_sig, output_sig, N, M, **kwargs):
+def direct_method(input_sig, output_sig, N, **kwargs):
     """
     Direct kernel identification on the output signal.
 
@@ -89,11 +89,11 @@ def direct_method(input_sig, output_sig, N, M, **kwargs):
         kernels_vec = _solver(mat, out_sig, solver)
         return _vec2dict_of_vec(kernels_vec, sizes)
 
-    return _identification(input_sig, output_sig, N, M, required_nb_data_func,
+    return _identification(input_sig, output_sig, N, required_nb_data_func,
                            core_func, 'order', **kwargs)
 
 
-def order_method(input_sig, output_by_order, N, M, **kwargs):
+def order_method(input_sig, output_by_order, N, **kwargs):
     """
     Separate kernel identification on each nonlinear homogeneous order.
 
@@ -128,11 +128,11 @@ def order_method(input_sig, output_by_order, N, M, **kwargs):
             kernels_vec[n] = _solver(phi, out_by_order[n-1], solver)
         return kernels_vec
 
-    return _identification(input_sig, output_by_order, N, M,
+    return _identification(input_sig, output_by_order, N,
                            required_nb_data_func, core_func, 'order', **kwargs)
 
 
-def term_method(input_sig, output_by_term, N, M, **kwargs):
+def term_method(input_sig, output_by_term, N, **kwargs):
     """
     Separate kernel identification on each nonlinear combinatorial term.
 
@@ -181,11 +181,11 @@ def term_method(input_sig, output_by_term, N, M, **kwargs):
 
         return kernels_vec
 
-    return _identification(input_sig, output_by_term, N, M,
+    return _identification(input_sig, output_by_term, N,
                            required_nb_data_func, core_func, 'term', **kwargs)
 
 
-def iter_method(input_sig, output_by_phase, N, M, **kwargs):
+def iter_method(input_sig, output_by_phase, N, **kwargs):
     """
     Recursive kernel identification on homophase signals.
 
@@ -242,11 +242,11 @@ def iter_method(input_sig, output_by_phase, N, M, **kwargs):
                     binomial(n, k)*np.dot(phi_by_term[(n, k)], kernels_vec[n])
         return kernels_vec
 
-    return _identification(input_sig, output_by_phase, N, M,
+    return _identification(input_sig, output_by_phase, N,
                            required_nb_data_func, core_func, 'term', **kwargs)
 
 
-def phase_method(input_sig, output_by_phase, N, M, **kwargs):
+def phase_method(input_sig, output_by_phase, N, **kwargs):
     """
     Separate kernel identification on odd and even homophase signals.
 
@@ -303,12 +303,12 @@ def phase_method(input_sig, output_by_phase, N, M, **kwargs):
 
         return kernels_vec
 
-    return _identification(input_sig, output_by_phase, N, M,
+    return _identification(input_sig, output_by_phase, N,
                            required_nb_data_func, core_func, 'term', **kwargs)
 
 
-def _identification(input_data, output_data, N, M, required_nb_data_func,
-                    core_func, sorted_by, solver='LS', out_form='vec',
+def _identification(input_data, output_data, N, required_nb_data_func,
+                    core_func, sorted_by, solver='LS', out_form='vec', M=None,
                     orthogonal_basis=None, phi=None, cast_mode='real-imag'):
     """Core function for kernel identification in linear algebra formalism."""
 
@@ -355,49 +355,49 @@ def _kwargs_for_KLS(**kwargs):
     return kwargs
 
 
-def KLS(input_sig, output_sig, N, M, **kwargs):
+def KLS(input_sig, output_sig, N, **kwargs):
     """
     Kernel identification via Least-Squares using a QR decomposition.
     """
 
     kwargs = _kwargs_for_KLS(**kwargs)
-    return direct_method(input_sig, output_sig, N, M, **kwargs)
+    return direct_method(input_sig, output_sig, N, **kwargs)
 
 
-def orderKLS(input_sig, output_by_order, N, M, **kwargs):
+def orderKLS(input_sig, output_by_order, N, **kwargs):
     """
     Performs KLS method on each nonlinear homogeneous order.
     """
 
     kwargs = _kwargs_for_KLS(**kwargs)
-    return order_method(input_sig, output_by_order, N, M, **kwargs)
+    return order_method(input_sig, output_by_order, N, **kwargs)
 
 
-def termKLS(input_sig, output_by_term, N, M, **kwargs):
+def termKLS(input_sig, output_by_term, N, **kwargs):
     """
     Performs KLS method on each combinatorial term.
     """
 
     kwargs = _kwargs_for_KLS(**kwargs)
-    return term_method(input_sig, output_by_term, N, M, **kwargs)
+    return term_method(input_sig, output_by_term, N, **kwargs)
 
 
-def iterKLS(input_sig, output_by_phase, N, M, **kwargs):
+def iterKLS(input_sig, output_by_phase, N, **kwargs):
     """
     Performs KLS method recursively on homophase signals.
     """
 
     kwargs = _kwargs_for_KLS(**kwargs)
-    return iter_method(input_sig, output_by_phase, N, M, **kwargs)
+    return iter_method(input_sig, output_by_phase, N, **kwargs)
 
 
-def phaseKLS(input_sig, output_by_phase, N, M, **kwargs):
+def phaseKLS(input_sig, output_by_phase, N, **kwargs):
     """
     Performs KLS method separately on odd and even homophase signals.
     """
 
     kwargs = _kwargs_for_KLS(**kwargs)
-    return phase_method(input_sig, output_by_phase, N, M, **kwargs)
+    return phase_method(input_sig, output_by_phase, N, **kwargs)
 
 
 #========================================#
