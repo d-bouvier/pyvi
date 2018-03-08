@@ -2,6 +2,24 @@
 """
 Module for orthogonal basis creation and projection.
 
+This modules creates class to handle orthogonal basis for signal projection.
+A valid basis object is:
+
+    - an instance of a subclass of :class:`_OrthogonalBasis`, such as
+    :class:`LaguerreBasis`, :class:`KautzBasis` or :class:'GeneralizedBasis';
+    - an instance of a custom object such that the following conditions are
+    met:
+
+        - ``hasattr(basis, 'K') == True``;
+        - ``hasattr(basis, 'projection') == True``;
+        - ``callable(getattr(basis, 'projection', None)) == True``;
+        - ``isinstance(basis.projection(signal), numpy.ndarray) == True``
+        with ``isinstance(signal, numpy.ndarray)``;
+        - ``basis.projection(signal).shape == (basis.K,) + shape``
+        with ``shape = signal.shape``.
+
+    Those conditions can be checked using :func:`is_valid_basis_instance()`.
+
 Class
 -----
 LaguerreBasis :

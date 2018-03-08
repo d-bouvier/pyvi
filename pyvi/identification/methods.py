@@ -68,8 +68,6 @@ def direct_method(input_sig, output_sig, N, **kwargs):
         Output signal; should have the same shape as ``input_sig``.
     N : int
         Truncation order.
-    M : int or list(int)
-        Memory length for each kernels (in samples).
 
     Returns
     -------
@@ -107,8 +105,6 @@ def order_method(input_sig, output_by_order, N, **kwargs):
         dimension should have the same shape as ``input_sig``.
     N : int
         Truncation order.
-    M : int or list(int)
-        Memory length for each kernels (in samples).
 
     Returns
     -------
@@ -147,8 +143,6 @@ def term_method(input_sig, output_by_term, N, **kwargs):
         ``n in range(1, N+1)`` and ``q in range(1+n//2)``.
     N : int
         Truncation order.
-    M : int or list(int)
-        Memory length for each kernels (in samples).
 
     Returns
     -------
@@ -201,8 +195,6 @@ def iter_method(input_sig, output_by_phase, N, **kwargs):
         the first dimension should have the same shape as ``input_sig``.
     N : int
         Truncation order.
-    M : int or list(int)
-        Memory length for each kernels (in samples).
 
     Returns
     -------
@@ -262,8 +254,6 @@ def phase_method(input_sig, output_by_phase, N, **kwargs):
         the first dimension should have the same shape as ``input_sig``.
     N : int
         Truncation order.
-    M : int or list(int)
-        Memory length for each kernels (in samples).
 
     Returns
     -------
@@ -402,7 +392,7 @@ def phaseKLS(input_sig, output_by_phase, N, **kwargs):
 
 #========================================#
 
-kwargs_docstring_common = """
+kwargs_docstring_common_pre = """
     Other parameters
     ----------------
     solver : {'LS', 'QR'}, optional (default='LS')
@@ -414,9 +404,15 @@ kwargs_docstring_common = """
         vectors regrouping the nonzero coefficients of the diagonal form are
         returned; if set to 'tri' or 'sym', tensors depicting the triangular
         or symmetric form are returned.
-    projection : None
-        Orthogonal basis unto which the kernel should be projected for
-        identification; unused for the moment."""
+    M : int or list(int), optional (default=None)
+        Memory length for each kernels (in samples); can be specified
+        globally for all orders, or separately for each order via a list of
+        different values.
+    orthogonal_basis : (list of) basis object, optional (default=None)
+        Orthogonal basis unto which kernels are projected; can be specified
+        globally for all orders, or separately for each order via a list of
+        different values. See module :mod:`pyvi.utilities.orthogonal_basis'`
+        for precisions on what basis object can be."""
 kwargs_docstring_phi_order = """
     phi : dict(int: numpy.ndarray), optional (default=None)
         Pre-computed dictionary of the combinatorial matrix for each nonlinear
@@ -429,15 +425,22 @@ kwargs_docstring_cast_mode = """
     cast_mode : {'real', 'imag', 'real-imag'}, optional (default='real-imag')
         Choose how complex number are casted to real numbers; if set to
         'real-imag', arrays for the real and imaginary part will be stacked."""
+kwargs_docstring_common_post = """
+
+    Either the memory length `M` or parameter `orthogonal_basis` must be
+    specified; if both are `None`, the method will issue an error; if both are
+    given, memory length `M` will not be used.
+    """
 
 for mode in ('direct', 'order', 'term', 'iter', 'phase'):
     method = locals()[mode + '_method']
-    kwargs_docstring = kwargs_docstring_common
+    kwargs_docstring = kwargs_docstring_common_pre
     if mode in {'direct', 'order'}:
         kwargs_docstring += kwargs_docstring_phi_order
     elif mode in {'term', 'iter', 'phase'}:
         kwargs_docstring += kwargs_docstring_phi_term
         kwargs_docstring += kwargs_docstring_cast_mode
+    kwargs_docstring += kwargs_docstring_common_post
     method.__doc__ = method.__doc__.format(kwargs_docstring)
 
 _wrapper_doc_pre = """
@@ -457,6 +460,7 @@ for method, mode in zip((KLS, orderKLS, termKLS, iterKLS, phaseKLS),
     method.__doc__ += '\n'.join(corresponding_method_doc.splitlines()[2:])
     method.__doc__ += _wrapper_doc_post.format(mode)
 
-del (kwargs_docstring_common, kwargs_docstring_phi_order,
-     kwargs_docstring_phi_term, kwargs_docstring_cast_mode, kwargs_docstring,
-     method, corresponding_method_doc, mode)
+del (kwargs_docstring_common_pre, kwargs_docstring_common_post,
+     kwargs_docstring_phi_order, kwargs_docstring_phi_term,
+     kwargs_docstring_cast_mode, kwargs_docstring, method,
+     corresponding_method_doc, mode)

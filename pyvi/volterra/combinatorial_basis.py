@@ -57,10 +57,8 @@ def compute_combinatorial_basis(signal, N, system_type='volterra', M=None,
     orthogonal_basis : (list of) basis object, optional (default=None)
         Orthogonal basis unto which kernels are projected; can be specified
         globally for all orders, or separately for each order via a list of
-        different values. Valid basis object should be instances of
-        :class:`LaguerreBasis`, :class:`KautzBasis` or
-        :class:'GeneralizedBasis' from :mod:`pyvi.utilities.orthogonal_basis'
-        module.
+        different values. See module :mod:`pyvi.utilities.orthogonal_basis'`
+        for precisions on what basis object can be.
     sorted_by : {'order', 'term'}, optional (default='order')
         Choose if matrices are computed for each nonlinear homogeneous order
         or nonlinear combinatorial term.
