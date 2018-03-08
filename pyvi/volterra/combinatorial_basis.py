@@ -329,18 +329,15 @@ def projected_volterra_basis(signal, N, orthogonal_basis,
         phi[(n, 0)] = np.zeros(signal.shape + (nb_coeff,), signal.dtype)
 
         if sorted_by == 'term':
-            for k in range(1, (n+1)//2):
+            for k in range(1, 1+n//2):
                 phi[(n, k)] = np.zeros(signal.shape + (nb_coeff,),
                                        signal.dtype)
-            if not n % 2:
-                phi[(n, n//2)] = np.zeros(signal.shape + (nb_coeff,))
 
         ind = 0
         for idx in itr.combinations_with_replacement(range(curr_K), n):
             phi[(n, 0)][:, ind] = np.prod(sig_proj[n][:, idx], axis=1)
             if sorted_by == 'term':
-                # Terms 1 <= k < (n+1)//2
-                for k in range(1, (n+1)//2):
+                for k in range(1, 1+n//2):
                     tmp = sig_proj[n][:, idx]
                     total = 0
                     for idx_conj in itr.combinations(range(n), k):
@@ -349,12 +346,11 @@ def projected_volterra_basis(signal, N, orthogonal_basis,
                         phi[(n, k)][:, ind] += np.prod(tmp2, axis=1)
                         total += 1
                     phi[(n, k)][:, ind] /= total
-                # Term k = n//2
-                if not n % 2:
-                    phi[(n, n//2)][:, ind] = np.real(
-                        np.prod(sig_proj[n][:, idx[:n//2]], axis=1) *
-                        np.prod(sig_proj[n][:, idx[n//2:]].conj(), axis=1))
             ind += 1
+
+        if sorted_by == 'term':
+            if not n % 2:
+                phi[(n, n//2)] = np.real(phi[(n, n//2)])
 
     if sorted_by == 'order':
         phi = _phi_by_order_post_processing(phi, N)
