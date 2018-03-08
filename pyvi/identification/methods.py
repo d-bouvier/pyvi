@@ -80,12 +80,12 @@ def direct_method(input_sig, output_sig, N, M, **kwargs):
         """Compute the minimum number of data required."""
         return sum(list_nb_coeff)
 
-    def core_func(phi_by_order, out_sig, solver, cast_mode):
+    def core_func(phi_by_order, out_sig, solver, sizes=[], **kwargs):
         """Core computation of the identification."""
         mat = np.concatenate([val for n, val in sorted(phi_by_order.items())],
                              axis=1)
         kernels_vec = _solver(mat, out_sig, solver)
-        return vec2dict_of_vec(kernels_vec, N, M)
+        return _vec2dict_of_vec(kernels_vec, sizes)
 
     return _identification(input_sig, output_sig, N, M, required_nb_data_func,
                            core_func, 'order', **kwargs)
@@ -119,7 +119,7 @@ def order_method(input_sig, output_by_order, N, M, **kwargs):
         """Compute the minimum number of data required."""
         return max(list_nb_coeff)
 
-    def core_func(phi_by_order, out_by_order, solver, cast_mode):
+    def core_func(phi_by_order, out_by_order, solver, **kwargs):
         """Core computation of the identification."""
         kernels_vec = dict()
         for n, phi in phi_by_order.items():
@@ -159,7 +159,7 @@ def term_method(input_sig, output_by_term, N, M, **kwargs):
         """Compute the minimum number of data required."""
         return max(list_nb_coeff / (1+np.arange(1, N+1)//2))
 
-    def core_func(phi_by_term, out_by_term, solver, cast_mode):
+    def core_func(phi_by_term, out_by_term, solver, cast_mode='', **kwargs):
         """Core computation of the identification."""
 
         for (n, k) in phi_by_term.keys():
@@ -213,7 +213,7 @@ def iter_method(input_sig, output_by_phase, N, M, **kwargs):
         """Compute the minimum number of data required."""
         return max(list_nb_coeff)
 
-    def core_func(phi_by_term, out_by_phase, solver, cast_mode):
+    def core_func(phi_by_term, out_by_phase, solver, cast_mode='', **kwargs):
         """Core computation of the identification."""
 
         kernels_vec = dict()
@@ -274,11 +274,10 @@ def phase_method(input_sig, output_by_phase, N, M, **kwargs):
         """Compute the minimum number of data required."""
         return max(list_nb_coeff)
 
-    def core_func(phi_by_term, out_by_phase, solver, cast_mode):
+    def core_func(phi_by_term, out_by_phase, solver, sizes=[], cast_mode=''):
         """Core computation of the identification."""
 
         L = out_by_phase.shape[1]
-        sizes = series_nb_coeff(N, M, form='tri', out_by_order=True)
         kernels_vec = dict()
 
         for is_odd in [False, True]:
@@ -313,7 +312,7 @@ def _identification(input_data, output_data, N, M, required_nb_data_func,
 
     # Check that there is enough data to do the identification
     nb_data = input_data.size
-    list_nb_coeff = series_nb_coeff(N, M, form='tri', out_by_order=True)
+    list_nb_coeff = series_nb_coeff(N, M, form='vec', out_by_order=True)
     required_nb_data = required_nb_data_func(list_nb_coeff)
     if nb_data < required_nb_data:
         raise ValueError('Input signal has {} data samples'.format(nb_data) +
@@ -328,7 +327,8 @@ def _identification(input_data, output_data, N, M, required_nb_data_func,
         #TODO check correct
 
     # Estimate kernels
-    kernels_vec = core_func(phi, output_data, solver, cast_mode)
+    kernels_vec = core_func(phi, output_data, solver, sizes=list_nb_coeff,
+                            cast_mode=cast_mode)
 
     # Output
     if out_form == 'vec':
