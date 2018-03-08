@@ -7,8 +7,7 @@ on a matrix representation of the input-to-output relation of a Volterra
 series, and uses linear algebra tools to estimate the kernels coefficients.
 
 It contains five methods using different type of output data; it also defines
-wrappers for the family of KLS methods, where some parameters already fixed
-(``solver`` is set to 'QR' and ``out_form`` to 'sym').
+wrappers for the family of KLS methods that relies on 'QR' decomposition.
 
 Functions
 ---------
@@ -65,7 +64,7 @@ def direct_method(input_sig, output_sig, N, **kwargs):
     input_sig : numpy.ndarray
         Input signal.
     output_sig : numpy.ndarray
-        Output signal; should have the same shape as ``input_sig``.
+        Output signal; should have the same shape as `input_sig`.
     N : int
         Truncation order.
 
@@ -100,9 +99,8 @@ def order_method(input_sig, output_by_order, N, **kwargs):
     input_sig : numpy.ndarray
         Input signal.
     output_by_order : numpy.ndarray
-        Nonlinear homogeneous orders of the output signal; the first dimension
-        of the array should be of length ``N``, and each slice along this
-        dimension should have the same shape as ``input_sig``.
+        Nonlinear homogeneous orders of the output signal; should verify
+        ``output_by_order.shape == (N, input_sig.shape)``.
     N : int
         Truncation order.
 
@@ -137,10 +135,10 @@ def term_method(input_sig, output_by_term, N, **kwargs):
     input_sig : numpy.ndarray
         Input signal.
     output_by_term : dict((int, int): numpy.ndarray
-        Nonlinear combinatorial terms of the output signal; each array
-        contained in the dictionar should have the same shape as ``input_sig``;
-        the dictionary should contains all keys ``(n, q)`` for
-        ``n in range(1, N+1)`` and ``q in range(1+n//2)``.
+        Dictionary of the nonlinear combinatorial terms of the output signal;
+        should contains all keys ``(n, q)`` for ``n in range(1, N+1)`` and
+        ``q in range(1+n//2)``; each term should verify
+        ``output_by_term[(n, q)].shape == input_sig.shape``.
     N : int
         Truncation order.
 
@@ -185,11 +183,11 @@ def iter_method(input_sig, output_by_phase, N, **kwargs):
     input_sig : numpy.ndarray
         Input signal.
     output_by_phase : numpy.ndarray
-        Homophase signals constituting the output signal; the first dimension
-        of the array should be of length ``2N+1`` (if the whole phase spectrum
-        is given, in the order ``[0, 1, ... N, -N, ..., -1]``) or ``N+1``
-        (if only the null-and-positive phases are given); each slice along
-        the first dimension should have the same shape as ``input_sig``.
+        Homophase signals constituting the output signal; should verify
+        ``output_by_phase.shape == (2*N+1,) + input_sig.shape`` if the whole
+        phase spectrum is given or only
+        ``output_by_phase.shape == (N+1,) + input_sig.shape)``
+        if only the null-and-positive phases are given.
     N : int
         Truncation order.
 
@@ -244,11 +242,11 @@ def phase_method(input_sig, output_by_phase, N, **kwargs):
     input_sig : numpy.ndarray
         Input signal.
     output_by_phase : numpy.ndarray
-        Homophase signals constituting the output signal; the first dimension
-        of the array should be of length ``2N+1`` (if the whole phase spectrum
-        is given, in the order ``[0, 1, ... N, -N, ..., -1]``) or ``N+1``
-        (if only the null-and-positive phases are given); each slice along
-        the first dimension should have the same shape as ``input_sig``.
+        Homophase signals constituting the output signal; should verify
+        ``output_by_phase.shape == (2*N+1,) + input_sig.shape`` if the whole
+        phase spectrum is given or only
+        ``output_by_phase.shape == (N+1,) + input_sig.shape)``
+        if only the null-and-positive phases are given.
     N : int
         Truncation order.
 
@@ -361,7 +359,6 @@ def _cast_complex2real(val_by_term, cast_mode):
 
 def _kwargs_for_KLS(**kwargs):
     kwargs['solver'] = 'QR'
-    kwargs['out_form'] = 'sym'
     return kwargs
 
 
@@ -419,11 +416,9 @@ kwargs_docstring_common_pre = """
         Method used for solving linear systems; if set to 'LS', a standard
         Least-Squares estimate is used; if set to 'QR', a QR decomposition of
         the matrix to invert is used.
-    out_form : {'vec', sym', 'tri'}, optional (default='vec')
-        Form under which the kernels are returned; if set to 'vec', only
-        vectors regrouping the nonzero coefficients of the diagonal form are
-        returned; if set to 'tri' or 'sym', tensors depicting the triangular
-        or symmetric form are returned.
+    out_form : {'tri', 'sym', 'vec'}, optional (default='vec')
+        Form to assume for the kernel; if None, no specific form is assumed.
+        See module :mod:`pyvi.volterra.tools` for more precisions.
     M : int or list(int), optional (default=None)
         Memory length for each kernels (in samples); can be specified
         globally for all orders, or separately for each order via a list of
@@ -431,7 +426,7 @@ kwargs_docstring_common_pre = """
     orthogonal_basis : (list of) basis object, optional (default=None)
         Orthogonal basis unto which kernels are projected; can be specified
         globally for all orders, or separately for each order via a list of
-        different values. See module :mod:`pyvi.utilities.orthogonal_basis'`
+        different values. See module :mod:`pyvi.utilities.orthogonal_basis`
         for precisions on what basis object can be."""
 kwargs_docstring_phi_order = """
     phi : dict(int: numpy.ndarray), optional (default=None)
@@ -465,7 +460,7 @@ for mode in ('direct', 'order', 'term', 'iter', 'phase'):
 
 _wrapper_doc_pre = """
     This function is only a wrapper kept for convenience; refer to
-    `pyvi.identification.{}_method`.
+    :func:`pyvi.identification.{}_method`.
     """
 _wrapper_doc_post = """
     See also

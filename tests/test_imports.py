@@ -45,24 +45,32 @@ class UtilitiesTestCase(PyviTestCase):
     needed_properties = ['rms', 'db', 'safe_db', 'binomial', 'multinomial',
                          'array_symmetrization', 'separation_error',
                          'identification_error', 'LaguerreBasis', 'KautzBasis',
-                         'GeneralizedBasis', 'create_orthogonal_basis']
+                         'GeneralizedBasis', 'create_orthogonal_basis',
+                         'is_valid_basis_instance']
     should_be_absent_properties = ['_AbstractOrthogonalBasis',
-                                   'inherint_docstring']
+                                   'inherint_docstring', '_as_list']
 
 
 class VolterraTestCase(PyviTestCase):
 
     module = pyvi.volterra
     needed_properties = ['kernel_nb_coeff', 'series_nb_coeff', 'vec2kernel',
-                         'vec2series', 'kernel2vec', 'volterra_basis']
-    should_be_absent_properties = []
+                         'vec2series', 'kernel2vec',
+                         'compute_combinatorial_basis', 'volterra_basis',
+                         'hammerstein_basis', 'projected_volterra_basis',
+                         'projected_hammerstein_basis']
+    should_be_absent_properties = ['_vec2dict_of_vec', '_check_parameters',
+                                   '_compute_list_nb_coeff',
+                                   '_phi_by_order_post_processing',
+                                   '_combinatorial_mat_diag_terms']
 
 
 class SeparationTestCase(PyviTestCase):
 
     module = pyvi.separation
     needed_properties = ['AS', 'CPS', 'HPS', 'PS', 'PAS']
-    should_be_absent_properties = ['_SeparationMethod', '_AbstractPS']
+    should_be_absent_properties = ['_SeparationMethod', '_AbstractPS',
+                                   '_create_vandermonde_mixing_mat']
 
 
 
@@ -70,9 +78,11 @@ class IdentificationTestCase(PyviTestCase):
 
     module = pyvi.identification
     needed_properties = ['direct_method', 'order_method', 'term_method',
-                         'iter_method', 'KLS', 'orderKLS', 'termKLS',
-                         'iterKLS']
-    should_be_absent_properties = []
+                         'iter_method', 'phase_method', 'KLS', 'orderKLS',
+                         'termKLS', 'iterKLS', 'phaseKLS']
+    should_be_absent_properties = ['_solver', '_ls_solver', '_qr_solver',
+                                   '_complex2real', '_identification',
+                                   '_cast_complex2real', '_kwargs_for_KLS']
 
 
 #==============================================================================

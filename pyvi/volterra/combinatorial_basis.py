@@ -2,6 +2,19 @@
 """
 Module for computing volterra combinatorial basis.
 
+Functions
+---------
+compute_combinatorial_basis :
+    Creates dictionary of combinatorial basis matrix.
+volterra_basis :
+    Dictionary of combinatorial basis matrix for Volterra system.
+hammerstein_basis :
+    Dictionary of combinatorial basis matrix for Hammerstein system.
+projected_volterra_basis :
+    Dictionary of combinatorial basis matrix for projected Volterra system.
+projected_hammerstein_basis :
+    Dictionary of combinatorial basis matrix for projected Hammerstein system.
+
 Notes
 -----
 Developed for Python 3.6.1
@@ -57,7 +70,7 @@ def compute_combinatorial_basis(signal, N, system_type='volterra', M=None,
     orthogonal_basis : (list of) basis object, optional (default=None)
         Orthogonal basis unto which kernels are projected; can be specified
         globally for all orders, or separately for each order via a list of
-        different values. See module :mod:`pyvi.utilities.orthogonal_basis'`
+        different values. See module :mod:`pyvi.utilities.orthogonal_basis`
         for precisions on what basis object can be.
     sorted_by : {'order', 'term'}, optional (default='order')
         Choose if matrices are computed for each nonlinear homogeneous order
@@ -89,7 +102,7 @@ def compute_combinatorial_basis(signal, N, system_type='volterra', M=None,
 
 
 def _check_parameters(N, system_type, M, orthogonal_basis):
-    """Check for wrong, crontadictory or missing parameters."""
+    """Check for wrong, contradictory or missing parameters."""
 
     if system_type not in set.union(_STRING_VOLTERRA, _STRING_HAMMERSTEIN):
         message = "Unknown system type {}; available types are 'volterra' " + \
@@ -134,6 +147,7 @@ def _check_parameters(N, system_type, M, orthogonal_basis):
 
 def _compute_list_nb_coeff(N, system_type, M, orthogonal_basis,
                            orthogonal_basis_is_list):
+    """Compute the number of element for each order."""
 
     if M is not None:
         nb_element = _as_list(M, N)
@@ -146,35 +160,6 @@ def _compute_list_nb_coeff(N, system_type, M, orthogonal_basis,
         return series_nb_coeff(N, nb_element, form='vec', out_by_order=True)
     else:
         return nb_element
-
-
-def hammerstein_basis(signal, N, M, sorted_by):
-    """
-    Dictionary of combinatorial basis matrix for Hammerstein system.
-    """
-
-    _M = _as_list(M, N)
-    signal = signal.copy()
-    len_sig = signal.shape[0]
-    signal.shape = (len_sig, 1)
-
-    phi = dict()
-    for n, m in zip(range(1, N+1), _M):
-        phi[(n, 0)] = _combinatorial_mat_diag_terms(signal**n, m)
-        if sorted_by == 'term':
-            # Terms 1 <= k < (n+1)//2
-            for k in range(1, (n+1)//2):
-                tmp = signal**(n-k) * signal.conj()**k
-                phi[(n, k)] = _combinatorial_mat_diag_terms(tmp, m)
-            # Term k = n//2
-            if not n % 2:
-                tmp = np.real(signal * signal.conj())**(n//2)
-                phi[(n, n//2)] = _combinatorial_mat_diag_terms(tmp, m)
-
-    if sorted_by == 'order':
-        phi = _phi_by_order_post_processing(phi, N)
-
-    return phi
 
 
 def volterra_basis(signal, N, M, sorted_by):
@@ -272,27 +257,28 @@ def volterra_basis(signal, N, M, sorted_by):
     return phi
 
 
-def projected_hammerstein_basis(signal, N, orthogonal_basis, sorted_by):
+def hammerstein_basis(signal, N, M, sorted_by):
     """
-    Dictionary of combinatorial basis matrix for projected Hammerstein system.
+    Dictionary of combinatorial basis matrix for Hammerstein system.
     """
 
-    _orthogonal_basis = _as_list(orthogonal_basis, N)
+    _M = _as_list(M, N)
     signal = signal.copy()
+    len_sig = signal.shape[0]
+    signal.shape = (len_sig, 1)
 
     phi = dict()
-    for n, basis in zip(range(1, N+1), _orthogonal_basis):
-        phi[(n, 0)] = basis.projection(signal**n).T
-
+    for n, m in zip(range(1, N+1), _M):
+        phi[(n, 0)] = _combinatorial_mat_diag_terms(signal**n, m)
         if sorted_by == 'term':
             # Terms 1 <= k < (n+1)//2
             for k in range(1, (n+1)//2):
                 tmp = signal**(n-k) * signal.conj()**k
-                phi[(n, k)] = basis.projection(tmp).T
+                phi[(n, k)] = _combinatorial_mat_diag_terms(tmp, m)
             # Term k = n//2
             if not n % 2:
                 tmp = np.real(signal * signal.conj())**(n//2)
-                phi[(n, n//2)] = basis.projection(tmp).T
+                phi[(n, n//2)] = _combinatorial_mat_diag_terms(tmp, m)
 
     if sorted_by == 'order':
         phi = _phi_by_order_post_processing(phi, N)
@@ -358,8 +344,36 @@ def projected_volterra_basis(signal, N, orthogonal_basis,
     return phi
 
 
+def projected_hammerstein_basis(signal, N, orthogonal_basis, sorted_by):
+    """
+    Dictionary of combinatorial basis matrix for projected Hammerstein system.
+    """
+
+    _orthogonal_basis = _as_list(orthogonal_basis, N)
+    signal = signal.copy()
+
+    phi = dict()
+    for n, basis in zip(range(1, N+1), _orthogonal_basis):
+        phi[(n, 0)] = basis.projection(signal**n).T
+
+        if sorted_by == 'term':
+            # Terms 1 <= k < (n+1)//2
+            for k in range(1, (n+1)//2):
+                tmp = signal**(n-k) * signal.conj()**k
+                phi[(n, k)] = basis.projection(tmp).T
+            # Term k = n//2
+            if not n % 2:
+                tmp = np.real(signal * signal.conj())**(n//2)
+                phi[(n, n//2)] = basis.projection(tmp).T
+
+    if sorted_by == 'order':
+        phi = _phi_by_order_post_processing(phi, N)
+
+    return phi
+
+
 def _phi_by_order_post_processing(phi, N):
-    """Post processing of the dictionary ``phi`` if it by nonlinear order."""
+    """Post processing of the dictionary `phi` if it by nonlinear order."""
 
     for n in range(1, N+1):
         phi[n] = phi.pop((n, 0))

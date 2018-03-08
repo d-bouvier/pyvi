@@ -33,7 +33,7 @@ import itertools as itr
 import numpy as np
 import scipy.fftpack as sc_fft
 import scipy.signal as sc_sig
-from .tools import create_vandermonde_mixing_mat
+from .tools import _create_vandermonde_mixing_mat
 from ..utilities.mathbox import binomial, multinomial
 from ..utilities.tools import inherit_docstring
 
@@ -60,7 +60,7 @@ class _SeparationMethod:
     K : int
         Number of tests signals.
     factors : array_like
-        Vector of length K regrouping all factors.
+        Vector of length `K` regrouping all factors.
     condition_numbers : list(float)
         List of condition numbers of all matrix inverted during separation.
 
@@ -90,8 +90,8 @@ class _SeparationMethod:
         Returns
         -------
         input_coll : numpy.ndarray
-            Collection of the K input test signals (each with the same shape as
-            ``signal``); first dimension of ``input_coll`` is of length K.
+            Collection of the input test signals; its shape verifies
+            ``input_coll.shape == (self.K, signal.shape)``.
         """
 
         return np.tensordot(self.factors, signal, axes=0)
@@ -103,14 +103,14 @@ class _SeparationMethod:
         Parameters
         ----------
         output_coll : numpy.ndarray
-            Collection of the K output signals; first dimension should be of
-            length K.
+            Collection of the output signals; it should verify
+            ``output_coll.shape[0] == self.K``.
 
         Returns
         -------
         output_by_order : numpy.ndarray
-            Estimation of the nonlinear homogeneous orders; first dimension of
-            ``output_by_order`` is of length N.
+            Estimation of the nonlinear homogeneous orders; it verifies
+            ``output_by_order.shape == (self.N, output_coll.shape[1:])``.
         """
 
         raise NotImplementedError
@@ -130,8 +130,8 @@ class AS(_SeparationMethod):
         Defines if amplitudes with negative values can be used; this greatly
         improves separation.
     nb_amp : int, optional (default=None)
-        Number of different amplitudes; must be greater than or equal to N;
-        if None, will be set equal to N.
+        Number of different amplitudes; must be greater than or equal to `N`;
+        if None, will be set equal to `N`.
 
     Attributes
     ----------
@@ -140,9 +140,9 @@ class AS(_SeparationMethod):
     K : int
         Number of tests signals.
     nb_amp : int
-        Number of amplitude factors; equal to K for AS.
+        Number of amplitude factors; always equal to `K` for AS.
     factors : array_like
-        Vector of length K regrouping all factors.
+        Vector of length `K` regrouping all factors.
     gain : float
         Amplitude factor between consecutive test signals.
     negative_gain : boolean
@@ -179,7 +179,7 @@ class AS(_SeparationMethod):
         self.gain = gain
         self.negative_gain = negative_gain
         super().__init__(N, self._gen_amp_factors())
-        self.mixing_mat = create_vandermonde_mixing_mat(self.factors, self.N)
+        self.mixing_mat = _create_vandermonde_mixing_mat(self.factors, self.N)
         self.condition_numbers.append(np.linalg.cond(self.mixing_mat))
 
     @classmethod
@@ -210,7 +210,7 @@ class AS(_SeparationMethod):
 
     @classmethod
     def best_gain(cls, N, gain_min=0.1, gain_max=1., tol=1e-6, **kwargs):
-        """ Search for the gain that minimizes the maximum condition number."""
+        """Search for the gain that minimizes the maximum condition number."""
 
         while True:
             gain_vec = np.linspace(gain_min, gain_max, num=9)
@@ -238,8 +238,9 @@ class CPS(_SeparationMethod):
     N : int
         Number of orders to separate (truncation order of the Volterra series).
     nb_phase : int
-        Number of phase factors used; should be greater than N; choosing N
-        large leads to a more robust method but also to more test signals.
+        Number of phase factors used; should be greater than `N`; choosing
+        `nb_phase` large leads to a more robust method but also to more test
+        signals.
     rho : float, optional (default=1.)
         Rejection factor value for dealing with the order aliasing effect;
         must be less than 1 to reject higher-orders; must be close to 1 to
@@ -252,15 +253,15 @@ class CPS(_SeparationMethod):
     K : int
         Number of tests signals.
     nb_phase : int
-        Number of phase factors; equal to K for CPS and HPS.
+        Number of phase factors; equal to `K` for CPS.
     factors : array_like
-        Vector of length K regrouping all factors.
+        Vector of length `K` regrouping all factors.
     rho : float
         Rejection factor.
     w : float
         Initial phase factor.
     fft_axis : int, class attribute
-        Axis along which to compute the inverse FFT.
+        Axis along which to compute the inverse FFT; equal to 0 for CPS.
     condition_numbers : list(float)
         List of condition numbers of all matrix inverted during separation.
 
@@ -332,8 +333,9 @@ class HPS(CPS):
     N : int
         Number of nonlinear orders (truncation order of the Volterra series).
     nb_phase : int
-        Number of phase factors used; should be greater than N; choosing N
-        large leads to a more robust method but also to more test signals.
+        Number of phase factors used; should be greater than ``2*N+1``;
+        choosing `nb_phase` large leads to a more robust method but also to
+        more test signals.
 
     Attributes
     ----------
@@ -342,15 +344,15 @@ class HPS(CPS):
     K : int
         Number of tests signals.
     nb_phase : int
-        Number of phase factors; equal to K for CPS and HPS.
+        Number of phase factors; equal to `K` for HPS.
     factors : array_like
-        Vector of length K regrouping all factors.
+        Vector of length `K` regrouping all factors.
     rho : float, class attribute
-        Rejection factor; equal to 1 (not used) for HPS, PS and PAS.
+        Rejection factor; equal to 1 (not used) for HPS.
     w : float
         Initial phase factor.
     fft_axis : int or tuple(int), class attribute
-        Axis along which inverse FFT is computed; equal to 0 for HPS and PAS.
+        Axis along which inverse FFT is computed; equal to 0 for HPS.
     condition_numbers : list(float)
         List of condition numbers of all matrix inverted during separation.
 
@@ -388,11 +390,11 @@ class HPS(CPS):
         Returns
         -------
         input_coll : numpy.ndarray
-            Collection of the K input test signals (each with the same shape as
-            ``signal``);  first dimension of ``input_coll`` is of length K.
+            Collection of the input test signals; its shape verifies
+            ``input_coll.shape == (self.K, signal.shape)``.
         signal_cplx : numpy.ndarray
-            Complex version of ``signal`` obtained using Hilbert transform;
-            only returned if ``signal`` is not complex-valued
+            Complex version of `signal` obtained using Hilbert transform;
+            only returned if `signal` is not complex-valued
         """
 
         if not np.iscomplexobj(signal):
@@ -408,14 +410,14 @@ class HPS(CPS):
         Parameters
         ----------
         output_coll : numpy.ndarray
-            Collection of the K output signals; first dimension should be of
-            length K.
+            Collection of the output signals; it should verify
+            ``output_coll.shape[0] == self.K``.
 
         Returns
         -------
         homophase : numpy.ndarray
-            Estimation of the homophase signals; phases are along the first
-            dimension, in the following order: [0, 1, ... N, -N, ..., -1].
+            Estimation of the homophase signals; it verifies
+            ``homophase.shape == (2*self.N+1, output_coll.shape[1:])``.
         """
 
         temp = self._ifft(output_coll)
@@ -431,8 +433,9 @@ class _AbstractPS(HPS):
     N : int
         Number of nonlinear orders (truncation order of the Volterra series).
     nb_phase : int
-        Number of phase factors used; should be greater than N; choosing N
-        large leads to a more robust method but also to more test signals.
+        Number of phase factors used; should be greater than ``2*N+1``;
+        choosing `nb_phase` large leads to a more robust method but also to
+        more test signals.
 
     Attributes
     ----------
@@ -443,9 +446,9 @@ class _AbstractPS(HPS):
     nb_phase : int
         Number of phase factors.
     factors : array_like
-        Vector of length K regrouping all factors.
+        Vector of length `K` regrouping all factors.
     rho : float, class attribute
-        Rejection factor; equal to 1 (not used) for HPS, PS and PAS.
+        Rejection factor; equal to 1 (not used) for _AbstractPS.
     w : float
         Initial phase factor.
     fft_axis : int or tuple(int), class attribute
@@ -507,21 +510,22 @@ class _AbstractPS(HPS):
         Parameters
         ----------
         output_coll : numpy.ndarray
-            Collection of the K output signals; first dimension should be of
-            length K.
+            Collection of the output signals; it should verify
+            ``output_coll.shape[0] == self.K``
         raw_mode : boolean, optional (default=False)
-            If True, only returns eestimated orders; else also returns
+            If True, only returns estimated orders; else also returns
             estimated combinatorial terms.
 
         Returns
         -------
         output_by_order : numpy.ndarray
-            Estimation of the nonlinear homogeneous orders; first dimension of
-            ``output_by_order`` is of length N.
+            Estimation of the nonlinear homogeneous orders; it verifies
+            ``output_by_order.shape == (self.N, output_coll.shape[1:])``.
         combinatorial_terms : dict((int, int): numpy.ndarray)
-            Dictionnary of the estimated combinatorial terms for each couple
-            (n, q) where n is the nonlinear order and q the number of times
-            where the conjuguate input signal appears.
+            Dictionary of the estimated combinatorial terms; should contains
+            all keys ``(n, q)`` for ``n in range(1, N+1)`` and
+            ``q in range(1+n//2)``; each term should verify
+            ``combinatorial_terms[(n, q)].shape == output_coll.shape[1:]``.
         """
 
         # Initialization
@@ -576,8 +580,9 @@ class PS(_AbstractPS):
     N : int
         Number of nonlinear orders (truncation order of the Volterra series).
     nb_phase : int
-        Number of phase factors used; should be greater than N; choosing N
-        large leads to a more robust method but also to more test signals.
+        Number of phase factors used; should be greater than ``2*N+1``;
+        choosing `nb_phase` large leads to a more robust method but also to
+        more test signals.
 
     Attributes
     ----------
@@ -588,9 +593,9 @@ class PS(_AbstractPS):
     nb_phase : int
         Number of phase factors.
     factors : array_like
-        Vector of length K regrouping all factors.
+        Vector of length `K` regrouping all factors.
     rho : float, class attribute
-        Rejection factor; equal to 1 (not used) for HPS, PS and PAS.
+        Rejection factor; equal to 1 (not used) for PS.
     w : float
         Initial phase factor.
     fft_axis : int or tuple(int), class attribute
@@ -708,8 +713,9 @@ class PAS(_AbstractPS, AS):
     gain : float, optional (default=0.64)
         Gain factor in amplitude between the input test signals.
     nb_phase : int
-        Number of phase factors used; should be greater than N; choosing N
-        large leads to a more robust method but also to more test signals.
+        Number of phase factors used; should be greater than ``2*N+1``;
+        choosing `nb_phase` large leads to a more robust method but also to
+        more test signals.
 
     Attributes
     ----------
@@ -722,9 +728,9 @@ class PAS(_AbstractPS, AS):
     nb_amp : int
         Number of amplitude factors.
     factors : array_like
-        Vector of length K regrouping all factors.
+        Vector of length `K` regrouping all factors.
     rho : float, class attribute
-        Rejection factor; equal to 1 (not used) for HPS, PS and PAS.
+        Rejection factor; equal to 1 (not used) for PAS.
     w : float
         Initial phase factor.
     gain : float
@@ -732,7 +738,7 @@ class PAS(_AbstractPS, AS):
     negative_gain : boolean, class attribute
         Boolean for use of negative values amplitudes; equal to False for PAS.
     fft_axis : int or tuple(int), class attribute
-        Axis along which inverse FFT is computed; equal to 0 for HPS and PAS.
+        Axis along which inverse FFT is computed; equal to 0 for PAS.
     mixing_mat_dict : dict(int: numpy.ndarray)
         Dictionnary of mixing matrix between orders and output for each phase.
     nq_dict : dict(int: list((int, int)))
@@ -760,7 +766,7 @@ class PAS(_AbstractPS, AS):
         self.HPS_obj = HPS(N, nb_phase=nb_phase)
 
         AS.__init__(self, N, gain=gain, negative_gain=self.negative_gain)
-        self._global_mix_mat = create_vandermonde_mixing_mat(self.factors, N)
+        self._global_mix_mat = _create_vandermonde_mixing_mat(self.factors, N)
         self.nb_term = self.nb_amp * self.nb_phase
 
         factors = np.tensordot(self.HPS_obj.factors, self.factors, axes=0)
