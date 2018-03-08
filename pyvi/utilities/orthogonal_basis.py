@@ -6,7 +6,7 @@ This modules creates class to handle orthogonal basis for signal projection.
 A valid basis object is:
 
     - an instance of a subclass of :class:`_OrthogonalBasis`, such as
-    :class:`LaguerreBasis`, :class:`KautzBasis` or :class:'GeneralizedBasis';
+    :class:`LaguerreBasis`, :class:`KautzBasis` or :class:`GeneralizedBasis`;
     - an instance of a custom object such that the following conditions are
     met:
 
@@ -82,7 +82,7 @@ class _OrthogonalBasis():
 
     @classmethod
     def _filtering(cls, signal, system):
-        """Filter ``signal`` by ``system``."""
+        """Filter `signal` by `system`."""
 
         if any(np.iscomplex(signal)):
             _, filtered_signal_r, _ = sc_sig.dlsim(system, np.real(signal))
@@ -118,7 +118,7 @@ class LaguerreBasis(_OrthogonalBasis):
 
     def __init__(self, pole, K):
         if np.iscomplex(pole):
-            raise ValueError('Given parameter ``pole`` is complex-valued, ' +
+            raise ValueError('Given parameter `pole` is complex-valued, ' +
                              'should be real-valued for Laguerre basis.')
         self.pole = pole
         self.K = K
@@ -164,7 +164,7 @@ class KautzBasis(_OrthogonalBasis):
 
     def __init__(self, pole, K):
         if K % 2:
-            raise ValueError('Given parameter ``K`` is odd, should be even ' +
+            raise ValueError('Given parameter `K` is odd, should be even ' +
                              'for Kautz basis to ensure realness.')
         self.pole = pole
         self.K = K
@@ -268,7 +268,7 @@ def create_orthogonal_basis(poles, K=None):
         complex) pole is given, a Laguerre (resp. Kautz) basis is returned; if
         several poles are given, a Generalized orthogonal basis is returned.
     K : int, optional (default=None)
-        Number of elements of the basis; only mandatory if ``poles`` is a
+        Number of elements of the basis; only mandatory if `poles` is a
         number or of lenght 1; else, the number of elements will depend of the
         number of poles.
 
@@ -280,7 +280,7 @@ def create_orthogonal_basis(poles, K=None):
 
     if isinstance(poles, (Sequence, np.ndarray)):
         if len(poles) == 0:
-            raise ValueError('Parameter ``poles`` has zero-length, should ' +
+            raise ValueError('Parameter `poles` has zero-length, should ' +
                              'be at least 1.')
         elif len(poles) == 1:
             return create_orthogonal_basis(poles[0], K=K)
@@ -288,7 +288,7 @@ def create_orthogonal_basis(poles, K=None):
             return GeneralizedBasis(poles)
     elif isinstance(poles, Number):
         if K is None:
-            raise ValueError('Unspecified parameter ``K`` for basis of ' +
+            raise ValueError('Unspecified parameter `K` for basis of ' +
                              'type Laguerre or Kautz.')
         pole = poles
         if np.iscomplex(pole):
@@ -296,7 +296,7 @@ def create_orthogonal_basis(poles, K=None):
         else:
             return LaguerreBasis(np.real(pole), K)
     else:
-        raise TypeError('Parameter ``poles`` is neither a numeric value ' +
+        raise TypeError('Parameter `poles` is neither a numeric value ' +
                         'nor a list of numeric values.')
 
 

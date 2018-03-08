@@ -4,7 +4,7 @@ Tools for order separation.
 
 Functions
 ---------
-create_vandermonde_mixing_mat :
+_create_vandermonde_mixing_mat :
     Creates the Vandermonde matrix due to the nonlinear orders homogeneity.
 
 Notes
@@ -24,7 +24,7 @@ import numpy as np
 # Functions
 #==============================================================================
 
-def create_vandermonde_mixing_mat(factors, N):
+def _create_vandermonde_mixing_mat(factors, N):
     """
     Creates the Vandermonde matrix due to the nonlinear orders homogeneity.
 
@@ -37,8 +37,9 @@ def create_vandermonde_mixing_mat(factors, N):
 
     Returns
     -------
-    matrix: np.ndarray (of size=(len(factors), N))
-        Mixing matrix of the Volterra orders in the output signals.
+    matrix: numpy.ndarray
+        Mixing matrix of the Volterra orders in the output signals; its shape
+        verifies ``(len(factors), N)``.
     """
 
     return np.vander(factors, N=N+1, increasing=True)[:, 1::]

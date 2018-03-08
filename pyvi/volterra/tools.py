@@ -96,13 +96,13 @@ def series_nb_coeff(N, M, form=None, out_by_order=False):
         via a list of different values.
     out_by_order : boolean, optional (default=False)
         Specify if the output should be the total number of nonzero
-        coefficients (if ``out_by_order``is False), or a list of the number of
+        coefficients (if `out_by_order` is False), or a list of the number of
         nonzero coefficients for each order.
 
     Returns
     -------
     nb_coeff : int or list(int)
-        The total number of nonzero coefficients (if ``out_by_order``is False),
+        The total number of nonzero coefficients (if `out_by_order` is False),
         or a list of the number of nonzero coefficients for each order.
     """
 
@@ -196,7 +196,7 @@ def vec2series(vec, N, M, form=None):
     Returns
     -------
     kernels : dict(int: numpy.ndarray)
-        Dictionnary linking the Volterra kernel of order ``n`` to key ``n``.
+        Dictionnary of each Volterra kernel by order.
     """
 
     _M = _as_list(M, N)

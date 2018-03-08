@@ -17,7 +17,8 @@ import unittest
 import numpy as np
 from pyvi.identification.methods import (direct_method, order_method,
                                          term_method, iter_method,
-                                         phase_method)
+                                         phase_method, KLS, orderKLS, termKLS,
+                                         iterKLS, phaseKLS)
 from pyvi.separation.methods import HPS, PS
 from pyvi.volterra.combinatorial_basis import (_check_parameters,
                                                _compute_list_nb_coeff,
@@ -142,22 +143,18 @@ class DirectMethod_ListM_Test(DirectMethodTest):
 
 
 class OrderMethod_ListM_Test(OrderMethodTest, DirectMethod_ListM_Test):
-
     pass
 
 
 class TermMethod_ListM_Test(TermMethodTest, DirectMethod_ListM_Test):
-
     pass
 
 
 class IterMethod_ListM_Test(IterMethodTest, DirectMethod_ListM_Test):
-
     pass
 
 
 class PhaseMethod_ListM_Test(PhaseMethodTest, DirectMethod_ListM_Test):
-
     pass
 
 
@@ -168,22 +165,18 @@ class DirectMethod_Projected_Test(DirectMethodTest):
 
 
 class OrderMethod_Projected_Test(OrderMethodTest, DirectMethod_Projected_Test):
-
     pass
 
 
 class TermMethod_Projected_Test(TermMethodTest, DirectMethod_Projected_Test):
-
     pass
 
 
 class IterMethod_Projected_Test(IterMethodTest, DirectMethod_Projected_Test):
-
     pass
 
 
 class PhaseMethod_Projected_Test(PhaseMethodTest, DirectMethod_Projected_Test):
-
     pass
 
 
@@ -197,23 +190,134 @@ class DirectMethod_MultiProj_Test(DirectMethodTest):
 
 
 class OrderMethod_MultiProj_Test(OrderMethodTest, DirectMethod_MultiProj_Test):
-
     pass
 
 
 class TermMethod_MultiProj_Test(TermMethodTest, DirectMethod_MultiProj_Test):
-
     pass
 
 
 class IterMethod_MultiProj_Test(IterMethodTest, DirectMethod_MultiProj_Test):
-
     pass
 
 
 class PhaseMethod_MultiProj_Test(PhaseMethodTest, DirectMethod_MultiProj_Test):
-
     pass
+
+
+class DirectMethodHammersteinTest(DirectMethodTest):
+
+    def _set_kwargs(self):
+        return {'M': 3, 'system_type': 'hammerstein'}
+
+
+class OrderMethodHammersteinTest(DirectMethodHammersteinTest, OrderMethodTest):
+    pass
+
+
+class TermMethodHammersteinTest(DirectMethodHammersteinTest, TermMethodTest):
+    pass
+
+
+class IterMethodHammersteinTest(DirectMethodHammersteinTest, IterMethodTest):
+    pass
+
+
+class PhaseMethodHammersteinTest(DirectMethodHammersteinTest, PhaseMethodTest):
+    pass
+
+
+class DirectMethodHammerstein_ListM_Test(DirectMethodHammersteinTest,
+                                         DirectMethod_ListM_Test):
+    pass
+
+
+class OrderMethodHammerstein_ListM_Test(DirectMethodHammerstein_ListM_Test,
+                                        OrderMethodTest):
+    pass
+
+
+class TermMethodHammerstein_ListM_Test(DirectMethodHammerstein_ListM_Test,
+                                       TermMethodTest):
+    pass
+
+
+class IterMethodHammerstein_ListM_Test(DirectMethodHammerstein_ListM_Test,
+                                       IterMethodTest):
+    pass
+
+
+class PhaseMethodHammerstein_ListM_Test(DirectMethodHammerstein_ListM_Test,
+                                        PhaseMethodTest):
+    pass
+
+
+
+class DirectMethodHammerstein_Proj_Test(DirectMethodHammersteinTest,
+                                        DirectMethod_Projected_Test):
+    pass
+
+
+class OrderMethodHammerstein_Proj_Test(DirectMethodHammerstein_Proj_Test,
+                                       OrderMethodTest):
+    pass
+
+
+class TermMethodHammerstein_Proj_Test(DirectMethodHammerstein_Proj_Test,
+                                      TermMethodTest):
+    pass
+
+
+class IterMethodHammerstein_Proj_Test(DirectMethodHammerstein_Proj_Test,
+                                      IterMethodTest):
+    pass
+
+
+class PhaseMethodHammerstein_Proj_Test(DirectMethodHammerstein_Proj_Test,
+                                       PhaseMethodTest):
+    pass
+
+
+class HammersteinWarningTest(unittest.TestCase):
+
+    def test_warning(self):
+        self.assertWarns(UserWarning, direct_method, np.arange(30),
+                         np.arange(30), 3, M=5, out_form='tri',
+                         system_type='hammerstein')
+
+
+class KLSTest(DirectMethodTest):
+
+    method = staticmethod(KLS)
+    solvers = None
+    cast_modes = None
+
+    def _identification(self):
+        list_kernels_est = dict()
+        list_kernels_est['None'] = \
+            self.method(self.input_sig, self.output_data, self.N,
+                        **self.kwargs)
+        return list_kernels_est
+
+
+class OrderKLSTest(KLSTest, OrderMethodTest):
+
+    method = staticmethod(orderKLS)
+
+
+class TermKLSTest(KLSTest, TermMethodTest):
+
+    method = staticmethod(termKLS)
+
+
+class IterKLSTest(KLSTest, IterMethodTest):
+
+    method = staticmethod(iterKLS)
+
+
+class PhaseKLSTest(KLSTest, PhaseMethodTest):
+
+    method = staticmethod(phaseKLS)
 
 
 #==============================================================================
@@ -221,9 +325,9 @@ class PhaseMethod_MultiProj_Test(PhaseMethodTest, DirectMethod_MultiProj_Test):
 #==============================================================================
 
 def generate_output(input_sig, kernels_vec, N, M=None, orthogonal_basis=None,
-                    by_order=False):
-    phi = compute_combinatorial_basis(input_sig, N, M=M,
-                                      orthogonal_basis=orthogonal_basis,
+                    system_type='volterra', by_order=False):
+    phi = compute_combinatorial_basis(input_sig, N, system_type=system_type,
+                                      M=M, orthogonal_basis=orthogonal_basis,
                                       sorted_by='order')
     L = phi[1].shape[0]
     output_by_order = np.zeros((N, L))
@@ -235,8 +339,7 @@ def generate_output(input_sig, kernels_vec, N, M=None, orthogonal_basis=None,
         return np.sum(output_by_order, axis=0)
 
 
-def generate_kernels(N, M=None, orthogonal_basis=None):
-    system_type = 'volterra'
+def generate_kernels(N, M=None, orthogonal_basis=None, system_type='volterra'):
     _M, is_orthogonal_basis_as_list = _check_parameters(N, system_type, M,
                                                         orthogonal_basis)
     list_nb_coeff = _compute_list_nb_coeff(N, system_type, _M,

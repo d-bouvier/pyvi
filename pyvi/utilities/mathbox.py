@@ -52,7 +52,7 @@ def rms(sig, axis=None):
     Returns
     -------
     rms_value : numpy.ndarray or numpy.float
-         Root-mean-square value alogn given ``axis``.
+         Root-mean-square value alogn given `axis`.
     """
 
     return np.sqrt(np.mean(np.abs(sig)**2, axis=axis))
@@ -92,7 +92,7 @@ def safe_db(num, den):
     Returns
     -------
     result : numpy.ndarray
-         dB value. Is numpy.Inf if ``num`` == 0 and -numpy.Inf if ``den`` == 0.
+         dB value. Is numpy.Inf if ``num == 0`` and -numpy.Inf if ``den == 0``.
     """
 
     # Initialization

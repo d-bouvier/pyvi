@@ -11,7 +11,7 @@ _ls_solver :
 _qr_solver :
     Compute solution of Ax=y using a QR decomposition of A.
 _cplx_to_real :
-    Cast a complex numpy.ndarray to a specific type using a given mode.
+    Cast a numpy.ndarray of complex type to real type with a specified mode.
 
 Notes
 -----
@@ -76,7 +76,7 @@ def _complex2real(sig_cplx, cast_mode='real-imag'):
     Returns
     -------
     sig_casted : numpy.ndarray
-        Array ``sig_cplx`` casted to real numbers following ``cast_mode``.
+        Array `sig_cplx` casted to real numbers following `cast_mode`.
     """
 
     if cast_mode not in {'real', 'imag', 'real-imag', 'cplx'}:

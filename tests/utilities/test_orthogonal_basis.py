@@ -86,23 +86,23 @@ class _OrthogonalBasisGlobalTest():
     def test_is_valid_basis_obj(self):
         for ind, basis in enumerate(self.basis_list):
             with self.subTest(i=ind):
-                self.assertTrue(is_valid_basis_obj(basis))
+                self.assertTrue(is_valid_basis_instance(basis))
 
 
-class LaguerreBasisTest(_OrthogonalBasis, unittest.TestCase):
+class LaguerreBasisTest(_OrthogonalBasisGlobalTest, unittest.TestCase):
     params_list = [(0.1, 2), (0.1, 5), (0.1, 10), (0.2, 5), (0.5, 5),
                    (0.9, 5), (0.95, 5)]
     basis = LaguerreBasis
 
 
-class KautzBasisTest(_OrthogonalBasis, unittest.TestCase):
+class KautzBasisTest(_OrthogonalBasisGlobalTest, unittest.TestCase):
     params_list = [(0.1*np.exp(1j*np.pi/4), 2), (0.1*np.exp(1j*np.pi/4), 10),
                    (0.5*np.exp(1j*np.pi/4), 10), (0.9*np.exp(1j*np.pi/4), 10),
                    (0.95*np.exp(1j*np.pi/4), 10), (0.7 + 0.1j, 10), (0.7, 10)]
     basis = KautzBasis
 
 
-class GeneralizedBasisTest(_OrthogonalBasis, unittest.TestCase):
+class GeneralizedBasisTest(_OrthogonalBasisGlobalTest, unittest.TestCase):
     params_list = [[0.1], [0.1, 0.2, 0.5], [0.1, 0.9, 0.1, 0.5, 0.1],
                    [0.1*np.exp(1j*np.pi/4)], [0.1*np.exp(1j*np.pi/4), 0.1],
                    [0.1 + 0.1j, 0.2 + 0.2j, 0.5 + 0.1j, 0.1 + 0.5j],

@@ -21,7 +21,7 @@ Notes
 -----
 Developed for Python 3.6.1
 @author: Damien Bouvier (Damien.Bouvier@ircam.fr)
-``DocInherit`` found on http://code.activestate.com/recipes/576862/
+`DocInherit` found on http://code.activestate.com/recipes/576862/
 """
 
 #==============================================================================
@@ -95,9 +95,9 @@ def _as_list(val, N):
     """
     Check that given variable is a list or a tuple.
 
-    Check that ``val`` is an instance of list or tuple class with length ``N``.
-    If not, this functions returns a list of length ``N``, with every value
-    being ``val`.
+    Check that `val` is an instance of list or tuple class with length `N`.
+    If not, this functions returns a list of length `N`, with every value
+    being `val`.
 
     Parameters
     ----------
@@ -109,12 +109,12 @@ def _as_list(val, N):
     Returns
     -------
     list : list(type)
-        List of length ``N``.
+        List of length `N`.
     """
 
     if isinstance(val, (Sequence, np.ndarray)) and not isinstance(val, str):
         if len(val) != N:
-            raise ValueError('``val` has length {}, but '.format(len(val)) +
+            raise ValueError('`val` has length {}, but '.format(len(val)) +
                              'truncation order N is {}'.format(N))
         else:
             return list(val)
