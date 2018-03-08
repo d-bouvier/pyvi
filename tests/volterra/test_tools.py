@@ -16,7 +16,7 @@ import unittest
 import itertools
 import numpy as np
 from pyvi.volterra.tools import (kernel_nb_coeff, series_nb_coeff, vec2kernel,
-                                 vec2dict_of_vec, vec2series, kernel2vec)
+                                 vec2series, kernel2vec)
 from pyvi.utilities.mathbox import binomial
 
 
@@ -267,30 +267,6 @@ class Vec2Series_Form_AsList_Test(Vec2KernelTest):
     def test_f_as_dict(self):
         kernels = vec2series(self.h_vec, self.N, self.M, form=self.form)
         result = [np.all(h == self.h[n]) for n, h in kernels.items()]
-        self.assertTrue(all(result))
-
-
-class Vec2DictOfVec(Vec2SeriesTest):
-
-    test_triangular_form = property()
-    test_symmetric_form = property()
-    test_None_form = property()
-    test_error_raised = property()
-
-    def setUp(self):
-        super().setUp()
-        h_vec = np.concatenate([f for n, f in sorted(self.h_vec.items())],
-                               axis=0)
-        self.out = vec2dict_of_vec(h_vec, self.N, self.M)
-
-    def test_output_dict(self):
-        self.assertIsInstance(self.out, dict)
-
-    def test_correct_keys(self):
-        self.assertListEqual(list(self.out.keys()), list(range(1, self.N+1)))
-
-    def test_correct_output(self):
-        result = [np.all(h == self.h_vec[n]) for n, h in self.out.items()]
         self.assertTrue(all(result))
 
 
