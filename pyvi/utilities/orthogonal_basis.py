@@ -2,6 +2,24 @@
 """
 Module for orthogonal basis creation and projection.
 
+This modules creates class to handle orthogonal basis for signal projection.
+A valid basis object is:
+
+    - an instance of a subclass of :class:`_OrthogonalBasis`, such as
+    :class:`LaguerreBasis`, :class:`KautzBasis` or :class:'GeneralizedBasis';
+    - an instance of a custom object such that the following conditions are
+    met:
+
+        - ``hasattr(basis, 'K') == True``;
+        - ``hasattr(basis, 'projection') == True``;
+        - ``callable(getattr(basis, 'projection', None)) == True``;
+        - ``isinstance(basis.projection(signal), numpy.ndarray) == True``
+        with ``isinstance(signal, numpy.ndarray)``;
+        - ``basis.projection(signal).shape == (basis.K,) + shape``
+        with ``shape = signal.shape``.
+
+    Those conditions can be checked using :func:`is_valid_basis_instance()`.
+
 Class
 -----
 LaguerreBasis :
@@ -15,6 +33,8 @@ Functions
 ---------
 create_orthogonal_basis :
     Returns an orthogonal basis given its poles and its number of elements.
+is_valid_basis_instance :
+    Checks whether `basis` is a usable instance of a basis.
 
 Notes
 -----
@@ -37,7 +57,7 @@ from .tools import inherit_docstring
 # Class
 #==============================================================================
 
-class _AbstractOrthogonalBasis():
+class _OrthogonalBasis():
     """
     Abstract class for orthogonal basis.
     """
@@ -57,19 +77,24 @@ class _AbstractOrthogonalBasis():
             Signal projection; projected elements are along the first axis.
         """
 
-        return np.zeros((self.K,) + signal.shape)
+        return np.zeros((self.K,) + signal.shape, signal.dtype)
 
 
     @classmethod
     def _filtering(cls, signal, system):
         """Filter ``signal`` by ``system``."""
 
-        _, filtered_signal, _ = sc_sig.dlsim(system, signal)
+        if any(np.iscomplex(signal)):
+            _, filtered_signal_r, _ = sc_sig.dlsim(system, np.real(signal))
+            _, filtered_signal_i, _ = sc_sig.dlsim(system, np.imag(signal))
+            filtered_signal = filtered_signal_r + 1j * filtered_signal_i
+        else:
+            _, filtered_signal, _ = sc_sig.dlsim(system, signal)
         filtered_signal.shape = signal.shape
         return filtered_signal
 
 
-class LaguerreBasis(_AbstractOrthogonalBasis):
+class LaguerreBasis(_OrthogonalBasis):
     """
     Class for Orthogonal Laguerre Basis.
 
@@ -115,7 +140,7 @@ class LaguerreBasis(_AbstractOrthogonalBasis):
         return projection
 
 
-class KautzBasis(_AbstractOrthogonalBasis):
+class KautzBasis(_OrthogonalBasis):
     """
     Class for Orthogonal Kautz Basis.
 
@@ -171,7 +196,7 @@ class KautzBasis(_AbstractOrthogonalBasis):
         return projection
 
 
-class GeneralizedBasis(_AbstractOrthogonalBasis):
+class GeneralizedBasis(_OrthogonalBasis):
     """
     Class for Generalized Orthogonal Basis.
 
@@ -274,3 +299,19 @@ def create_orthogonal_basis(poles, K=None):
         raise TypeError('Parameter ``poles`` is neither a numeric value ' +
                         'nor a list of numeric values.')
 
+
+def is_valid_basis_instance(basis):
+    """Checks whether `basis` is a usable instance of a basis."""
+
+    sig = np.sin(2 * np.pi * np.arange(10)/10)
+    shape = sig.shape
+
+    try:
+        conditions = [hasattr(basis, 'K'), hasattr(basis, 'projection'),
+                      callable(getattr(basis, 'projection', None)),
+                      isinstance(basis.projection(sig), np.ndarray),
+                      basis.projection(sig).shape == (basis.K,)+shape]
+    except:
+        return False
+
+    return all(conditions)
