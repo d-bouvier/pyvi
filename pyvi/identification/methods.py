@@ -45,8 +45,10 @@ Developed for Python 3.6.1
 
 import numpy as np
 from .tools import _solver, _complex2real
-from ..volterra.combinatorial_basis import volterra_basis
-from ..volterra.tools import series_nb_coeff, vec2series, _vec2dict_of_vec
+from ..volterra.combinatorial_basis import (compute_combinatorial_basis,
+                                            _check_parameters,
+                                            _compute_list_nb_coeff)
+from ..volterra.tools import vec2series, _vec2dict_of_vec
 from ..utilities.mathbox import binomial
 
 
@@ -307,12 +309,18 @@ def phase_method(input_sig, output_by_phase, N, M, **kwargs):
 
 def _identification(input_data, output_data, N, M, required_nb_data_func,
                     core_func, sorted_by, solver='LS', out_form='vec',
-                    projection=None, phi=None, cast_mode='real-imag'):
+                    orthogonal_basis=None, phi=None, cast_mode='real-imag'):
     """Core function for kernel identification in linear algebra formalism."""
+
+
+    _M, is_orthogonal_basis_as_list = _check_parameters(N, 'volterra', M,
+                                                        orthogonal_basis)
+    list_nb_coeff = _compute_list_nb_coeff(N, 'volterra', M,
+                                           orthogonal_basis,
+                                           is_orthogonal_basis_as_list)
 
     # Check that there is enough data to do the identification
     nb_data = input_data.size
-    list_nb_coeff = series_nb_coeff(N, M, form='vec', out_by_order=True)
     required_nb_data = required_nb_data_func(list_nb_coeff)
     if nb_data < required_nb_data:
         raise ValueError('Input signal has {} data samples'.format(nb_data) +
@@ -321,7 +329,9 @@ def _identification(input_data, output_data, N, M, required_nb_data_func,
 
     # Create dictionary of combinatorial matrix
     if phi is None:
-        phi = volterra_basis(input_data, N, M, sorted_by=sorted_by)
+        phi = compute_combinatorial_basis(input_data, N, M=_M,
+                                          orthogonal_basis=orthogonal_basis,
+                                          sorted_by=sorted_by)
     else:
         pass
         #TODO check correct
