@@ -38,7 +38,7 @@ from ..utilities.tools import _as_list
 
 
 #==============================================================================
-# Variables
+# Constants
 #==============================================================================
 
 _STRING_VOLTERRA = {'volterra', 'Volterra', 'VOLTERRA'}

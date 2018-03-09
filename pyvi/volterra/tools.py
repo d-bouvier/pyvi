@@ -43,7 +43,7 @@ from ..utilities.tools import _as_list
 
 
 #==============================================================================
-# Variables
+# Constants
 #==============================================================================
 
 _STRING_OPT_TRI = {'tri', 'triangular', 'Triangular', 'TRI'}
