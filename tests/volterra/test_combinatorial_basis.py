@@ -80,7 +80,8 @@ class _CombinatorialBasisTest():
     def test_same_result_with_term_and_order(self):
         for n in range(1, self.N+1):
             with self.subTest(i=n):
-                self.assertTrue(np.all(self.order[n] == self.term[(n, 0)]))
+                result = np.all(self.order[n] == (2**n) * self.term[(n, 0)])
+                self.assertTrue(result)
 
     def test_same_result_between_all_terms_with_real_signals(self):
         for n in range(1, self.N+1):
@@ -160,7 +161,8 @@ class VolterraBasisCorrectOutputTest(VolterraBasisCplxSigTest):
     def test_correct_output_term(self):
         for (n, k), val in self.term.items():
             with self.subTest(i=(n, k)):
-                self.assertTrue(np.all(val == self.true[(n, k)]))
+                result = np.all(val == self.true[(n, k)] / (2**n))
+                self.assertTrue(result)
 
 
 class HammersteinBasisTest(VolterraBasisTest):
@@ -194,7 +196,6 @@ class HammersteinBasisCplxSigTest(HammersteinBasis_M_List_Test,
             (3, 1): np.array([[2+2j, 16+16j, 54+54j, 128+128j],
                               [0., 2+2j, 16+16j, 54+54j],
                               [0., 0., 2+2j, 16+16j]]).T}
-    pass
 
 
 class HammersteinBasisCorrectOutputTest(HammersteinBasisCplxSigTest,
@@ -322,7 +323,7 @@ class ProjVolterraBasisCorrectOutputTest(ProjVolterraBasisTest):
     def test_correct_output_term(self):
         for (n, k), val in self.term.items():
             with self.subTest(i=(n, k)):
-                self.assertTrue(np.allclose(val, self.true[(n, k)],
+                self.assertTrue(np.allclose(val, self.true[(n, k)] / (2**n),
                                             rtol=self.rtol, atol=self.atol))
 
 
