@@ -370,7 +370,7 @@ def projected_hammerstein_basis(signal, N, orthogonal_basis, sorted_by):
 
 
 def _phi_post_processing(phi, N, sorted_by):
-    """Post processing of the dictionary `phi` if it by nonlinear order."""
+    """Post processing of the dictionary `phi`."""
 
     _phi = dict()
     if sorted_by == 'term':
