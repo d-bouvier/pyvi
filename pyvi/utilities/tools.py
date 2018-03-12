@@ -95,9 +95,9 @@ def _as_list(val, N):
     """
     Check that given variable is a list or a tuple.
 
-    Check that `val` is an instance of list or tuple class with length `N`.
-    If not, this functions returns a list of length `N`, with every value
-    being `val`.
+    Check that `val` is an instance of list, tuple or numpy.ndarray with
+    length `N`. If not, this functions returns a list of length `N`, with
+    every value being `val`.
 
     Parameters
     ----------
@@ -108,7 +108,7 @@ def _as_list(val, N):
 
     Returns
     -------
-    list : list(type)
+    list(type)
         List of length `N`.
     """
 

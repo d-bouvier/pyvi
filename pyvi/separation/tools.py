@@ -37,7 +37,7 @@ def _create_vandermonde_mixing_mat(factors, N):
 
     Returns
     -------
-    matrix: numpy.ndarray
+    numpy.ndarray
         Mixing matrix of the Volterra orders in the output signals; its shape
         verifies ``(len(factors), N)``.
     """

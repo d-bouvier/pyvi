@@ -78,7 +78,7 @@ def compute_combinatorial_basis(signal, N, system_type='volterra', M=None,
 
     Returns
     -------
-    kernels : dict(int or (int, int): numpy.ndarray)
+    dict(int or (int, int): numpy.ndarray)
         Dictionary of combinatorial basis matrix for each order or
         combinatorial term.
     """

@@ -40,7 +40,7 @@ def separation_error(signals_ref, signals_est, db=True):
 
     Returns
     -------
-    error : numpy.ndarray
+    numpy.ndarray
         List of normalized-RMS error values.
     """
 
@@ -69,7 +69,7 @@ def identification_error(kernels_ref, kernels_est, db=True):
 
     Returns
     -------
-    error : list(floats)
+    errors : list(floats)
         List of normalized-RMS error values.
     """
 
