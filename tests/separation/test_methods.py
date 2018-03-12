@@ -35,8 +35,8 @@ class _OrderSeparationMethodGlobalTest():
                     'PAS': 'float'}
     true_input_func = {'AS': lambda x: x,
                        'CPS': lambda x: x,
-                       'PS': lambda x: 2 * np.real(x),
-                       'PAS': lambda x: 2 * np.real(x)}
+                       'PS': lambda x: np.real(x),
+                       'PAS': lambda x: np.real(x)}
     tol = 5e-10
     N = 5
     L = 1000
@@ -182,7 +182,7 @@ class HPS_Test(_OrderSeparationMethodGlobalTest, unittest.TestCase):
                 start = 2
             for n in range(start, self.N+1, 2):
                 q = (n - p) // 2
-                fac = binomial(n, q)
+                fac = binomial(n, q) / 2**n
                 self.homophase_true[ind] += fac * np.exp(1j * p * phase_vec)
 
     def test_shape(self):

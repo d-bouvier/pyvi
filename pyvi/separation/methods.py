@@ -403,11 +403,11 @@ class HPS(CPS):
 
         is_complex = np.iscomplexobj(signal)
         if not is_complex:
-            signal_cplx = (1/2) * sc_sig.hilbert(signal)
+            signal_cplx = sc_sig.hilbert(signal)
         else:
             signal_cplx = signal
 
-        input_coll = 2*np.real(super().gen_inputs(signal_cplx))
+        input_coll = np.real(super().gen_inputs(signal_cplx))
         if not is_complex and return_cplx_sig:
             return input_coll, signal_cplx
         else:
@@ -552,10 +552,11 @@ class _AbstractPS(HPS):
             for ind, (n, q) in enumerate(self.nq_dict[phase]):
                 if phase:
                     dec = tmp.shape[0] // 2
-                    combinatorial_terms[(n, q)] = (tmp[ind] + 1j*tmp[ind+dec])
+                    combinatorial_terms[(n, q)] = (2**n) * \
+                                                  (tmp[ind] + 1j*tmp[ind+dec])
                     output_by_order[n-1] += 2 * binomial(n, q) * tmp[ind]
                 else:
-                    combinatorial_terms[(n, q)] = tmp[ind]
+                    combinatorial_terms[(n, q)] = (2**n) * tmp[ind]
                     output_by_order[n-1] += binomial(n, q) * tmp[ind]
 
         # Function output
