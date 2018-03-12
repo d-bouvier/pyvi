@@ -378,7 +378,7 @@ class HPS(CPS):
     def _compute_required_nb_phase(cls, N):
         return 2*N + 1
 
-    def gen_inputs(self, signal):
+    def gen_inputs(self, signal, return_cplx_sig=False):
         """
         Returns the collection of input test signals.
 
@@ -386,6 +386,9 @@ class HPS(CPS):
         ----------
         signal : array_like
             Input signal.
+        return_cplx_sig : boolean, optional (default=False)
+            If `signal`is real-valued, chosses Whether to return the complex
+            signal constructed from its hilbert transform.
 
         Returns
         -------
@@ -394,14 +397,21 @@ class HPS(CPS):
             ``input_coll.shape == (self.K, signal.shape)``.
         signal_cplx : numpy.ndarray
             Complex version of `signal` obtained using Hilbert transform;
-            only returned if `signal` is not complex-valued
+            only returned if `signal` is real-valued and `return_cplx_sig` is
+            True.
         """
 
-        if not np.iscomplexobj(signal):
+        is_complex = np.iscomplexobj(signal)
+        if not is_complex:
             signal_cplx = (1/2) * sc_sig.hilbert(signal)
-            return 2*np.real(super().gen_inputs(signal_cplx)), signal_cplx
         else:
-            return 2*np.real(super().gen_inputs(signal))
+            signal_cplx = signal
+
+        input_coll = 2*np.real(super().gen_inputs(signal_cplx))
+        if not is_complex and return_cplx_sig:
+            return input_coll, signal_cplx
+        else:
+            return input_coll
 
     def process_outputs(self, output_coll):
         """

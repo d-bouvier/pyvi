@@ -207,10 +207,14 @@ class HPS_GenInputsTestCase(unittest.TestCase):
         self.method = sep.HPS(self.N)
 
     def test_gen_inputs(self):
-        for dtype, out_type in (('float', tuple), ('complex', np.ndarray)):
-            with self.subTest(i=dtype):
+        for dtype, return_cplx, out_type in (('float', True, tuple),
+                                             ('float', False, np.ndarray),
+                                             ('complex', True, np.ndarray),
+                                             ('complex', False, np.ndarray)):
+            with self.subTest(i=(dtype, return_cplx)):
                 input_sig = np.zeros((self.L,), dtype=dtype)
-                outputs = self.method.gen_inputs(input_sig)
+                outputs = self.method.gen_inputs(input_sig,
+                                                 return_cplx_sig=return_cplx)
                 self.assertIsInstance(outputs, out_type)
 
 
