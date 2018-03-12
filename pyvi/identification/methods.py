@@ -168,7 +168,7 @@ def term_method(input_sig, output_by_term, N, **kwargs):
                                    axis=0)
             out_n = np.concatenate([_out_by_term[(n, k)] for k in k_vec],
                                    axis=0)
-            kernels_vec[n] = _solver(phi_n, out_n, solver)
+            kernels_vec[n] = _solver((2**n) * phi_n, out_n, solver)
 
         return kernels_vec
 
@@ -227,8 +227,8 @@ def iter_method(input_sig, output_by_phase, N, **kwargs):
 
             for k in range(1, 1+n//2):
                 p = n - 2*k
-                _out_by_phase[p] -= \
-                    binomial(n, k)*np.dot(phi_by_term[(n, k)], kernels_vec[n])
+                _out_by_phase[p] -= binomial(n, k) * \
+                                    np.dot(phi_by_term[(n, k)], kernels_vec[n])
         return kernels_vec
 
     return _identification(input_sig, output_by_phase, N,
