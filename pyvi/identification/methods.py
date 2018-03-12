@@ -72,7 +72,7 @@ def direct_method(input_sig, output_sig, N, **kwargs):
 
     Returns
     -------
-    kernels : dict(int: numpy.ndarray)
+    dict(int: numpy.ndarray)
         Dictionary of estimated kernels, where each key is the nonlinear order.
     {}
     """
@@ -108,7 +108,7 @@ def order_method(input_sig, output_by_order, N, **kwargs):
 
     Returns
     -------
-    kernels : dict(int: numpy.ndarray)
+    dict(int: numpy.ndarray)
         Dictionary of estimated kernels, where each key is the nonlinear order.
     {}
     """
@@ -146,7 +146,7 @@ def term_method(input_sig, output_by_term, N, **kwargs):
 
     Returns
     -------
-    kernels : dict(int: numpy.ndarray)
+    dict(int: numpy.ndarray)
         Dictionary of estimated kernels, where each key is the nonlinear order.
     {}
     """
@@ -168,7 +168,7 @@ def term_method(input_sig, output_by_term, N, **kwargs):
                                    axis=0)
             out_n = np.concatenate([_out_by_term[(n, k)] for k in k_vec],
                                    axis=0)
-            kernels_vec[n] = _solver(phi_n, out_n, solver)
+            kernels_vec[n] = _solver((2**n) * phi_n, out_n, solver)
 
         return kernels_vec
 
@@ -195,7 +195,7 @@ def iter_method(input_sig, output_by_phase, N, **kwargs):
 
     Returns
     -------
-    kernels : dict(int: numpy.ndarray)
+    dict(int: numpy.ndarray)
         Dictionary of estimated kernels, where each key is the nonlinear order.
     {}
     """
@@ -227,8 +227,8 @@ def iter_method(input_sig, output_by_phase, N, **kwargs):
 
             for k in range(1, 1+n//2):
                 p = n - 2*k
-                _out_by_phase[p] -= \
-                    binomial(n, k)*np.dot(phi_by_term[(n, k)], kernels_vec[n])
+                _out_by_phase[p] -= binomial(n, k) * \
+                                    np.dot(phi_by_term[(n, k)], kernels_vec[n])
         return kernels_vec
 
     return _identification(input_sig, output_by_phase, N,
@@ -268,7 +268,7 @@ def phase_method(input_sig, output_by_phase, N, **kwargs):
 
         L = out_by_phase.shape[1]
         L = 2*L if cast_mode == 'real-imag' else L
-        kernels_vec = dict()
+        kernels = dict()
         _phi_by_term = _cast_complex2real(phi_by_term, cast_mode)
 
         for is_odd in [False, True]:
@@ -295,10 +295,10 @@ def phase_method(input_sig, output_by_phase, N, **kwargs):
             index = 0
             for n in range(1 if is_odd else 2, N+1, 2):
                 nb_term = sizes[n-1]
-                kernels_vec[n] = curr_f[index:index+nb_term]
+                kernels[n] = curr_f[index:index+nb_term]
                 index += nb_term
 
-        return kernels_vec
+        return kernels
 
     return _identification(input_sig, output_by_phase, N,
                            required_nb_data_func, core_func, 'term', **kwargs)

@@ -378,7 +378,7 @@ class HPS(CPS):
     def _compute_required_nb_phase(cls, N):
         return 2*N + 1
 
-    def gen_inputs(self, signal):
+    def gen_inputs(self, signal, return_cplx_sig=False):
         """
         Returns the collection of input test signals.
 
@@ -386,6 +386,9 @@ class HPS(CPS):
         ----------
         signal : array_like
             Input signal.
+        return_cplx_sig : boolean, optional (default=False)
+            If `signal`is real-valued, chosses Whether to return the complex
+            signal constructed from its hilbert transform.
 
         Returns
         -------
@@ -394,14 +397,21 @@ class HPS(CPS):
             ``input_coll.shape == (self.K, signal.shape)``.
         signal_cplx : numpy.ndarray
             Complex version of `signal` obtained using Hilbert transform;
-            only returned if `signal` is not complex-valued
+            only returned if `signal` is real-valued and `return_cplx_sig` is
+            True.
         """
 
-        if not np.iscomplexobj(signal):
-            signal_cplx = (1/2) * sc_sig.hilbert(signal)
-            return 2*np.real(super().gen_inputs(signal_cplx)), signal_cplx
+        is_complex = np.iscomplexobj(signal)
+        if not is_complex:
+            signal_cplx = sc_sig.hilbert(signal)
         else:
-            return 2*np.real(super().gen_inputs(signal))
+            signal_cplx = signal
+
+        input_coll = np.real(super().gen_inputs(signal_cplx))
+        if not is_complex and return_cplx_sig:
+            return input_coll, signal_cplx
+        else:
+            return input_coll
 
     def process_outputs(self, output_coll):
         """
@@ -542,10 +552,11 @@ class _AbstractPS(HPS):
             for ind, (n, q) in enumerate(self.nq_dict[phase]):
                 if phase:
                     dec = tmp.shape[0] // 2
-                    combinatorial_terms[(n, q)] = (tmp[ind] + 1j*tmp[ind+dec])
+                    combinatorial_terms[(n, q)] = (2**n) * \
+                                                  (tmp[ind] + 1j*tmp[ind+dec])
                     output_by_order[n-1] += 2 * binomial(n, q) * tmp[ind]
                 else:
-                    combinatorial_terms[(n, q)] = tmp[ind]
+                    combinatorial_terms[(n, q)] = (2**n) * tmp[ind]
                     output_by_order[n-1] += binomial(n, q) * tmp[ind]
 
         # Function output

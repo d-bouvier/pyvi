@@ -35,8 +35,8 @@ class _OrderSeparationMethodGlobalTest():
                     'PAS': 'float'}
     true_input_func = {'AS': lambda x: x,
                        'CPS': lambda x: x,
-                       'PS': lambda x: 2 * np.real(x),
-                       'PAS': lambda x: 2 * np.real(x)}
+                       'PS': lambda x: np.real(x),
+                       'PAS': lambda x: np.real(x)}
     tol = 5e-10
     N = 5
     L = 1000
@@ -182,7 +182,7 @@ class HPS_Test(_OrderSeparationMethodGlobalTest, unittest.TestCase):
                 start = 2
             for n in range(start, self.N+1, 2):
                 q = (n - p) // 2
-                fac = binomial(n, q)
+                fac = binomial(n, q) / 2**n
                 self.homophase_true[ind] += fac * np.exp(1j * p * phase_vec)
 
     def test_shape(self):
@@ -207,10 +207,14 @@ class HPS_GenInputsTestCase(unittest.TestCase):
         self.method = sep.HPS(self.N)
 
     def test_gen_inputs(self):
-        for dtype, out_type in (('float', tuple), ('complex', np.ndarray)):
-            with self.subTest(i=dtype):
+        for dtype, return_cplx, out_type in (('float', True, tuple),
+                                             ('float', False, np.ndarray),
+                                             ('complex', True, np.ndarray),
+                                             ('complex', False, np.ndarray)):
+            with self.subTest(i=(dtype, return_cplx)):
                 input_sig = np.zeros((self.L,), dtype=dtype)
-                outputs = self.method.gen_inputs(input_sig)
+                outputs = self.method.gen_inputs(input_sig,
+                                                 return_cplx_sig=return_cplx)
                 self.assertIsInstance(outputs, out_type)
 
 

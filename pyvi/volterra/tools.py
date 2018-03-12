@@ -70,7 +70,7 @@ def kernel_nb_coeff(n, m, form=None):
 
     Returns
     -------
-    nb_coeff : int
+    int
         The number of nonzero coefficients.
     """
 

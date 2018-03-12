@@ -73,7 +73,7 @@ class _OrthogonalBasis():
 
         Returns
         -------
-        projection : array_like
+        array_like
             Signal projection; projected elements are along the first axis.
         """
 
@@ -274,7 +274,7 @@ def create_orthogonal_basis(poles, K=None):
 
     Returns
     -------
-    basis: LaguerreBasis, KautzBasis, GeneralizedBasis
+    LaguerreBasis, KautzBasis, GeneralizedBasis
         Returned orthogonal basis; its type depends on the given parameters.
     """
 

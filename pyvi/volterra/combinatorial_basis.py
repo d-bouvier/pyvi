@@ -78,7 +78,7 @@ def compute_combinatorial_basis(signal, N, system_type='volterra', M=None,
 
     Returns
     -------
-    kernels : dict(int or (int, int): numpy.ndarray)
+    dict(int or (int, int): numpy.ndarray)
         Dictionary of combinatorial basis matrix for each order or
         combinatorial term.
     """
@@ -248,11 +248,11 @@ def volterra_basis(signal, N, M, sorted_by):
         current_max_delay = np.concatenate(tuple(max_delay[n].values()))
         phi[(n, k)] = val[:, np.where(current_max_delay < _M_save[n-1])[0]]
 
+    phi = _phi_post_processing(phi, N, sorted_by)
+
     if sorted_by == 'term':
         for (n, k) in phi.keys():
-                phi[(n, k)] = phi[(n, k)] / binomial(n, k)
-    elif sorted_by == 'order':
-        phi = _phi_by_order_post_processing(phi, N)
+            phi[(n, k)] = phi[(n, k)] / binomial(n, k)
 
     return phi
 
@@ -273,15 +273,14 @@ def hammerstein_basis(signal, N, M, sorted_by):
         if sorted_by == 'term':
             # Terms 1 <= k < (n+1)//2
             for k in range(1, (n+1)//2):
-                tmp = signal**(n-k) * signal.conj()**k
+                tmp = (signal**(n-k) * signal.conj()**k)
                 phi[(n, k)] = _combinatorial_mat_diag_terms(tmp, m)
             # Term k = n//2
             if not n % 2:
                 tmp = np.real(signal * signal.conj())**(n//2)
                 phi[(n, n//2)] = _combinatorial_mat_diag_terms(tmp, m)
 
-    if sorted_by == 'order':
-        phi = _phi_by_order_post_processing(phi, N)
+    phi = _phi_post_processing(phi, N, sorted_by)
 
     return phi
 
@@ -338,8 +337,7 @@ def projected_volterra_basis(signal, N, orthogonal_basis,
             if not n % 2:
                 phi[(n, n//2)] = np.real(phi[(n, n//2)])
 
-    if sorted_by == 'order':
-        phi = _phi_by_order_post_processing(phi, N)
+    phi = _phi_post_processing(phi, N, sorted_by)
 
     return phi
 
@@ -359,26 +357,30 @@ def projected_hammerstein_basis(signal, N, orthogonal_basis, sorted_by):
         if sorted_by == 'term':
             # Terms 1 <= k < (n+1)//2
             for k in range(1, (n+1)//2):
-                tmp = signal**(n-k) * signal.conj()**k
+                tmp = (signal**(n-k) * signal.conj()**k)
                 phi[(n, k)] = basis.projection(tmp).T
             # Term k = n//2
             if not n % 2:
                 tmp = np.real(signal * signal.conj())**(n//2)
                 phi[(n, n//2)] = basis.projection(tmp).T
 
-    if sorted_by == 'order':
-        phi = _phi_by_order_post_processing(phi, N)
+    phi = _phi_post_processing(phi, N, sorted_by)
 
     return phi
 
 
-def _phi_by_order_post_processing(phi, N):
-    """Post processing of the dictionary `phi` if it by nonlinear order."""
+def _phi_post_processing(phi, N, sorted_by):
+    """Post processing of the dictionary `phi`."""
 
-    for n in range(1, N+1):
-        phi[n] = phi.pop((n, 0))
+    _phi = dict()
+    if sorted_by == 'term':
+        for (n, k) in phi.keys():
+            _phi[(n, k)] = phi[(n, k)] / (2**n)
+    elif sorted_by == 'order':
+        for n in range(1, N+1):
+            _phi[n] = phi.pop((n, 0))
 
-    return phi
+    return _phi
 
 
 def _combinatorial_mat_diag_terms(signal, m):

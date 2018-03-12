@@ -75,7 +75,7 @@ def _complex2real(sig_cplx, cast_mode='real-imag'):
 
     Returns
     -------
-    sig_casted : numpy.ndarray
+    numpy.ndarray
         Array `sig_cplx` casted to real numbers following `cast_mode`.
     """
 

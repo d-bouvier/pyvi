@@ -51,7 +51,7 @@ def rms(sig, axis=None):
 
     Returns
     -------
-    rms_value : numpy.ndarray or numpy.float
+    numpy.ndarray or numpy.float
          Root-mean-square value alogn given `axis`.
     """
 
@@ -71,7 +71,7 @@ def db(val, ref=1.):
 
     Returns
     -------
-    db_value : numpy.ndarray or numpy.float
+    numpy.ndarray or numpy.float
          dB value.
     """
 
@@ -145,7 +145,7 @@ def binomial(n, k):
 
     Returns
     -------
-    result : int
+    int
          Binomial coefficient.
     """
 
@@ -163,7 +163,7 @@ def multinomial(n, k):
 
     Returns
     -------
-    result : int
+    int
          Multinomial coefficient.
     """
 
