@@ -88,6 +88,19 @@ class _OrthogonalBasisGlobalTest():
             with self.subTest(i=ind):
                 self.assertTrue(is_valid_basis_instance(basis))
 
+    def test_cplx_input(self):
+        input_real = np.random.normal(size=(100,))
+        input_imag = np.random.normal(size=(100,))
+        input_sig = input_real + 1j * input_imag
+        for ind, basis in enumerate(self.basis_list):
+            with self.subTest(i=ind):
+                proj_real = basis.projection(input_real)
+                proj_imag = basis.projection(input_imag)
+                proj_sig = basis.projection(input_sig)
+                self.assertTrue(np.allclose(proj_real + 1j * proj_imag,
+                                            proj_sig, rtol=self.rtol,
+                                            atol=self.atol))
+
 
 class LaguerreBasisTest(_OrthogonalBasisGlobalTest, unittest.TestCase):
     params_list = [(0.1, 2), (0.1, 5), (0.1, 10), (0.2, 5), (0.5, 5),
