@@ -84,7 +84,7 @@ class _OrthogonalBasis():
     def _filtering(cls, signal, system):
         """Filter `signal` by `system`."""
 
-        if any(np.iscomplex(signal)):
+        if np.iscomplexobj(signal):
             _, filtered_signal_r, _ = sc_sig.dlsim(system, np.real(signal))
             _, filtered_signal_i, _ = sc_sig.dlsim(system, np.imag(signal))
             filtered_signal = filtered_signal_r + 1j * filtered_signal_i
