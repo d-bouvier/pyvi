@@ -93,3 +93,30 @@ def identification_error(kernels_ref, kernels_est, db=True):
             errors.append(rms_error / rms_ref)
 
     return errors
+
+
+def evaluation_error(signal_ref, signal_est, db=True):
+    """
+    Returns the relative error between a reference signal and an estimation.
+
+    Parameters
+    ----------
+    signal_ref : numpy.ndarray
+        Reference signal.
+    signal_est : numpy.ndarray
+        Estimation of the reference signal
+
+    Returns
+    -------
+    float
+        Normalized-RMS error value.
+    """
+
+    rms_error = rms(signal_est - signal_ref)
+    rms_ref = rms(signal_ref)
+
+    if db:
+        return float(safe_db(rms_error, rms_ref))
+    else:
+        return float(rms_error / rms_ref)
+
