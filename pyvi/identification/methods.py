@@ -218,10 +218,9 @@ def iter_method(input_sig, output_by_phase, N, **kwargs):
 
             if n == 2:
                 current_phi = np.concatenate(
-                    (current_phi, binomial(n, n//2) * _phi_by_term[(n, n//2)]),
-                    axis=0)
+                    (current_phi, 2 * np.real(_phi_by_term[(2, 1)])), axis=0)
                 current_phase_sig = np.concatenate(
-                    (current_phase_sig, _out_by_phase[0]), axis=0)
+                    (current_phase_sig, np.real(_out_by_phase[0])), axis=0)
 
             kernels_vec[n] = _solver(current_phi, current_phase_sig, solver)
 
@@ -283,12 +282,13 @@ def phase_method(input_sig, output_by_phase, N, **kwargs):
                  for p in curr_phases])
 
             if not is_odd:
-                curr_y = np.concatenate((out_by_phase[0], curr_y), axis=0)
+                curr_y = np.concatenate((np.real(out_by_phase[0]), curr_y),
+                                        axis=0)
                 n_even = range(2, N+1, 2)
                 temp = np.concatenate([_phi_by_term[n, n//2] *
                                        binomial(n, n//2) for n in n_even],
                                       axis=1)
-                curr_phi = np.concatenate((temp, curr_phi), axis=0)
+                curr_phi = np.concatenate((np.real(temp), curr_phi), axis=0)
 
             curr_f = _solver(curr_phi, curr_y, solver)
 
@@ -358,7 +358,7 @@ def _cast_complex2real(val_by_term, cast_mode):
     _val_by_term = dict()
     for (n, k) in val_by_term.keys():
         if (not n % 2) and (k == n//2):
-            _val_by_term[(n, k)] = val_by_term[(n, k)]
+            _val_by_term[(n, k)] = np.real(val_by_term[(n, k)])
         else:
             _val_by_term[(n, k)] = _complex2real(val_by_term[(n, k)],
                                                  cast_mode=cast_mode)

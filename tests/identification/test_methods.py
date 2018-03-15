@@ -81,6 +81,14 @@ class DirectMethodTest(unittest.TestCase):
                 with self.subTest(i=(n, key)):
                     self.assertEqual(h.shape, (self.length[n-1],))
 
+    def test_check_kernels_are_real(self):
+        for key, kernels_est in self.list_kernels_est.items():
+            for n, h in kernels_est.items():
+                with self.subTest(i=(n, key)):
+                    if not np.isrealobj(h):
+                        print(h.dtype, np.isrealobj(h), (n, key))
+                    self.assertTrue(np.isrealobj(h))
+
     def test_correct_output(self):
         for key, kernels_est in self.list_kernels_est.items():
             for n, h in kernels_est.items():
