@@ -78,8 +78,7 @@ class IdentificationTestCase(PyviTestCase):
 
     module = pyvi.identification
     needed_properties = ['direct_method', 'order_method', 'term_method',
-                         'iter_method', 'phase_method', 'KLS', 'orderKLS',
-                         'termKLS', 'iterKLS', 'phaseKLS']
+                         'iter_method', 'phase_method']
     should_be_absent_properties = ['_solver', '_ls_solver', '_qr_solver',
                                    '_complex2real', '_identification',
                                    '_cast_complex2real', '_kwargs_for_KLS']

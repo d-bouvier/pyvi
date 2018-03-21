@@ -21,16 +21,6 @@ iter_method :
     Recursive kernel identification on homophase signals.
 phase_method :
     Separate kernel identification on odd and even homophase signals.
-KLS :
-    Kernel identification via Least-Squares method using a QR decomposition.
-orderKLS :
-    Performs KLS method on each nonlinear homogeneous order.
-termKLS :
-    Performs KLS method on each combinatorial term.
-iterKLS :
-    Performs KLS method recursively on homophase signals.
-phaseKLS :
-    Performs KLS method separately on odd and even homophase signals.
 
 Notes
 -----
@@ -367,58 +357,6 @@ def _cast_complex2real(val_by_term, cast_mode):
 
 #========================================#
 
-def _kwargs_for_KLS(**kwargs):
-    kwargs['solver'] = 'QR'
-    return kwargs
-
-
-def KLS(input_sig, output_sig, N, **kwargs):
-    """
-    Kernel identification via Least-Squares using a QR decomposition.
-    """
-
-    kwargs = _kwargs_for_KLS(**kwargs)
-    return direct_method(input_sig, output_sig, N, **kwargs)
-
-
-def orderKLS(input_sig, output_by_order, N, **kwargs):
-    """
-    Performs KLS method on each nonlinear homogeneous order.
-    """
-
-    kwargs = _kwargs_for_KLS(**kwargs)
-    return order_method(input_sig, output_by_order, N, **kwargs)
-
-
-def termKLS(input_sig, output_by_term, N, **kwargs):
-    """
-    Performs KLS method on each combinatorial term.
-    """
-
-    kwargs = _kwargs_for_KLS(**kwargs)
-    return term_method(input_sig, output_by_term, N, **kwargs)
-
-
-def iterKLS(input_sig, output_by_phase, N, **kwargs):
-    """
-    Performs KLS method recursively on homophase signals.
-    """
-
-    kwargs = _kwargs_for_KLS(**kwargs)
-    return iter_method(input_sig, output_by_phase, N, **kwargs)
-
-
-def phaseKLS(input_sig, output_by_phase, N, **kwargs):
-    """
-    Performs KLS method separately on odd and even homophase signals.
-    """
-
-    kwargs = _kwargs_for_KLS(**kwargs)
-    return phase_method(input_sig, output_by_phase, N, **kwargs)
-
-
-#========================================#
-
 kwargs_docstring_common_pre = """
     Other parameters
     ----------------
@@ -483,14 +421,6 @@ _wrapper_doc_post = """
     pyvi.identification.{}_method
     """
 
-for method, mode in zip((KLS, orderKLS, termKLS, iterKLS, phaseKLS),
-                        ('direct', 'order', 'term', 'iter', 'phase')):
-    method.__doc__ += _wrapper_doc_pre.format(mode)
-    corresponding_method_doc = locals()[mode + '_method'].__doc__
-    method.__doc__ += '\n'.join(corresponding_method_doc.splitlines()[2:])
-    method.__doc__ += _wrapper_doc_post.format(mode)
-
 del (kwargs_docstring_common_pre, kwargs_docstring_common_post,
      kwargs_docstring_phi_order, kwargs_docstring_phi_term,
-     kwargs_docstring_cast_mode, kwargs_docstring, method,
-     corresponding_method_doc, mode)
+     kwargs_docstring_cast_mode, kwargs_docstring, method, mode)
