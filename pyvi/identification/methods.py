@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
 """
-Toolbox for Volterra series system identification.
+Module for Volterra kernels identification.
 
-This package creates identification methods for Volterra kernels. It relies
+This module creates identification methods for Volterra kernels. It relies
 on a matrix representation of the input-to-output relation of a Volterra
 series, and uses linear algebra tools to estimate the kernels coefficients.
 
-It contains five methods using different type of output data; it also defines
-wrappers for the family of KLS methods that relies on 'QR' decomposition.
+It contains five methods, each based on a different set of output data (see
+:mod:`pyvi.separation`).
 
 Functions
 ---------
@@ -16,27 +16,21 @@ direct_method :
 order_method :
     Separate kernel identification on each nonlinear homogeneous order.
 term_method :
-    Separate kernel identification on each nonlinear combinatorial term.
+    Separate kernel identification on each nonlinear interconjugate term.
 iter_method :
     Recursive kernel identification on homophase signals.
 phase_method :
     Separate kernel identification on odd and even homophase signals.
-KLS :
-    Kernel identification via Least-Squares method using a QR decomposition.
-orderKLS :
-    Performs KLS method on each nonlinear homogeneous order.
-termKLS :
-    Performs KLS method on each combinatorial term.
-iterKLS :
-    Performs KLS method recursively on homophase signals.
-phaseKLS :
-    Performs KLS method separately on odd and even homophase signals.
 
 Notes
 -----
-Developed for Python 3.6.1
+Developed for Python 3.6
 @author: Damien Bouvier (Damien.Bouvier@ircam.fr)
 """
+
+__all__ = ['direct_method', 'order_method', 'term_method', 'iter_method',
+           'phase_method']
+
 
 #==============================================================================
 # Importations
@@ -130,14 +124,14 @@ def order_method(input_sig, output_by_order, N, **kwargs):
 
 def term_method(input_sig, output_by_term, N, **kwargs):
     """
-    Separate kernel identification on each nonlinear combinatorial term.
+    Separate kernel identification on each nonlinear interconjugate term.
 
     Parameters
     ----------
     input_sig : numpy.ndarray
         Input signal.
     output_by_term : dict((int, int): numpy.ndarray
-        Dictionary of the nonlinear combinatorial terms of the output signal;
+        Dictionary of the nonlinear interconjugate terms of the output signal;
         should contains all keys ``(n, q)`` for ``n in range(1, N+1)`` and
         ``q in range(1+n//2)``; each term should verify
         ``output_by_term[(n, q)].shape == input_sig.shape``.
@@ -367,58 +361,6 @@ def _cast_complex2real(val_by_term, cast_mode):
 
 #========================================#
 
-def _kwargs_for_KLS(**kwargs):
-    kwargs['solver'] = 'QR'
-    return kwargs
-
-
-def KLS(input_sig, output_sig, N, **kwargs):
-    """
-    Kernel identification via Least-Squares using a QR decomposition.
-    """
-
-    kwargs = _kwargs_for_KLS(**kwargs)
-    return direct_method(input_sig, output_sig, N, **kwargs)
-
-
-def orderKLS(input_sig, output_by_order, N, **kwargs):
-    """
-    Performs KLS method on each nonlinear homogeneous order.
-    """
-
-    kwargs = _kwargs_for_KLS(**kwargs)
-    return order_method(input_sig, output_by_order, N, **kwargs)
-
-
-def termKLS(input_sig, output_by_term, N, **kwargs):
-    """
-    Performs KLS method on each combinatorial term.
-    """
-
-    kwargs = _kwargs_for_KLS(**kwargs)
-    return term_method(input_sig, output_by_term, N, **kwargs)
-
-
-def iterKLS(input_sig, output_by_phase, N, **kwargs):
-    """
-    Performs KLS method recursively on homophase signals.
-    """
-
-    kwargs = _kwargs_for_KLS(**kwargs)
-    return iter_method(input_sig, output_by_phase, N, **kwargs)
-
-
-def phaseKLS(input_sig, output_by_phase, N, **kwargs):
-    """
-    Performs KLS method separately on odd and even homophase signals.
-    """
-
-    kwargs = _kwargs_for_KLS(**kwargs)
-    return phase_method(input_sig, output_by_phase, N, **kwargs)
-
-
-#========================================#
-
 kwargs_docstring_common_pre = """
     Other parameters
     ----------------
@@ -445,7 +387,7 @@ kwargs_docstring_phi_order = """
 kwargs_docstring_phi_term = """
     phi : dict((int, int): numpy.ndarray), optional (default=None)
         Pre-computed dictionary of the combinatorial matrix for each nonlinear
-        combinatorial term."""
+        interconjugate term."""
 kwargs_docstring_cast_mode = """
     cast_mode : {'real', 'imag', 'real-imag'}, optional (default='real-imag')
         Choose how complex number are casted to real numbers; if set to
@@ -483,14 +425,6 @@ _wrapper_doc_post = """
     pyvi.identification.{}_method
     """
 
-for method, mode in zip((KLS, orderKLS, termKLS, iterKLS, phaseKLS),
-                        ('direct', 'order', 'term', 'iter', 'phase')):
-    method.__doc__ += _wrapper_doc_pre.format(mode)
-    corresponding_method_doc = locals()[mode + '_method'].__doc__
-    method.__doc__ += '\n'.join(corresponding_method_doc.splitlines()[2:])
-    method.__doc__ += _wrapper_doc_post.format(mode)
-
 del (kwargs_docstring_common_pre, kwargs_docstring_common_post,
      kwargs_docstring_phi_order, kwargs_docstring_phi_term,
-     kwargs_docstring_cast_mode, kwargs_docstring, method,
-     corresponding_method_doc, mode)
+     kwargs_docstring_cast_mode, kwargs_docstring, method, mode)

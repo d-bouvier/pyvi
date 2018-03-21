@@ -17,9 +17,12 @@ projected_hammerstein_basis :
 
 Notes
 -----
-Developed for Python 3.6.1
+Developed for Python 3.6
 @author: Damien Bouvier (Damien.Bouvier@ircam.fr)
 """
+
+__all__ = ['compute_combinatorial_basis']
+
 
 #==============================================================================
 # Importations
@@ -74,13 +77,13 @@ def compute_combinatorial_basis(signal, N, system_type='volterra', M=None,
         for precisions on what basis object can be.
     sorted_by : {'order', 'term'}, optional (default='order')
         Choose if matrices are computed for each nonlinear homogeneous order
-        or nonlinear combinatorial term.
+        or nonlinear interconjugate term.
 
     Returns
     -------
     dict(int or (int, int): numpy.ndarray)
         Dictionary of combinatorial basis matrix for each order or
-        combinatorial term.
+        interconjugate term.
     """
 
     _M, orthogonal_basis_is_list = _check_parameters(N, system_type, M,

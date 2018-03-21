@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Tooolbox for useful math functions.
+Module for useful math functions.
 
 Functions
 ---------
@@ -19,9 +19,13 @@ array_symmetrization :
 
 Notes
 -----
-Developed for Python 3.6.1
+Developed for Python 3.6
 @author: Damien Bouvier (Damien.Bouvier@ircam.fr)
 """
+
+__all__ = ['rms', 'db', 'safe_db', 'binomial', 'multinomial',
+           'array_symmetrization']
+
 
 #==============================================================================
 # Importations

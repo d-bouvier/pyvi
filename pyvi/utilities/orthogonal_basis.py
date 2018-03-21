@@ -38,9 +38,13 @@ is_valid_basis_instance :
 
 Notes
 -----
-Developed for Python 3.6.1
+Developed for Python 3.6
 @author: Damien Bouvier (Damien.Bouvier@ircam.fr)
 """
+
+__all__ = ['LaguerreBasis', 'KautzBasis', 'GeneralizedBasis',
+           'create_orthogonal_basis', 'is_valid_basis_instance']
+
 
 #==============================================================================
 # Importations

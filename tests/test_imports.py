@@ -4,7 +4,7 @@ Test script for checking correctness of the namespaces and their attributes.
 
 Notes
 -----
-Developed for Python 3.6.1
+Developed for Python 3.6
 @author: Damien Bouvier (Damien.Bouvier@ircam.fr)
 """
 
@@ -56,9 +56,7 @@ class VolterraTestCase(PyviTestCase):
     module = pyvi.volterra
     needed_properties = ['kernel_nb_coeff', 'series_nb_coeff', 'vec2kernel',
                          'vec2series', 'kernel2vec',
-                         'compute_combinatorial_basis', 'volterra_basis',
-                         'hammerstein_basis', 'projected_volterra_basis',
-                         'projected_hammerstein_basis']
+                         'compute_combinatorial_basis']
     should_be_absent_properties = ['_vec2dict_of_vec', '_check_parameters',
                                    '_compute_list_nb_coeff',
                                    '_phi_by_order_post_processing',
@@ -78,8 +76,7 @@ class IdentificationTestCase(PyviTestCase):
 
     module = pyvi.identification
     needed_properties = ['direct_method', 'order_method', 'term_method',
-                         'iter_method', 'phase_method', 'KLS', 'orderKLS',
-                         'termKLS', 'iterKLS', 'phaseKLS']
+                         'iter_method', 'phase_method']
     should_be_absent_properties = ['_solver', '_ls_solver', '_qr_solver',
                                    '_complex2real', '_identification',
                                    '_cast_complex2real', '_kwargs_for_KLS']

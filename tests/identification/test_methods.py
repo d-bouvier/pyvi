@@ -4,7 +4,7 @@ Test script for pyvi/identification/methods.py
 
 Notes
 -----
-Developed for Python 3.6.1
+Developed for Python 3.6
 @author: Damien Bouvier (Damien.Bouvier@ircam.fr)
 """
 
@@ -17,8 +17,7 @@ import unittest
 import numpy as np
 from pyvi.identification.methods import (direct_method, order_method,
                                          term_method, iter_method,
-                                         phase_method, KLS, orderKLS, termKLS,
-                                         iterKLS, phaseKLS)
+                                         phase_method)
 from pyvi.separation.methods import HPS, PS
 from pyvi.volterra.combinatorial_basis import (_check_parameters,
                                                _compute_list_nb_coeff,
@@ -292,40 +291,6 @@ class HammersteinWarningTest(unittest.TestCase):
         self.assertWarns(UserWarning, direct_method, np.arange(30),
                          np.arange(30), 3, M=5, out_form='tri',
                          system_type='hammerstein')
-
-
-class KLSTest(DirectMethodTest):
-
-    method = staticmethod(KLS)
-    solvers = None
-    cast_modes = None
-
-    def _identification(self):
-        list_kernels_est = dict()
-        list_kernels_est['None'] = \
-            self.method(self.input_sig, self.output_data, self.N,
-                        **self.kwargs)
-        return list_kernels_est
-
-
-class OrderKLSTest(KLSTest, OrderMethodTest):
-
-    method = staticmethod(orderKLS)
-
-
-class TermKLSTest(KLSTest, TermMethodTest):
-
-    method = staticmethod(termKLS)
-
-
-class IterKLSTest(KLSTest, IterMethodTest):
-
-    method = staticmethod(iterKLS)
-
-
-class PhaseKLSTest(KLSTest, PhaseMethodTest):
-
-    method = staticmethod(phaseKLS)
 
 
 #==============================================================================
