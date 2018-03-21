@@ -4,7 +4,7 @@ Test script for pyvi/volterra/combinatorial_basis.py
 
 Notes
 -----
-Developed for Python 3.6.1
+Developed for Python 3.6
 @author: Damien Bouvier (Damien.Bouvier@ircam.fr)
 """
 

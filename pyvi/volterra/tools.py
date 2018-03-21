@@ -28,9 +28,13 @@ kernel2vec :
 
 Notes
 -----
-Developed for Python 3.6.1
+Developed for Python 3.6
 @author: Damien Bouvier (Damien.Bouvier@ircam.fr)
 """
+
+__all__ = ['kernel_nb_coeff', 'series_nb_coeff', 'vec2kernel', 'vec2series',
+           'kernel2vec']
+
 
 #==============================================================================
 # Importations

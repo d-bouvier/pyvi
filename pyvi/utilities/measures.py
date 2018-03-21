@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Error measure function.
+Module for error measure functions.
 
 Functions
 ---------
@@ -8,10 +8,15 @@ separation_error :
     Returns the relative error between nonlinear orders and their estimates.
 identification_error :
     Returns the relative error between kernels and their estimates.
+evaluation_error :
+    Returns the relative error between a reference signal and an estimation.
 
-Developed for Python 3.6.1
+Developed for Python 3.6
 @author: Damien Bouvier (Damien.Bouvier@ircam.fr)
 """
+
+__all__ = ['separation_error', 'identification_error', 'evaluation_error']
+
 
 #==============================================================================
 # Importations

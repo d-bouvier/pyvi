@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """
-Module for Volterra series nonlinear order separation.
+Module for nonlinear homogeneous order separation of Volterra series.
 
-This package creates classes for several nonlinear homogeneous order
+This module creates classes for several nonlinear homogeneous order
 separation methods.
 
 Class
@@ -20,9 +20,12 @@ PAS :
 
 Notes
 -----
-Developed for Python 3.6.1
+Developed for Python 3.6
 @author: Damien Bouvier (Damien.Bouvier@ircam.fr)
 """
+
+__all__ = ['AS', 'CPS', 'HPS', 'PS', 'PAS']
+
 
 #==============================================================================
 # Importations
@@ -477,7 +480,7 @@ class _AbstractPS(HPS):
     gen_inputs(signal)
         Returns the collection of input test signals.
     process_output(output_coll, raw_mode=False)
-        Process outputs and returns estimated orders or combinatorial terms.
+        Process outputs and returns estimated orders or interconjugate terms.
 
     See also
     --------
@@ -515,7 +518,7 @@ class _AbstractPS(HPS):
 
     def process_outputs(self, output_coll, raw_mode=False):
         """
-        Process outputs and returns estimated orders or combinatorial terms.
+        Process outputs and returns estimated orders or interconjugate terms.
 
         Parameters
         ----------
@@ -524,44 +527,44 @@ class _AbstractPS(HPS):
             ``output_coll.shape[0] == self.K``
         raw_mode : boolean, optional (default=False)
             If True, only returns estimated orders; else also returns
-            estimated combinatorial terms.
+            estimated interconjugate terms.
 
         Returns
         -------
         output_by_order : numpy.ndarray
             Estimation of the nonlinear homogeneous orders; it verifies
             ``output_by_order.shape == (self.N, output_coll.shape[1:])``.
-        combinatorial_terms : dict((int, int): numpy.ndarray)
-            Dictionary of the estimated combinatorial terms; should contains
+        interconjugate_terms : dict((int, int): numpy.ndarray)
+            Dictionary of the estimated interconjugate terms; contains
             all keys ``(n, q)`` for ``n in range(1, N+1)`` and
-            ``q in range(1+n//2)``; each term should verify
-            ``combinatorial_terms[(n, q)].shape == output_coll.shape[1:]``.
+            ``q in range(1+n//2)``; each term verify
+            ``interconjugate_terms[(n, q)].shape == output_coll.shape[1:]``.
         """
 
         # Initialization
-        combinatorial_terms = dict()
+        interconjugate_terms = dict()
         output_by_order = np.zeros((self.N,) + output_coll.shape[1:])
 
         # Regroup by phase with an inverse DFT
         out_per_phase = self._regroup_per_phase(output_coll)
 
-        # Extract combinatorial terms from homophase signals
+        # Extract interconjugate terms from homophase signals
         for phase in range(self.N+1):
             sigs = self._corresponding_sigs(out_per_phase, phase)
             tmp = AS._solve(self, sigs, self.mixing_mat_dict[phase])
             for ind, (n, q) in enumerate(self.nq_dict[phase]):
                 if phase:
                     dec = tmp.shape[0] // 2
-                    combinatorial_terms[(n, q)] = (2**n) * \
-                                                  (tmp[ind] + 1j*tmp[ind+dec])
+                    interconjugate_terms[(n, q)] = (2**n) * \
+                                                   (tmp[ind] + 1j*tmp[ind+dec])
                     output_by_order[n-1] += 2 * binomial(n, q) * tmp[ind]
                 else:
-                    combinatorial_terms[(n, q)] = (2**n) * tmp[ind]
+                    interconjugate_terms[(n, q)] = (2**n) * tmp[ind]
                     output_by_order[n-1] += binomial(n, q) * tmp[ind]
 
         # Function output
         if raw_mode:
-            return output_by_order, combinatorial_terms
+            return output_by_order, interconjugate_terms
         else:
             return output_by_order
 
@@ -625,7 +628,7 @@ class PS(_AbstractPS):
     gen_inputs(signal)
         Returns the collection of input test signals.
     process_output(output_coll, raw_mode=False)
-        Process outputs and returns estimated orders or combinatorial terms.
+        Process outputs and returns estimated orders or interconjugate terms.
 
     See also
     --------
@@ -655,7 +658,7 @@ class PS(_AbstractPS):
         p1_vec = np.arange(p1_start, p1_end)
         tmp_mixing_mat = np.zeros((len_diag, len(self.nq_dict[phase])))
 
-        # Computation of the combinatorial factor for each term
+        # Computation of the interconjugate factor for each term
         for indp, (p1, p2) in enumerate(zip(p1_vec, p1_vec[::-1])):
             for indn, (n, q) in enumerate(self.nq_dict[phase]):
                 if (abs(p1) + abs(p2)) <= n:
@@ -764,7 +767,7 @@ class PAS(_AbstractPS, AS):
     gen_inputs(signal)
         Returns the collection of input test signals.
     process_output(output_coll, raw_mode=False)
-        Process outputs and returns estimated orders or combinatorial terms.
+        Process outputs and returns estimated orders or interconjugate terms.
 
     See also
     --------

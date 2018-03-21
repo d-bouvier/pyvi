@@ -19,7 +19,7 @@ inherit_docstring :
 
 Notes
 -----
-Developed for Python 3.6.1
+Developed for Python 3.6
 @author: Damien Bouvier (Damien.Bouvier@ircam.fr)
 `DocInherit` found on http://code.activestate.com/recipes/576862/
 """
