@@ -10,5 +10,5 @@ Developed for Python 3.6
 
 __author__ = "Damien Bouvier"
 __maintainer__ = "Damien Bouvier"
-__version__ = "0.5.2"
+__version__ = "0.6"
 __author_email__ = 'Damien.Bouvier@ircam.fr'
