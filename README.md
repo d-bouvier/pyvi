@@ -3,14 +3,14 @@ This project proposes a python toolbox for Volterra Series Identification using 
 
 License
 =======
-`Pyvi <https://github.com/d-bouvier/pyvi/>`_ is distributed under the BSD 3-Clause "New" or "Revised" License.
+[Pyvi](https://github.com/d-bouvier/pyvi) is distributed under the BSD 3-Clause "New" or "Revised" License.
 
 Python prerequisites
 ====================
-The `Pyvi <https://github.com/d-bouvier/pyvi/>`_ package needs the following packages installed:
+The [Pyvi](https://github.com/d-bouvier/pyvi) package is developped for Python 3 and needs the following packages installed:
 
-- `numpy <http://www.numpy.org>`_
-- `scipy <http://www.scipy.org>`_
+- [numpy](http://www.numpy.org)
+- [scipy](http://www.scipy.org)
 
 The package has been fully tested with the following versions:
 
@@ -21,22 +21,28 @@ The package has been fully tested with the following versions:
 Package structure
 =================
 
-The package is divided into the following folders:
+The package is divided into the following submodules:
 
-* [/pyvi/separation](https://github.com/d-bouvier/pyvi/tree/master/pyvi/separation)
+* [separation](https://github.com/d-bouvier/pyvi/tree/master/pyvi/separation)
+
 Module for nonlinear homogeneous order separation of Volterra series.
 
-* [/pyvi/identification](https://github.com/d-bouvier/pyvi/tree/master/pyvi/identification)
+* [identification](https://github.com/d-bouvier/pyvi/tree/master/pyvi/identification)
+
 Module for Volterra kernels identification.
 
-* [/pyvi/volterra](https://github.com/d-bouvier/pyvi/tree/master/pyvi/volterra)
+* [volterra](https://github.com/d-bouvier/pyvi/tree/master/pyvi/volterra)
+
 Module creating various tools for Volterra series.
 
-* [/pyvi/utilities](https://github.com/d-bouvier/pyvi/tree/master/pyvi/utilities)
+* [utilities](https://github.com/d-bouvier/pyvi/tree/master/pyvi/utilities)
+
 Module containing various useful class and functions.
 
 Authors
 =======
 Damien, Bouvier (Équipe S3AM, IRCAM, CNRS UMR 9912, UPMC, Paris, France) - damien.bouvier@ircam.fr
+
 Hélie, Thomas (Équipe S3AM, IRCAM, CNRS UMR 9912, UPMC, Paris, France)
+
 Roze, David Tristan (Équipe S3AM, IRCAM, CNRS UMR 9912, UPMC, Paris, France)
