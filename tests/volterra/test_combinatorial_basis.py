@@ -211,12 +211,16 @@ class ProjVolterraBasisTest(VolterraBasisTest):
     rtol = 0
     atol = 1e-12
     is_list = False
+    unit_delay = False
 
     def compute_basis_func(self, sig, sorted_by):
         if isinstance(self.M, int):
-            orthogonal_basis = LaguerreBasis(self.pole, self.M)
+            orthogonal_basis = LaguerreBasis(self.pole, self.M,
+                                             unit_delay=self.unit_delay)
         else:
-            orthogonal_basis = [LaguerreBasis(self.pole, m) for m in self.M]
+            orthogonal_basis = [LaguerreBasis(self.pole, m,
+                                              unit_delay=self.unit_delay)
+                                for m in self.M]
         return projected_volterra_basis(sig, self.N, orthogonal_basis,
                                         self.is_list, sorted_by=sorted_by)
 
@@ -247,63 +251,63 @@ class ProjVolterraBasisCplxSigTest(ProjVolterraBasisListTest):
         return super().sig_creation() + 1j * super().sig_creation()
 
 
-class ProjVolterraBasisCorrectOutputTest(ProjVolterraBasisTest):
+class ProjVolterraBasisCorrectTest(ProjVolterraBasisTest):
 
-    L = 3
+    L = 2
     N = 3
     M = 3
     atol = 1e-7
     rtol = 1e-12
     true = {(1, 0): np.array(
-                [[0.+0.j, 0.99498744+0.99498744j, 2.08947362+2.08947362j],
-                 [0.+0.j, 0.09949874+0.09949874j, -0.7760902-0.7760902j],
-                 [0.+0.j, 0.00994987+0.00994987j, -0.17611278-0.17611278j]]).T,
+                [[0.99498744+0.99498744j, 2.08947362+2.08947362j],
+                 [-0.09949874-0.09949874j, 0.7760902+0.7760902j],
+                 [0.00994987+0.00994987j, -0.17611278-0.17611278j]]).T,
             (2, 0): np.array(
-                [[0.+0.000000e+00j, 0.+1.980000e+00j, 0.+8.731800e+00j],
-                 [0.+0.j, 0.+0.198j, 0.-3.24324j],
-                 [0.+0.j, 0.+0.0198j, 0.-0.735966j],
-                 [0.+0.j, 0.+1.980000e-02j, 0.+1.204632e+00j],
-                 [0.+0.j, 0.+0.00198j, 0.+0.2733588j],
-                 [0.+0.j, 0.+1.980000e-04j, 0.+6.203142e-02j]]).T,
+                [[0.+1.980000e+00j, 0.+8.731800e+00j],
+                 [-0.-0.198j, -0.+3.24324j],
+                 [0.+0.0198j, 0.-0.735966j],
+                 [0.+1.980000e-02j, 0.+1.204632e+00j],
+                 [-0.-0.00198j, -0.-0.2733588j],
+                 [0.+1.980000e-04j, 0.+6.203142e-02j]]).T,
             (2, 1): np.array(
-                 [[0., 1.980000, 8.731800],
-                  [0., 0.198, -3.24324],
-                  [0., 0.0198, -0.735966],
-                  [0., 1.980000e-02, 1.204632],
-                  [0., 0.00198, 0.2733588],
-                  [0., 1.980000e-04, 6.203142e-02]]).T,
+                 [[1.980000, 8.731800],
+                  [-0.198, 3.24324],
+                  [0.0198, -0.735966],
+                  [1.980000e-02, 1.204632],
+                  [-0.00198, -0.2733588],
+                  [1.980000e-04, 6.203142e-02]]).T,
             (3, 0): np.array(
-                 [[0.+0.j, -1.97007513+1.97007513j, -18.2448657+18.2448657j],
-                  [0.+0.j, -0.19700751+0.19700751j, 6.77666442-6.77666442j],
-                  [0.+0.j, -0.01970075+0.01970075j, 1.53778154-1.53778154j],
-                  [0.+0.j, -1.97007513e-02+1.97007513e-02j,
+                 [[-1.97007513+1.97007513j, -18.2448657+18.2448657j],
+                  [0.19700751-0.19700751j, -6.77666442+6.77666442j],
+                  [-0.01970075+0.01970075j, 1.53778154-1.53778154j],
+                  [-1.97007513e-02+1.97007513e-02j,
                    -2.51704678+2.51704678j],
-                  [0.+0.j, -1.97007513e-03+1.97007513e-03j,
-                   -5.71176001e-01+5.71176001e-01j],
-                  [0.+0.j, -0.00019701+0.00019701j, -0.12961302+0.12961302j],
-                  [0.+0.j, -1.97007513e-03+1.97007513e-03j,
-                   9.34903091e-01-9.34903091e-01j],
-                  [0.+0.j, -1.97007513e-04+1.97007513e-04j,
+                  [1.97007513e-03-1.97007513e-03j,
+                   +5.71176001e-01-5.71176001e-01j],
+                  [-0.00019701+0.00019701j, -0.12961302+0.12961302j],
+                  [1.97007513e-03-1.97007513e-03j,
+                   -9.34903091e-01+9.34903091e-01j],
+                  [-1.97007513e-04+1.97007513e-04j,
                    2.12151086e-01-2.12151086e-01j],
-                  [0.+0.j, -1.97007513e-05+1.97007513e-05j,
-                   4.81419772e-02-4.81419772e-02j],
-                  [0.+0.j, -1.97007513e-06+1.97007513e-06j,
+                  [1.97007513e-05-1.97007513e-05j,
+                   -4.81419772e-02+4.81419772e-02j],
+                  [-1.97007513e-06+1.97007513e-06j,
                    1.09245256e-02-1.09245256e-02j]]).T,
             (3, 1): np.array(
-                  [[0.+0.j, 1.97007513e+00+1.97007513e+00j,
+                  [[1.97007513e+00+1.97007513e+00j,
                     1.82448657e+01+1.82448657e+01j],
-                   [0.+0.j, 0.19700751+0.19700751j, -6.77666442-6.77666442j],
-                   [0.+0.j, 0.01970075+0.01970075j, -1.53778154-1.53778154j],
-                   [0.+0.j, 0.01970075+0.01970075j, 2.51704678+2.51704678j],
-                   [0.+0.j, 0.00197008+0.00197008j, 0.571176+0.571176j],
-                   [0.+0.j, 0.00019701+0.00019701j, 0.12961302+0.12961302j],
-                   [0.+0.j, 1.97007513e-03+1.97007513e-03j,
-                    -9.34903091e-01-9.34903091e-01j],
-                   [0.+0.j, 1.97007513e-04+1.97007513e-04j,
+                   [-0.19700751-0.19700751j, 6.77666442+6.77666442j],
+                   [0.01970075+0.01970075j, -1.53778154-1.53778154j],
+                   [0.01970075+0.01970075j, 2.51704678+2.51704678j],
+                   [-0.00197008-0.00197008j, -0.571176-0.571176j],
+                   [0.00019701+0.00019701j, 0.12961302+0.12961302j],
+                   [-1.97007513e-03-1.97007513e-03j,
+                    9.34903091e-01+9.34903091e-01j],
+                   [1.97007513e-04+1.97007513e-04j,
                     -2.12151086e-01-2.12151086e-01j],
-                   [0.+0.j, 1.97007513e-05+1.97007513e-05j,
-                    -4.81419772e-02-4.81419772e-02j],
-                   [0.+0.j, 1.97007513e-06+1.97007513e-06j,
+                   [-1.97007513e-05-1.97007513e-05j,
+                    4.81419772e-02+4.81419772e-02j],
+                   [1.97007513e-06+1.97007513e-06j,
                     -1.09245256e-02-1.09245256e-02j]]).T}
     order_keys = {1, 2, 3}
     term_keys = {(1, 0), (2, 0), (2, 1), (3, 0), (3, 1)}
@@ -323,17 +327,37 @@ class ProjVolterraBasisCorrectOutputTest(ProjVolterraBasisTest):
     def test_correct_output_term(self):
         for (n, k), val in self.term.items():
             with self.subTest(i=(n, k)):
+                if not np.allclose(val, self.true[(n, k)] / (2**n),
+                                   rtol=self.rtol, atol=self.atol):
+                    print()
+                    print((n, k))
+                    print(val)
+                    print(self.true[(n, k)] / (2**n))
+                    print()
                 self.assertTrue(np.allclose(val, self.true[(n, k)] / (2**n),
                                             rtol=self.rtol, atol=self.atol))
+
+
+class ProjVolterraBasisCorrectTestWithUnitDelay(ProjVolterraBasisCorrectTest):
+
+    L = 3
+    unit_delay = True
+    true = ProjVolterraBasisCorrectTest.true.copy()
+    for key in true.keys():
+        nb_col = true[key].shape[1]
+        true[key] = np.concatenate((np.zeros((1, nb_col)), true[key]), axis=0)
 
 
 class ProjHammersteinBasisTest(ProjVolterraBasisTest):
 
     def compute_basis_func(self, sig, sorted_by):
         if isinstance(self.M, int):
-            orthogonal_basis = LaguerreBasis(self.pole, self.M)
+            orthogonal_basis = LaguerreBasis(self.pole, self.M,
+                                             unit_delay=self.unit_delay)
         else:
-            orthogonal_basis = [LaguerreBasis(self.pole, m) for m in self.M]
+            orthogonal_basis = [LaguerreBasis(self.pole, m,
+                                              unit_delay=self.unit_delay)
+                                for m in self.M]
         return projected_hammerstein_basis(sig, self.N, orthogonal_basis,
                                            sorted_by=sorted_by)
 
@@ -354,29 +378,40 @@ class ProjHammersteinBasisCplxSigTest(ProjHammersteinBasisListTest):
         return super().sig_creation() + 1j * super().sig_creation()
 
 
-class ProjHammersteinBasisCorrectOutputTest(ProjHammersteinBasisCplxSigTest,
-                                            ProjVolterraBasisTest):
+class ProjHammersteinBasisCorrectTest(ProjHammersteinBasisTest,
+                                      ProjVolterraBasisCorrectTest):
 
     true = {(1, 0): np.array(
-                [[0.+0.j, 0.99498744+0.99498744j, 2.08947362+2.08947362j],
-                 [0.+0.j, 0.09949874+0.09949874j, -0.7760902-0.7760902j],
-                 [0.+0.j, 0.00994987+0.00994987j, -0.17611278-0.17611278j]]).T,
+                [[0.99498744+0.99498744j, 2.08947362+2.08947362j],
+                 [-0.09949874-0.09949874j, 0.7760902+0.7760902j],
+                 [0.00994987+0.00994987j, -0.17611278-0.17611278j]]).T,
             (2, 0): np.array(
-                [[0.+0.j, 0.+1.98997487j, 0.+8.15889698j],
-                 [0.+0.j, 0.+0.19899749j, 0.-1.15418543j],
-                 [0.+0.j, 0.+0.01989975j, 0.-0.31242606j]]).T,
+                [[0.+1.98997487j, 0.+8.15889698j],
+                 [0.-0.19899749j, 0.+1.15418543j],
+                 [0.+0.01989975j, 0.-0.31242606j]]).T,
             (2, 1): np.array(
-                 [[0., 1.98997487, 8.15889698],
-                  [0., 0.19899749, -1.15418543],
-                  [0., 0.01989975, -0.31242606]]).T,
+                 [[1.98997487, 8.15889698],
+                  [-0.19899749, 1.15418543],
+                  [0.01989975, -0.31242606]]).T,
             (3, 0): np.array(
-                 [[0., -1.98997487+1.98997487j, -16.11879648+16.11879648j],
-                  [0., -0.19899749+0.19899749j, 0.35819548-0.35819548j],
-                  [0., -0.01989975+0.01989975j, 0.23282706-0.23282706j]]).T,
+                 [[-1.98997487+1.98997487j, -16.11879648+16.11879648j],
+                  [0.19899749-0.19899749j, -0.35819548+0.35819548j],
+                  [-0.01989975+0.01989975j, 0.23282706-0.23282706j]]).T,
             (3, 1): np.array(
-                 [[0, 1.98997487+1.98997487j, 16.11879648+16.11879648j],
-                  [0, 0.19899749+0.19899749j, -0.35819548-0.35819548j],
-                  [0, 0.01989975+0.01989975j, -0.23282706-0.23282706j]]).T}
+                 [[1.98997487+1.98997487j, 16.11879648+16.11879648j],
+                  [-0.19899749-0.19899749j, 0.35819548+0.35819548j],
+                  [0.01989975+0.01989975j, -0.23282706-0.23282706j]]).T}
+
+
+class ProjHammersteinBasisCorrectTestWithUnitDelay(
+        ProjHammersteinBasisCorrectTest):
+
+    L = 3
+    unit_delay = True
+    true = ProjHammersteinBasisCorrectTest.true.copy()
+    for key in true.keys():
+        nb_col = true[key].shape[1]
+        true[key] = np.concatenate((np.zeros((1, nb_col)), true[key]), axis=0)
 
 
 class CheckParametersTest(unittest.TestCase):

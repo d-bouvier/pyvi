@@ -120,18 +120,26 @@ class LaguerreBasis(_OrthogonalBasis):
         Project a signal unto the basis.
     """
 
-    def __init__(self, pole, K):
+    def __init__(self, pole, K, unit_delay=False):
         if np.iscomplex(pole):
             raise ValueError('Given parameter `pole` is complex-valued, ' +
                              'should be real-valued for Laguerre basis.')
         self.pole = pole
         self.K = K
-        self._init_filter, self._post_filter = self._compute_filters(pole)
+        self._unit_delay = unit_delay
+        self._init_filter, self._post_filter = \
+            self._compute_filters(pole, unit_delay)
 
     @classmethod
-    def _compute_filters(cls, pole):
-        init_filt = sc_sig.dlti([], [pole], np.sqrt(1 - pole**2))
-        post_filt = sc_sig.dlti([1/pole], [pole], pole)
+    def _compute_filters(cls, pole, unit_delay):
+        if pole == 0:
+            poles_init = [0] if unit_delay else []
+            init_filt = sc_sig.dlti([], poles_init, 1)
+            post_filt = sc_sig.dlti([], [pole], 1)
+        else:
+            zeros_init = [] if unit_delay else [0]
+            init_filt = sc_sig.dlti(zeros_init, [pole], np.sqrt(1 - pole**2))
+            post_filt = sc_sig.dlti([1/pole], [pole], -pole)
         return init_filt._as_ss(), post_filt._as_ss()
 
     @inherit_docstring
@@ -166,27 +174,40 @@ class KautzBasis(_OrthogonalBasis):
         Project a signal unto the basis.
     """
 
-    def __init__(self, pole, K):
+    def __init__(self, pole, K, unit_delay=False):
         if K % 2:
             raise ValueError('Given parameter `K` is odd, should be even ' +
                              'for Kautz basis to ensure realness.')
         self.pole = pole
         self.K = K
-        filters = self._compute_filters(pole)
+        self._unit_delay = unit_delay
+        filters = self._compute_filters(pole, unit_delay)
         self._init_filter, self._even_filter, self._post_filter = filters
 
     @classmethod
-    def _compute_filters(cls, pole):
-        c = - np.abs(pole)**2
-        b = 2 * np.real(pole) / (1 - c)
-        gain_odd = np.sqrt(1 - c**2)
-        gain_even = np.sqrt(1 - b**2)
-        num = [-c, b*(c-1), 1]
-        den = [1, b*(c-1), -c]
+    def _compute_filters(cls, pole, unit_delay):
+        if pole == 0:
+            den_init = [1]
+            if unit_delay:
+                den_init.append(0)
+            init_filt = sc_sig.dlti([1], den_init)
+            even_filt = sc_sig.dlti([1], [1, 0])
+            post_filt = sc_sig.dlti([1], [1, 0, 0])
+        else:
+            c = - np.abs(pole)**2
+            b = 2 * np.real(pole) / (1 - c)
+            gain_odd = np.sqrt(1 - c**2)
+            gain_even = np.sqrt(1 - b**2)
+            num = [-c, b*(c-1), 1]
+            den = [1, b*(c-1), -c]
 
-        init_filt = sc_sig.dlti([gain_odd, -gain_odd*b], den)
-        even_filt = sc_sig.dlti([gain_even], [1, -b])
-        post_filt = sc_sig.dlti(num, den)
+            num_init = [gain_odd, -gain_odd*b]
+            if not unit_delay:
+                num_init.append(0)
+
+            init_filt = sc_sig.dlti(num_init, den)
+            even_filt = sc_sig.dlti([gain_even], [1, -b])
+            post_filt = sc_sig.dlti(num, den)
         return init_filt._as_ss(), even_filt._as_ss(), post_filt._as_ss()
 
     @inherit_docstring
@@ -223,18 +244,21 @@ class GeneralizedBasis(_OrthogonalBasis):
         Project a signal unto the basis.
     """
 
-    def __init__(self, poles):
+    def __init__(self, poles, unit_delay=False):
+        self._unit_delay = unit_delay
         self.poles = []
         self._filters = []
         self._type_list = []
         for pole in poles:
             if np.iscomplex(pole):
                 self.poles += [pole, np.conj(pole)]
-                self._filters.append(KautzBasis._compute_filters(pole))
+                self._filters.append(
+                    KautzBasis._compute_filters(pole, unit_delay))
                 self._type_list.append('Kautz')
             else:
                 self.poles.append(pole)
-                self._filters.append(LaguerreBasis._compute_filters(pole))
+                self._filters.append(
+                    LaguerreBasis._compute_filters(pole, unit_delay))
                 self._type_list.append('Laguerre')
         self.K = len(self.poles)
 
@@ -261,7 +285,7 @@ class GeneralizedBasis(_OrthogonalBasis):
 # Functions
 #==============================================================================
 
-def create_orthogonal_basis(poles, K=None):
+def create_orthogonal_basis(poles, K=None, unit_delay=False):
     """
     Returns an orthogonal basis given its poles and its number of elements.
 
@@ -287,18 +311,19 @@ def create_orthogonal_basis(poles, K=None):
             raise ValueError('Parameter `poles` has zero-length, should ' +
                              'be at least 1.')
         elif len(poles) == 1:
-            return create_orthogonal_basis(poles[0], K=K)
+            return create_orthogonal_basis(poles[0], K=K,
+                                           unit_delay=unit_delay)
         else:
-            return GeneralizedBasis(poles)
+            return GeneralizedBasis(poles, unit_delay=unit_delay)
     elif isinstance(poles, Number):
         if K is None:
             raise ValueError('Unspecified parameter `K` for basis of ' +
                              'type Laguerre or Kautz.')
         pole = poles
         if np.iscomplex(pole):
-            return KautzBasis(pole, K)
+            return KautzBasis(pole, K, unit_delay=unit_delay)
         else:
-            return LaguerreBasis(np.real(pole), K)
+            return LaguerreBasis(np.real(pole), K, unit_delay=unit_delay)
     else:
         raise TypeError('Parameter `poles` is neither a numeric value ' +
                         'nor a list of numeric values.')

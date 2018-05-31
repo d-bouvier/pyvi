@@ -27,24 +27,28 @@ from pyvi.utilities.orthogonal_basis import (_OrthogonalBasis, LaguerreBasis,
 class CreateOrthogonalBasisTest(unittest.TestCase):
 
     K = 6
+    unit_delay = False
 
     def test_real_pole_outputs_laguerre(self):
         for pole in [0.5, 0.5 + 0j, [0.1], [0.1 + 0j]]:
             with self.subTest(i=pole):
-                self.assertIsInstance(create_orthogonal_basis(pole, self.K),
-                                      LaguerreBasis)
+                basis = create_orthogonal_basis(pole, K=self.K,
+                                                unit_delay=self.unit_delay)
+                self.assertIsInstance(basis, LaguerreBasis)
 
     def test_cplx_pole_outputs_kautz(self):
         for pole in [0.5 + 0.1j, [0.5 + 0.1j]]:
             with self.subTest(i=pole):
-                self.assertIsInstance(create_orthogonal_basis(pole, self.K),
-                                      KautzBasis)
+                basis = create_orthogonal_basis(pole, K=self.K,
+                                                unit_delay=self.unit_delay)
+                self.assertIsInstance(basis, KautzBasis)
 
     def test_list_poles_outputs_generalized(self):
         for poles in [[0.5, 0.4], [0.5 + 0.1j, 0.4 + 0.5j], [0.5, 0.5 + 0.1j]]:
             with self.subTest(i=poles):
-                self.assertIsInstance(create_orthogonal_basis(poles),
-                                      GeneralizedBasis)
+                basis = create_orthogonal_basis(poles,
+                                                unit_delay=self.unit_delay)
+                self.assertIsInstance(basis, GeneralizedBasis)
 
     def test_zero_len_error(self):
         self.assertRaises(ValueError, create_orthogonal_basis, [])
@@ -59,6 +63,11 @@ class CreateOrthogonalBasisTest(unittest.TestCase):
         self.assertRaises(TypeError, create_orthogonal_basis, None)
 
 
+class CreateOrthogonalBasisTestWithUnitDelay(CreateOrthogonalBasisTest):
+
+    unit_delay = True
+
+
 class _OrthogonalBasisGlobalTest():
 
     params_list = []
@@ -66,11 +75,13 @@ class _OrthogonalBasisGlobalTest():
     L = 2000
     atol = 1e-14
     rtol = 1e-14
+    unit_delay = False
 
     def setUp(self):
         self.basis_list = []
         for pole, K in self.params_list:
-            self.basis_list.append(self.basis(pole, K))
+            self.basis_list.append(self.basis(pole, K,
+                                              unit_delay=self.unit_delay))
 
     def test_orthogonality(self):
         input_sig = np.zeros((self.L,))
@@ -104,14 +115,15 @@ class _OrthogonalBasisGlobalTest():
 
 class LaguerreBasisTest(_OrthogonalBasisGlobalTest, unittest.TestCase):
     params_list = [(0.1, 2), (0.1, 5), (0.1, 10), (0.2, 5), (0.5, 5),
-                   (0.9, 5), (0.95, 5)]
+                   (0.9, 5), (0.95, 5), (0, 5)]
     basis = LaguerreBasis
 
 
 class KautzBasisTest(_OrthogonalBasisGlobalTest, unittest.TestCase):
     params_list = [(0.1*np.exp(1j*np.pi/4), 2), (0.1*np.exp(1j*np.pi/4), 10),
                    (0.5*np.exp(1j*np.pi/4), 10), (0.9*np.exp(1j*np.pi/4), 10),
-                   (0.95*np.exp(1j*np.pi/4), 10), (0.7 + 0.1j, 10), (0.7, 10)]
+                   (0.95*np.exp(1j*np.pi/4), 10), (0.7 + 0.1j, 10), (0.7, 10),
+                   (0, 6)]
     basis = KautzBasis
 
 
@@ -119,13 +131,29 @@ class GeneralizedBasisTest(_OrthogonalBasisGlobalTest, unittest.TestCase):
     params_list = [[0.1], [0.1, 0.2, 0.5], [0.1, 0.9, 0.1, 0.5, 0.1],
                    [0.1*np.exp(1j*np.pi/4)], [0.1*np.exp(1j*np.pi/4), 0.1],
                    [0.1 + 0.1j, 0.2 + 0.2j, 0.5 + 0.1j, 0.1 + 0.5j],
-                   [0.1 + 0.1j, 0.2, 0.5 + 0.1j, 0.5, 0.1 + 0.5j]]
+                   [0.1 + 0.1j, 0.2, 0.5 + 0.1j, 0.5, 0.1 + 0.5j], [0, 0, 0]]
     basis = GeneralizedBasis
 
     def setUp(self):
         self.basis_list = []
         for poles in self.params_list:
-            self.basis_list.append(self.basis(poles))
+            self.basis_list.append(self.basis(poles,
+                                              unit_delay=self.unit_delay))
+
+
+class LaguerreBasisTestWithUnitDelay(LaguerreBasisTest):
+
+    unit_delay = True
+
+
+class KautzBasisTestWithUnitDelay(KautzBasisTest):
+
+    unit_delay = True
+
+
+class GeneralizedBasisTestWithUnitDelay(GeneralizedBasisTest):
+
+    unit_delay = True
 
 
 class RaisedErrorTest(unittest.TestCase):
@@ -145,6 +173,7 @@ class LaguerreAndGeneralizedEqualityTest(unittest.TestCase):
     L = 1000
     atol = 1e-14
     rtol = 0
+    unit_delay = False
 
     def setUp(self):
         input_sig = np.zeros((self.L,))
@@ -153,15 +182,17 @@ class LaguerreAndGeneralizedEqualityTest(unittest.TestCase):
         self.gob_filters = dict()
         for K in self.list_K:
             poles = self._pole2poles(K)
-            comp_basis = self.comp_basis(self.pole, K)
+            comp_basis = self.comp_basis(self.pole, K,
+                                         unit_delay=self.unit_delay)
             self.comp_filters[K] = comp_basis.projection(input_sig)
-            generalized_basis = GeneralizedBasis(poles)
+            generalized_basis = GeneralizedBasis(poles,
+                                                 unit_delay=self.unit_delay)
             self.gob_filters[K] = generalized_basis.projection(input_sig)
 
     def _pole2poles(self, K):
         return (self.pole,)*K
 
-    def test_orthogonality(self):
+    def test_equality(self):
         for K in self.list_K:
             with self.subTest(i=K):
                 self.assertTrue(np.allclose(self.gob_filters[K],
@@ -176,6 +207,16 @@ class KautzAndGeneralizedEqualityTest(LaguerreAndGeneralizedEqualityTest):
 
     def _pole2poles(self, K):
         return (self.pole,)*(K//2)
+
+
+class LaguerreAndGeneralizedEqualityTest_2(LaguerreAndGeneralizedEqualityTest):
+
+    unit_delay = True
+
+
+class KautzAndGeneralizedEqualityTest_2(KautzAndGeneralizedEqualityTest):
+
+    unit_delay = True
 
 
 #==============================================================================
