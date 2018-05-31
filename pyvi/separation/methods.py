@@ -526,7 +526,7 @@ class _AbstractPS(HPS):
             Collection of the output signals; it should verify
             ``output_coll.shape[0] == self.K``
         raw_mode : boolean, optional (default=False)
-            If True, only returns estimated orders; else also returns
+            If False, only returns estimated orders; else also returns
             estimated interconjugate terms.
 
         Returns

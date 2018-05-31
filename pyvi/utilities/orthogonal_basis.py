@@ -108,11 +108,15 @@ class LaguerreBasis(_OrthogonalBasis):
         Real-valued Laguerre pole.
     K : int
         Number of elements of the basis.
+    unit_delay : boolean, optional (default=False)
+        If True, the filters are all strictly causal (they verify the unit
+        delay condition).
 
     Attributes
     ----------
     pole : float
     K : int
+    _unit_delay : boolean
 
     Methods
     -------
@@ -162,11 +166,15 @@ class KautzBasis(_OrthogonalBasis):
         Complex-valued Kautz pole.
     K : int
         Number of elements of the basis.
+    unit_delay : boolean, optional (default=False)
+        If True, the filters are all strictly causal (they verify the unit
+        delay condition).
 
     Attributes
     ----------
     pole : float
     K : int
+    _unit_delay : boolean
 
     Methods
     -------
@@ -230,6 +238,9 @@ class GeneralizedBasis(_OrthogonalBasis):
     poles : list(float or complex)
         List of the wanted poles; for complex poles, conjuguated poles are
         automatically added.
+    unit_delay : boolean, optional (default=False)
+        If True, the filters are all strictly causal (they verify the unit
+        delay condition).
 
     Attributes
     ----------
@@ -237,6 +248,7 @@ class GeneralizedBasis(_OrthogonalBasis):
         List of all the poles, including complex conjuguated ones.
     K : int
         Number of elements of the basis.
+    _unit_delay : boolean
 
     Methods
     -------
@@ -299,6 +311,9 @@ def create_orthogonal_basis(poles, K=None, unit_delay=False):
         Number of elements of the basis; only mandatory if `poles` is a
         number or of lenght 1; else, the number of elements will depend of the
         number of poles.
+    unit_delay : boolean, optional (default=False)
+        If True, the filters are all strictly causal (they verify the unit
+        delay condition).
 
     Returns
     -------
