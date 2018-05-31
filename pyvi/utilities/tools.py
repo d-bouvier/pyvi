@@ -11,6 +11,8 @@ Functions
 ---------
 _as_list :
     Check that given variable is a list or a tuple.
+_is_sorted :
+    Check that given numeric array is sorted in ascending order.
 
 Decorator
 ---------
@@ -120,3 +122,24 @@ def _as_list(val, N):
             return list(val)
     else:
         return [val, ]*N
+
+
+def _is_sorted(array_1d):
+    """
+    Check that given numeric array is sorted in ascending order.
+
+    Parameters
+    ----------
+    array_1d : array_like
+        Numeric array to check if it is sorted.
+
+    Returns
+    -------
+    is_sorted : boolean
+        True if `array_1d` is sorted, False otherwise.
+    """
+
+    for ind in range(len(array_1d)-1):
+        if array_1d[ind+1] < array_1d[ind]:
+            return False
+    return True

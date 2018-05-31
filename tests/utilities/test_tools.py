@@ -14,7 +14,7 @@ Developed for Python 3.6
 
 import unittest
 import numpy as np
-from pyvi.utilities.tools import _as_list
+from pyvi.utilities.tools import _as_list, _is_sorted
 
 
 #==============================================================================
@@ -56,6 +56,18 @@ class AsListTest(unittest.TestCase):
     def test_error_if_wrong_length(self):
         val = [1, 2, 3]
         self.assertRaises(ValueError, _as_list, val, len(val)-1)
+
+
+class IsSortedTest(unittest.TestCase):
+
+    arrays = [([1, 2, 3], True),
+              ([1, 3, 2], False),
+              ([1, 3, 3], True)]
+
+    def test_correct(self):
+        for (array, result) in self.arrays:
+            with self.subTest(i=array):
+                self.assertEqual(_is_sorted(array), result)
 
 
 #==============================================================================
