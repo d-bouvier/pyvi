@@ -241,19 +241,21 @@ class ASBestGainTest(unittest.TestCase):
                   (3, {'nb_amp': 10}, 0.66459128),
                   (9, {}, 0.79174226)]
     tol = 1e-8
+    method = sep.AS
 
     def test_correct(self):
         for N, kwargs, ref in self.best_gains:
             with self.subTest(i=(N, kwargs)):
-                val = sep.AS.best_gain(N, tol=self.tol, **kwargs)
+                val = self.method.best_gain(N, tol=self.tol, **kwargs)
                 error = abs(ref - val)
                 self.assertTrue(error < self.tol)
 
 
 class PASBestGainTest(ASBestGainTest):
-    best_gains = [(3, {}, 0.52662911),
-                  (5, {}, 0.66150378),
-                  (9, {}, 0.79174226)]
+    best_gains = [(3, {}, 0.53896221),
+                  (5, {}, 0.64621028),
+                  (9, {}, 0.76971949)]
+    method = sep.PAS
 
 
 #==============================================================================
