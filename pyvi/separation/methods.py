@@ -55,6 +55,9 @@ class _SeparationMethod:
         Number of orders to separate (truncation order of the Volterra series).
     factors : array_like
         Factors applied to the base signal in order to create the test signals.
+    constant_term : boolean, optional (default=False)
+        If True, constant term of the Volterra series (i.e. the order 0) is
+        also separated; otherwise it is considered null.
 
     Attributes
     ----------
@@ -66,6 +69,8 @@ class _SeparationMethod:
         Vector of length `K` regrouping all factors.
     condition_numbers : list(float)
         List of condition numbers of all matrix inverted during separation.
+    constant_term : boolean
+        Whether constant term of the Volterra series is separated.
 
     Methods
     -------
@@ -75,11 +80,13 @@ class _SeparationMethod:
         Process outputs and returns estimated orders.
     """
 
-    def __init__(self, N, factors):
+    def __init__(self, N, factors, constant_term=False):
         self.N = N
         self.factors = factors
         self.K = len(factors)
         self.condition_numbers = []
+        self.constant_term = constant_term
+        self._N = self.N + int(self.constant_term)
 
     def gen_inputs(self, signal):
         """
@@ -139,6 +146,9 @@ class AS(_SeparationMethod):
     nb_amp : int, optional (default=None)
         Number of different amplitudes; must be greater than or equal to `N`;
         if None, will be set equal to `N`.
+    constant_term : boolean, optional (default=False)
+        If True, constant term of the Volterra series (i.e. the order 0) is
+        also separated; otherwise it is considered null.
 
     Attributes
     ----------
@@ -158,6 +168,8 @@ class AS(_SeparationMethod):
         Mixing matrix between orders and output.
     condition_numbers : list(float)
         List of condition numbers of all matrix inverted during separation.
+    constant_term : boolean
+        Whether constant term of the Volterra series is separated.
 
     Methods
     -------
@@ -171,8 +183,9 @@ class AS(_SeparationMethod):
     _SeparationMethod : Parent class.
     """
 
-    def __init__(self, N, gain=0.64, negative_gain=True, nb_amp=None):
-        super().__init__(N, [])
+    def __init__(self, N, gain=0.64, negative_gain=True, nb_amp=None,
+                 **kwargs):
+        super().__init__(N, [], **kwargs)
 
         nb_amp_min = self._compute_required_nb_amp()
         if nb_amp is not None:
@@ -189,13 +202,15 @@ class AS(_SeparationMethod):
         self.negative_gain = negative_gain
         self._update_factors(self._gen_amp_factors())
 
-        self.mixing_mat = _create_vandermonde_mixing_mat(self.factors, self.N)
+        self.mixing_mat = \
+            _create_vandermonde_mixing_mat(self.factors, self.N,
+                                           first_column=self.constant_term)
         self.condition_numbers.append(np.linalg.cond(self.mixing_mat))
 
     def _compute_required_nb_amp(self):
         """Computes the required minium number of amplitude."""
 
-        return self.N
+        return self._N
 
     def _gen_amp_factors(self):
         """Generates the vector of amplitude factors."""
@@ -254,6 +269,9 @@ class CPS(_SeparationMethod):
         Rejection factor value for dealing with the order aliasing effect;
         must be less than 1 to reject higher-orders; must be close to 1 to
         not enhance noise measurement.
+    constant_term : boolean, optional (default=False)
+        If True, constant term of the Volterra series (i.e. the order 0) is
+        also separated; otherwise it is considered null.
 
     Attributes
     ----------
@@ -273,6 +291,8 @@ class CPS(_SeparationMethod):
         Axis along which to compute the inverse FFT; equal to 0 for CPS.
     condition_numbers : list(float)
         List of condition numbers of all matrix inverted during separation.
+    constant_term : boolean
+        Whether constant term of the Volterra series is separated.
 
     Methods
     -------
@@ -288,8 +308,8 @@ class CPS(_SeparationMethod):
 
     fft_axis = 0
 
-    def __init__(self, N, nb_phase=None, rho=1.):
-        super().__init__(N, [])
+    def __init__(self, N, nb_phase=None, rho=1., **kwargs):
+        super().__init__(N, [], **kwargs)
 
         nb_phase_min = self._compute_required_nb_phase()
         if nb_phase is not None:
@@ -306,15 +326,16 @@ class CPS(_SeparationMethod):
         self._update_factors(self._gen_phase_factors())
 
         self.condition_numbers.append(1.)
-        self.contrast_vector = (1/self.rho) ** np.arange(1, self.N+1)
-        self.contrast_vector.shape = (self.N, 1)
+        power_min = int(not self.constant_term)
+        self.contrast_vector = (1/self.rho) ** np.arange(power_min, self.N+1)
+        self.contrast_vector.shape = (self._N, 1)
         if self.rho != 1.:
             self.condition_numbers.append(np.linalg.cond(self.contrast_vector))
 
     def _compute_required_nb_phase(self):
         """Computes the required minium number of phase."""
 
-        return self.N
+        return self._N
 
     def _gen_phase_factors(self):
         """Generates the vector of dephasing factors."""
@@ -325,8 +346,10 @@ class CPS(_SeparationMethod):
 
     @inherit_docstring
     def process_outputs(self, output_coll):
-        estimation = np.roll(self._ifft(output_coll), -1, axis=0)[:self.N]
-        return self.contrast_vector * estimation
+        estimation = self._ifft(output_coll)
+        if not self.constant_term:
+            estimation = np.roll(estimation, -1, axis=0)
+        return self.contrast_vector * estimation[:self._N]
 
     def _ifft(self, output_coll):
         """Inverse Discrete Fourier Transform using the FFT algorithm."""
@@ -365,6 +388,9 @@ class HPS(CPS):
         Axis along which inverse FFT is computed; equal to 0 for HPS.
     condition_numbers : list(float)
         List of condition numbers of all matrix inverted during separation.
+    constant_term : False
+        Whether constant term of the Volterra series is separated; have no
+        effect for HPS.
 
     Methods
     -------
@@ -381,8 +407,8 @@ class HPS(CPS):
 
     rho = 1
 
-    def __init__(self, N, nb_phase=None):
-        super().__init__(N, nb_phase=nb_phase, rho=self.rho)
+    def __init__(self, N, nb_phase=None, **kwargs):
+        super().__init__(N, nb_phase=nb_phase, rho=self.rho, **kwargs)
 
     def _compute_required_nb_phase(self):
         return 2*self.N + 1
@@ -480,6 +506,9 @@ class _AbstractPS(HPS):
         Matrix for taking into account conjuguated terms in estimation.
     condition_numbers : list(float)
         List of condition numbers of all matrix inverted during separation.
+    constant_term : False
+        Whether constant term of the Volterra series is separated; have no
+        effect for HPS.
 
     Methods
     -------
@@ -501,8 +530,12 @@ class _AbstractPS(HPS):
         """Create dictionnary of (n, q) tuple for each phase."""
 
         self.nq_dict = dict()
+        self._dec = int(not self.constant_term)
         for phase in range(self.N+1):
-            start = phase if phase else 2
+            if self.constant_term:
+                start = phase
+            else:
+                start = phase if phase else 2
             current_orders = np.arange(start, self.N+1, 2)
             self.nq_dict[phase] = [(n, (n-phase)//2) for n in current_orders]
 
@@ -549,7 +582,7 @@ class _AbstractPS(HPS):
 
         # Initialization
         interconjugate_terms = dict()
-        output_by_order = np.zeros((self.N,) + output_coll.shape[1:])
+        output_by_order = np.zeros((self._N,) + output_coll.shape[1:])
 
         # Regroup by phase with an inverse DFT
         out_per_phase = self._regroup_per_phase(output_coll)
@@ -563,10 +596,10 @@ class _AbstractPS(HPS):
                     dec = tmp.shape[0] // 2
                     interconjugate_terms[(n, q)] = (2**n) * \
                                                    (tmp[ind] + 1j*tmp[ind+dec])
-                    output_by_order[n-1] += 2 * binomial(n, q) * tmp[ind]
+                    output_by_order[n-self._dec] += 2*binomial(n, q) * tmp[ind]
                 else:
                     interconjugate_terms[(n, q)] = (2**n) * tmp[ind]
-                    output_by_order[n-1] += binomial(n, q) * tmp[ind]
+                    output_by_order[n-self._dec] += binomial(n, q) * tmp[ind]
 
         # Function output
         if raw_mode:
@@ -603,6 +636,9 @@ class PS(_AbstractPS):
         Number of phase factors used; should be greater than ``2*N+1``;
         choosing `nb_phase` large leads to a more robust method but also to
         more test signals.
+    constant_term : boolean, optional (default=False)
+        If True, constant term of the Volterra series (i.e. the order 0) is
+        also separated; otherwise it is considered null.
 
     Attributes
     ----------
@@ -628,6 +664,9 @@ class PS(_AbstractPS):
         Matrix for taking into account conjuguated terms in estimation.
     condition_numbers : list(float)
         List of condition numbers of all matrix inverted during separation.
+    constant_term : False
+        Whether constant term of the Volterra series is separated; have no
+        effect for HPS.
 
     Methods
     -------
@@ -644,8 +683,8 @@ class PS(_AbstractPS):
 
     fft_axis = (0, 1)
 
-    def __init__(self, N, nb_phase=None):
-        super().__init__(N, nb_phase=nb_phase)
+    def __init__(self, N, nb_phase=None, **kwargs):
+        super().__init__(N, nb_phase=nb_phase, **kwargs)
 
         factors = []
         for w1, w2 in itr.combinations_with_replacement(self.factors, 2):
@@ -736,6 +775,9 @@ class PAS(_AbstractPS, AS):
         Number of phase factors used; should be greater than ``2*N+1``;
         choosing `nb_phase` large leads to a more robust method but also to
         more test signals.
+    constant_term : boolean, optional (default=False)
+        If True, constant term of the Volterra series (i.e. the order 0) is
+        also separated; otherwise it is considered null.
 
     Attributes
     ----------
@@ -767,6 +809,9 @@ class PAS(_AbstractPS, AS):
         Matrix for taking into account conjuguated terms in estimation.
     condition_numbers : list(float)
         List of condition numbers of all matrix inverted during separation.
+    constant_term : False
+        Whether constant term of the Volterra series is separated; have no
+        effect for HPS.
 
     Methods
     -------
@@ -781,12 +826,15 @@ class PAS(_AbstractPS, AS):
     HPS, CPS, _SeparationMethod
     """
 
-    def __init__(self, N, gain=0.64, nb_phase=None):
-        AS.__init__(self, N, gain=gain, negative_gain=self.negative_gain)
+    def __init__(self, N, gain=0.64, nb_phase=None, **kwargs):
+        AS.__init__(self, N, gain=gain, negative_gain=self.negative_gain,
+                    **kwargs)
         self.nb_phase = self._compute_required_nb_phase()
         self.HPS_obj = HPS(N, nb_phase=nb_phase)
 
-        self._global_mix_mat = _create_vandermonde_mixing_mat(self.factors, N)
+        self._global_mix_mat = \
+            _create_vandermonde_mixing_mat(self.factors, N,
+                                           first_column=self.constant_term)
         self.nb_term = self.nb_amp * self.nb_phase
 
         factors = np.tensordot(self.HPS_obj.factors, self.factors, axes=0)
@@ -799,11 +847,11 @@ class PAS(_AbstractPS, AS):
 
     @inherit_docstring
     def _compute_required_nb_amp(self):
-        return (self.N + 1) // 2
+        return (self._N + 1) // 2
 
     @inherit_docstring
     def _create_tmp_mixing_matrix(self, phase):
-        current_orders_index = [n-1 for (n, q) in self.nq_dict[phase]]
+        current_orders_index = [n-self._dec for (n, q) in self.nq_dict[phase]]
         tmp_mixing_mat = self._global_mix_mat[:, current_orders_index]
         for ind, (n, q) in enumerate(self.nq_dict[phase]):
             tmp_mixing_mat[:, ind] *= binomial(n, q)

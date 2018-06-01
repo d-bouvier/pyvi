@@ -44,6 +44,7 @@ class _OrderSeparationMethodGlobalTest():
     def setUp(self, **kwargs):
         self.order_est = dict()
         self.order_true = dict()
+        self.constant_term = kwargs.get('constant_term', False)
         for method_name, method_class in self.method.items():
             for N in self.N:
                 key = (method_name, N)
@@ -57,17 +58,21 @@ class _OrderSeparationMethodGlobalTest():
                 output_coll = np.zeros(input_coll.shape,
                                        dtype=self.signal_dtype[method_name])
                 for ind in range(input_coll.shape[0]):
-                    output_coll[ind] = generate_output(input_coll[ind], N)
+                    output_coll[ind] = \
+                        generate_output(input_coll[ind], N,
+                                        constant_term=self.constant_term)
                 else:
                     self.order_est[key] = method.process_outputs(output_coll)
                 input_sig = self.true_input_func[method_name](input_sig)
-                self.order_true[key] = generate_output(input_sig, N,
-                                                       by_order=True)
+                self.order_true[key] = \
+                    generate_output(input_sig, N, by_order=True,
+                                    constant_term=self.constant_term)
 
     def test_shape(self):
         for (method, N), val in self.order_est.items():
             with self.subTest(i=(method, N)):
-                self.assertEqual(val.shape, (N, self.L))
+                _N = N+1 if self.constant_term else N
+                self.assertEqual(val.shape, (_N, self.L))
 
     def test_correct_output(self):
         for (method, N), val in self.order_est.items():
@@ -129,6 +134,18 @@ class RhoTestCase(_OrderSeparationMethodGlobalTest, unittest.TestCase):
 
     def setUp(self):
         super().setUp(rho=2.)
+
+
+class ConstantTermTestCase(_OrderSeparationMethodGlobalTest,
+                           unittest.TestCase):
+
+    method = {'AS': sep.AS,
+              'CPS': sep.CPS,
+              'PS': sep.PS,
+              'PAS': sep.PAS}
+
+    def setUp(self):
+        super().setUp(constant_term=True)
 
 
 class PS_RawModeTestCase(unittest.TestCase):
@@ -242,7 +259,14 @@ class ASBestGainTest(unittest.TestCase):
                   (3, {'negative_gain': True}, 0.52662910),
                   (3, {'negative_gain': False}, 0.53977263),
                   (3, {'nb_amp': 10}, 0.66459128),
-                  (9, {}, 0.79174226)]
+                  (9, {}, 0.79174226),
+                  (3, {'constant_term': True}, 0.52179740),
+                  (3, {'negative_gain': True, 'constant_term': True},
+                   0.52179740),
+                  (3, {'negative_gain': False, 'constant_term': True},
+                   0.47381948),
+                  (3, {'nb_amp': 10, 'constant_term': True}, 0.72635961),
+                  (9, {'constant_term': True}, 0.79454131)]
     tol = 1e-8
 
     def test_correct(self):
@@ -256,19 +280,25 @@ class ASBestGainTest(unittest.TestCase):
 class PASBestGainTest(ASBestGainTest):
     best_gains = [(3, {}, 0.52662911),
                   (5, {}, 0.66150378),
-                  (9, {}, 0.79174226)]
+                  (9, {}, 0.79174226),
+                  (3, {'constant_term': True}, 0.52179740),
+                  (5, {'constant_term': True}, 0.66494311),
+                  (9, {'constant_term': True}, 0.79454131)]
 
 
 #==============================================================================
 # Functions
 #==============================================================================
 
-def generate_output(input_sig, N, by_order=False):
+def generate_output(input_sig, N, by_order=False, constant_term=False):
     output_by_order = np.zeros((N, len(input_sig)), dtype=input_sig.dtype)
     for n in range(N):
         output_by_order[n, :] = input_sig**(n+1)
         output_by_order[n, 1:] += input_sig[:-1]**(n+1)
         output_by_order[n, 1:] -= 2*input_sig[:-1]**n * input_sig[1:]
+    if constant_term:
+        _term_cst = np.ones((1, len(input_sig)))
+        output_by_order = np.concatenate((_term_cst, output_by_order), axis=0)
     if by_order:
         return output_by_order
     else:
