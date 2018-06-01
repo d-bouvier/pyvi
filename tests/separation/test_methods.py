@@ -38,39 +38,41 @@ class _OrderSeparationMethodGlobalTest():
                        'PS': lambda x: np.real(x),
                        'PAS': lambda x: np.real(x)}
     tol = 5e-10
-    N = 5
+    N = [4, 5]
     L = 1000
 
     def setUp(self, **kwargs):
         self.order_est = dict()
         self.order_true = dict()
-        for name, method_class in self.method.items():
-            if self.input_dtype[name] == 'float':
-                input_sig = np.random.normal(size=(self.L,))
-            elif self.input_dtype[name] == 'complex':
-                input_sig = np.random.normal(size=(self.L,)) + \
-                            1j * np.random.normal(size=(self.L,))
-            method = method_class(self.N, **kwargs)
-            input_coll = method.gen_inputs(input_sig)
-            output_coll = np.zeros(input_coll.shape,
-                                   dtype=self.signal_dtype[name])
-            for ind in range(input_coll.shape[0]):
-                output_coll[ind] = generate_output(input_coll[ind], self.N)
-            else:
-                self.order_est[name] = method.process_outputs(output_coll)
-            input_sig = self.true_input_func[name](input_sig)
-            self.order_true[name] = generate_output(input_sig, self.N,
-                                                    by_order=True)
+        for method_name, method_class in self.method.items():
+            for N in self.N:
+                key = (method_name, N)
+                if self.input_dtype[method_name] == 'float':
+                    input_sig = np.random.normal(size=(self.L,))
+                elif self.input_dtype[method_name] == 'complex':
+                    input_sig = np.random.normal(size=(self.L,)) + \
+                                1j * np.random.normal(size=(self.L,))
+                method = method_class(N, **kwargs)
+                input_coll = method.gen_inputs(input_sig)
+                output_coll = np.zeros(input_coll.shape,
+                                       dtype=self.signal_dtype[method_name])
+                for ind in range(input_coll.shape[0]):
+                    output_coll[ind] = generate_output(input_coll[ind], N)
+                else:
+                    self.order_est[key] = method.process_outputs(output_coll)
+                input_sig = self.true_input_func[method_name](input_sig)
+                self.order_true[key] = generate_output(input_sig, N,
+                                                       by_order=True)
 
     def test_shape(self):
-        for name in self.method:
-            with self.subTest(i=name):
-                self.assertEqual(self.order_est[name].shape, (self.N, self.L))
+        for (method, N), val in self.order_est.items():
+            with self.subTest(i=(method, N)):
+                self.assertEqual(val.shape, (N, self.L))
 
     def test_correct_output(self):
-        for name in self.method:
-            with self.subTest(i=name):
-                error = rms(self.order_est[name] - self.order_true[name])
+        for (method, N), val in self.order_est.items():
+            with self.subTest(i=(method, N)):
+                error = rms(val - self.order_true[(method, N)])
                 self.assertTrue(error < self.tol)
 
 
@@ -106,7 +108,7 @@ class NbAmpTestCase(_OrderSeparationMethodGlobalTest, unittest.TestCase):
     method = {'AS': sep.AS}
 
     def setUp(self):
-        super().setUp(nb_amp=3*self.N)
+        super().setUp(nb_amp=3*max(self.N))
 
 
 class NbPhaseTestCase(_OrderSeparationMethodGlobalTest, unittest.TestCase):
@@ -157,6 +159,7 @@ class HPS_Test(_OrderSeparationMethodGlobalTest, unittest.TestCase):
 
     method = sep.HPS
     tol = 1e-14
+    N = 5
 
     def setUp(self, **kwargs):
         phase_vec = 2 * np.pi * np.arange(self.L)/self.L

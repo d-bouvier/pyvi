@@ -118,6 +118,10 @@ class _SeparationMethod:
 
         raise NotImplementedError
 
+    def _update_factors(self, new_factors):
+        self.factors = new_factors
+        self.K = len(self.factors)
+
 
 class AS(_SeparationMethod):
     """
@@ -168,7 +172,9 @@ class AS(_SeparationMethod):
     """
 
     def __init__(self, N, gain=0.64, negative_gain=True, nb_amp=None):
-        nb_amp_min = self._compute_required_nb_amp(N)
+        super().__init__(N, [])
+
+        nb_amp_min = self._compute_required_nb_amp()
         if nb_amp is not None:
             if nb_amp < nb_amp_min:
                 message = "Specified 'nb_amp' parameter is lower than " + \
@@ -181,15 +187,15 @@ class AS(_SeparationMethod):
 
         self.gain = gain
         self.negative_gain = negative_gain
-        super().__init__(N, self._gen_amp_factors())
+        self._update_factors(self._gen_amp_factors())
+
         self.mixing_mat = _create_vandermonde_mixing_mat(self.factors, self.N)
         self.condition_numbers.append(np.linalg.cond(self.mixing_mat))
 
-    @classmethod
-    def _compute_required_nb_amp(cls, N):
+    def _compute_required_nb_amp(self):
         """Computes the required minium number of amplitude."""
 
-        return N
+        return self.N
 
     def _gen_amp_factors(self):
         """Generates the vector of amplitude factors."""
@@ -283,7 +289,9 @@ class CPS(_SeparationMethod):
     fft_axis = 0
 
     def __init__(self, N, nb_phase=None, rho=1.):
-        nb_phase_min = self._compute_required_nb_phase(N)
+        super().__init__(N, [])
+
+        nb_phase_min = self._compute_required_nb_phase()
         if nb_phase is not None:
             if nb_phase < nb_phase_min:
                 message = "Specified 'nb_phase' parameter is lower than " + \
@@ -295,7 +303,7 @@ class CPS(_SeparationMethod):
             self.nb_phase = nb_phase_min
 
         self.rho = rho
-        super().__init__(N, self._gen_phase_factors())
+        self._update_factors(self._gen_phase_factors())
 
         self.condition_numbers.append(1.)
         self.contrast_vector = (1/self.rho) ** np.arange(1, self.N+1)
@@ -303,11 +311,10 @@ class CPS(_SeparationMethod):
         if self.rho != 1.:
             self.condition_numbers.append(np.linalg.cond(self.contrast_vector))
 
-    @classmethod
-    def _compute_required_nb_phase(cls, N):
+    def _compute_required_nb_phase(self):
         """Computes the required minium number of phase."""
 
-        return N
+        return self.N
 
     def _gen_phase_factors(self):
         """Generates the vector of dephasing factors."""
@@ -377,9 +384,8 @@ class HPS(CPS):
     def __init__(self, N, nb_phase=None):
         super().__init__(N, nb_phase=nb_phase, rho=self.rho)
 
-    @classmethod
-    def _compute_required_nb_phase(cls, N):
-        return 2*N + 1
+    def _compute_required_nb_phase(self):
+        return 2*self.N + 1
 
     def gen_inputs(self, signal, return_cplx_sig=False):
         """
@@ -693,7 +699,7 @@ class PS(_AbstractPS):
         spectrum_2d = sc_fft.ifft2(output_coll_2d, axes=self.fft_axis)
         spectrum_2d = sc_fft.fftshift(spectrum_2d, axes=self.fft_axis)
 
-        diff = self.nb_phase - self._compute_required_nb_phase(self.N)
+        diff = self.nb_phase - self._compute_required_nb_phase()
         if not (diff // 2):
             slice_obj = slice(diff % 2, None)
         else:
@@ -776,24 +782,24 @@ class PAS(_AbstractPS, AS):
     """
 
     def __init__(self, N, gain=0.64, nb_phase=None):
-        self.nb_phase = self._compute_required_nb_phase(N)
+        AS.__init__(self, N, gain=gain, negative_gain=self.negative_gain)
+        self.nb_phase = self._compute_required_nb_phase()
         self.HPS_obj = HPS(N, nb_phase=nb_phase)
 
-        AS.__init__(self, N, gain=gain, negative_gain=self.negative_gain)
         self._global_mix_mat = _create_vandermonde_mixing_mat(self.factors, N)
         self.nb_term = self.nb_amp * self.nb_phase
 
         factors = np.tensordot(self.HPS_obj.factors, self.factors, axes=0)
+        self._update_factors(factors.flatten())
         factors = factors.flatten()
 
-        _SeparationMethod.__init__(self, N, factors)
         self.condition_numbers += self.HPS_obj.condition_numbers
         self._create_nq_dict()
         self._create_mixing_matrix_dict()
 
     @inherit_docstring
-    def _compute_required_nb_amp(self, N):
-        return (N + 1) // 2
+    def _compute_required_nb_amp(self):
+        return (self.N + 1) // 2
 
     @inherit_docstring
     def _create_tmp_mixing_matrix(self, phase):
