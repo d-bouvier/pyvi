@@ -17,7 +17,10 @@ import numpy as np
 from pyvi.utilities.orthogonal_basis import (_OrthogonalBasis, LaguerreBasis,
                                              KautzBasis, GeneralizedBasis,
                                              create_orthogonal_basis,
-                                             is_valid_basis_instance)
+                                             is_valid_basis_instance,
+                                             laguerre_pole_optimization)
+from pyvi.volterra.combinatorial_basis import projected_volterra_basis
+from pyvi.identification.methods import order_method
 
 
 #==============================================================================
@@ -217,6 +220,82 @@ class LaguerreAndGeneralizedEqualityTest_2(LaguerreAndGeneralizedEqualityTest):
 class KautzAndGeneralizedEqualityTest_2(KautzAndGeneralizedEqualityTest):
 
     unit_delay = True
+
+
+class LaguerrePoleOptimizationTest(unittest.TestCase):
+
+    L = 3000
+    K = 3
+    N = 2
+    poles = {1: 0.85, 2: 0.9}
+    coeff = {1: [1, 0.0, 0.0],
+             2: [1, 0.0, 0.00, 0.0, 0.00, 0.0]}
+    iter_max = 8
+    tests = ['vec']*2 + ['tri']*2 + ['sym']*2
+    unit_delay = False
+    atol = 1e-12
+    rtol = 0
+
+    def setUp(self):
+        self.sig = np.random.normal(size=(self.L,))
+        basis = [LaguerreBasis(pole, self.K, unit_delay=self.unit_delay)
+                 for pole in self.poles.values()]
+        phi = projected_volterra_basis(self.sig, self.N, basis, True,
+                                       sorted_by='order')
+        self.outputs = np.zeros((self.N, self.L))
+        for n, val in phi.items():
+            self.outputs[n-1, :] = np.dot(val, self.coeff[n])
+
+        self.results = np.zeros((len(self.tests), self.N))
+        for ind, form in enumerate(self.tests):
+            self.results[ind, :] = self._make_estim(form)
+
+
+    def _make_estim(self, form):
+        poles = np.random.uniform(size=(self.N,))
+
+        for iter_nb in range(self.iter_max):
+            basis = [LaguerreBasis(pole, self.K, unit_delay=self.unit_delay)
+                     for pole in poles]
+            est_kernels = order_method(self.sig, self.outputs, self.N,
+                                       orthogonal_basis=basis, out_form=form)
+            for n, proj in est_kernels.items():
+                poles[n-1] = laguerre_pole_optimization(poles[n-1], proj,
+                                                        n, self.K)
+        return poles
+
+    def test_convergence(self):
+        for n in range(self.N):
+            with self.subTest(i=n):
+                self.assertTrue(np.allclose(self._compute_error(n), 0,
+                                            atol=self.atol, rtol=self.rtol))
+
+    def _compute_error(self, n):
+        return self.results[:, n] - self.poles[n+1]
+
+
+class LaguerrePoleOptimizationTest_Sym(LaguerrePoleOptimizationTest):
+
+    coeff = {1: [1, 0.2, 0.1],
+             2: [1, 0.05, 0.02, 0.2, 0.01, 0.1]}
+    tests = ['sym']*2
+    iter_max = 10
+    atol = 1e-8
+
+    def _compute_error(self, n):
+        temp = self.results[:, n]
+        return temp[:, np.newaxis] - temp[np.newaxis, :]
+
+
+class LaguerrePoleOptimizationTest_Tri(LaguerrePoleOptimizationTest_Sym):
+
+    tests = ['tri']*2
+
+
+class LaguerrePoleOptimizationTest_Vec(LaguerrePoleOptimizationTest_Sym):
+
+    tests = ['vec']*2
+    iter_max = 20
 
 
 #==============================================================================
