@@ -343,7 +343,15 @@ def _identification(input_data, output_data, N, required_nb_data_func,
     if out_form in _STRING_OPT_VEC:
         return kernels_vec
     else:
-        return vec2series(kernels_vec, N, M, form=out_form)
+        if orthogonal_basis is None:
+            return vec2series(kernels_vec, N, M, form=out_form)
+        elif is_orthogonal_basis_as_list:
+            return vec2series(kernels_vec, N,
+                              [tmp_basis.K for tmp_basis in orthogonal_basis],
+                              form=out_form)
+        else:
+            return vec2series(kernels_vec, N, orthogonal_basis.K,
+                              form=out_form)
 
 
 def _cast_complex2real(val_by_term, cast_mode):
