@@ -35,6 +35,8 @@ create_orthogonal_basis :
     Returns an orthogonal basis given its poles and its number of elements.
 is_valid_basis_instance :
     Checks whether `basis` is a usable instance of a basis.
+laguerre_pole_optimization :
+    Compute the optimized Laguerre pole from the Laguerre spectra of a kernel.
 
 Notes
 -----
@@ -52,9 +54,10 @@ __all__ = ['LaguerreBasis', 'KautzBasis', 'GeneralizedBasis',
 
 from numbers import Number
 from collections.abc import Sequence
+import itertools as itr
 import numpy as np
 import scipy.signal as sc_sig
-from .tools import inherit_docstring
+from .tools import inherit_docstring, _is_sorted
 
 
 #==============================================================================
@@ -344,3 +347,159 @@ def is_valid_basis_instance(basis):
         return False
 
     return all(conditions)
+
+
+def laguerre_pole_optimization(pole, projection, n, nb_base, form=None,
+                               return_cost=False):
+    """
+    Compute the optimized Laguerre pole from the Laguerre spectra of a kernel.
+
+    Use the method described in [1] to find an optimal value of the Laguerre
+    pole for the projection of a given Volterra kernel (known under its
+    Laguerre spectra form); due to the truncation of the Laguerre basis, the
+    method will not find the optimal value, and thus should be applied
+    iteratively.
+
+    Parameters
+    ----------
+    pole : float
+        Current value of the Laguerre pole; should be between -1 and 1.
+    projection : np.ndarray
+        Laguerre spectra of the kernel estimated using value `pole` as
+        Laguerre pole.
+    n : int
+        Order of the kernel.
+    nb_base : int
+        Number of element in the Laguerre basis used for the expansion.
+    form : {'vector', 'kernel', None}, optional (default=None)
+        Form under which the projection is given; if None, the form is found
+        from `projection`.
+    return_cost : boolean, (optional=False)
+        If True, this function also returns the cost after optimization.
+
+    Returns
+    -------
+    new_pole : float
+        New Laguerre pole value; is between -1 and 1.
+    cost : float
+        Value of the cost after optimization (see [1]); only returned if
+        `cost` is True.
+
+    References
+    ----------
+    .. [1] A. Kibangou, G. Favier, M. Hassani "Laguerre-Volterra Filters
+       Optimization Based on Laguerre Spectra", EURASIP Journal on Applied
+       Signal Processing, Computers & Geosciences, vol. 17, pp. 2874-2887,
+       2005.
+    """
+
+    if form is None:
+        value = np.squeeze(projection).ndim
+        if not value:
+            raise ValueError
+        if value == 1:
+            form = 'vector'
+        else:
+            form = 'kernel'
+
+    if form == 'vector':
+        ind_mat = _compute_ind_mat(n, nb_base, len(projection))
+        R1 = _compute_R1_from_vector(n, ind_mat, projection)
+        R2 = _compute_R2_from_vector(n, ind_mat, projection)
+    else:
+        R1 = _compute_R1_from_kernel(n, nb_base, projection)
+        R2 = _compute_R2_from_kernel(n, nb_base, projection)
+
+    rho = ((1+pole**2) * R1 + 2*pole*R2) / (2*pole*R1 + (1+pole**2)*R2)
+    if rho > 1:
+        new_pole = rho - np.sqrt(rho**2 - 1)
+    elif rho <= -1:
+        new_pole = rho + np.sqrt(rho**2 - 1)
+
+    if return_cost:
+        norm_l2 = _compute_norm_l2(projection)
+
+        den = 2 * (1-pole**2) * n * norm_l2
+        a = 1 + pole**2
+        b = 2 * pole
+        Q1 = (a*R1 + b*R2)/den - (1/2)
+        Q2 = (b*R1 + a*R2)/den
+
+        num = (1+Q1) * pole**2 - 2 * Q2 * pole + Q1
+        cost = num / (1 - pole**2)
+        return new_pole, cost
+    else:
+        return new_pole
+
+
+def _compute_ind_mat(n, m, nb_coeff):
+    """Compute matrix of indexes for each coefficient."""
+
+    ind_mat = np.zeros((nb_coeff, n))
+    curr_idx = 0
+    for indexes in itr.combinations_with_replacement(range(m), n):
+        ind_mat[curr_idx] = np.array(indexes)
+        curr_idx += 1
+
+    return ind_mat
+
+
+def _compute_R1_from_vector(n, ind_mat, vec):
+    """Compute term R1 from projection under vector form."""
+
+    R1 = 0
+    for l in range(n):
+        R1 += np.sum((2*ind_mat[:, l]+1) * vec**2)
+
+    return R1
+
+
+def _compute_R1_from_kernel(n, m, kernel):
+    """Compute term R1 from projection under kernel form."""
+
+    R1 = 0
+    ind_vec = np.arange(m)
+    for l in range(n):
+        ind_vec.shape = (1,)*l + (m,) + (1,)*(n-l-1)
+        R1 += np.sum((2*ind_vec+1) * kernel**2)
+
+    return R1
+
+
+def _compute_R2_from_vector(n, ind_mat, vec):
+    """Compute term R2 from projection under vector form."""
+
+    R2 = 0
+    for l in range(n):
+        _idx2keep = np.where(ind_mat[:, l] > 0)[0]
+        idx2keep_1 = []
+        idx2keep_2 = []
+        for idx in _idx2keep:
+            temp = ind_mat[idx, :].copy()
+            temp[l] -= 1
+            if _is_sorted(temp):
+                res_temp = np.where((ind_mat == temp).all(axis=1))
+                idx2keep_1.append(idx)
+                idx2keep_2.append(res_temp[0][0])
+        temp_vec = vec[idx2keep_1] * vec[idx2keep_2]
+        R2 = 2 * np.sum(ind_mat[idx2keep_1, l] * temp_vec)
+
+    return R2
+
+
+def _compute_R2_from_kernel(n, m, kernel):
+    """Compute term R2 from projection under kernel form."""
+
+    R2 = 0
+    ind_vec = np.arange(m)
+    for l in range(n):
+        ind_vec.shape = (1,)*l + (m,) + (1,)*(n-l-1)
+        _idx1 = (slice(None),)*l + (slice(1, None),) + (slice(None),)*(n-l-1)
+        _idx2 = (slice(None),)*l + (slice(m-1),) + (slice(None),)*(n-l-1)
+        R2 += 2 * np.sum(ind_vec[_idx1] * kernel[_idx1] * kernel[_idx2])
+
+    return R2
+
+
+def _compute_norm_l2(kernel):
+    return np.sum(kernel**2)
