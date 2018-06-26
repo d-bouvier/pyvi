@@ -76,7 +76,7 @@ class _SeparationMethod:
     -------
     gen_inputs(signal)
         Returns the collection of input test signals.
-    process_output(output_coll)
+    process_outputs(output_coll)
         Process outputs and returns estimated orders.
     """
 
@@ -191,7 +191,7 @@ class AS(_SeparationMethod):
     -------
     gen_inputs(signal)
         Returns the collection of input test signals.
-    process_output(output_coll)
+    process_outputs(output_coll)
         Process outputs and returns estimated orders.
 
     See also
@@ -305,7 +305,7 @@ class CPS(_SeparationMethod):
     -------
     gen_inputs(signal)
         Returns the collection of input test signals.
-    process_output(output_coll)
+    process_outputs(output_coll)
         Process outputs and returns estimated orders.
 
     See also
@@ -394,7 +394,7 @@ class HPS(CPS):
     -------
     gen_inputs(signal, return_cplx_sig=False)
         Returns the collection of input test signals.
-    process_output(output_coll)
+    process_outputs(output_coll)
         Process outputs and returns estimated homophase signals.
 
     See also
