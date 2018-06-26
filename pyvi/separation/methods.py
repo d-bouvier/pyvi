@@ -227,7 +227,17 @@ class AS(_SeparationMethod):
 
     @inherit_docstring
     def process_outputs(self, output_coll):
-        return _demix_coll(output_coll, self.mixing_mat)
+        return self._solve(output_coll, self.mixing_mat)
+
+    def _solve(self, sig_coll, mixing_mat):
+        """Solve the linear system via inverse or pseudo-inverse."""
+
+        is_square = mixing_mat.shape[0] == mixing_mat.shape[1]
+        if is_square:
+            inv_mixing_mat = np.linalg.inv(mixing_mat)
+        else:
+            inv_mixing_mat = np.linalg.pinv(mixing_mat)
+        return np.tensordot(inv_mixing_mat, sig_coll, axes=1)
 
     @classmethod
     def best_gain(cls, N, gain_min=0.1, gain_max=1., tol=1e-6, **kwargs):
