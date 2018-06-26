@@ -50,10 +50,10 @@ class _OrderSeparationMethodGlobalTest():
             for N in self.N:
                 key = (method_name, N)
                 if self.input_dtype[method_name] == 'float':
-                    input_sig = np.random.normal(size=(self.L,))
+                    input_sig = np.random.normal(size=(self.L))
                 elif self.input_dtype[method_name] == 'complex':
-                    input_sig = np.random.normal(size=(self.L,)) + \
-                                1j * np.random.normal(size=(self.L,))
+                    input_sig = np.random.normal(size=(self.L)) + \
+                                1j * np.random.normal(size=(self.L))
                 method = method_class(N, **kwargs)
                 input_coll = method.gen_inputs(input_sig)
                 output_coll = np.zeros(input_coll.shape,
@@ -77,7 +77,11 @@ class _OrderSeparationMethodGlobalTest():
         for (method, N), val in self.order_est.items():
             with self.subTest(i=(method, N)):
                 _N = N+1 if self.constant_term else N
-                self.assertEqual(val.shape, (_N, self.L))
+                if isinstance(self.L, tuple):
+                    shape = (_N,) + self.L
+                else:
+                    shape = (_N, self.L)
+                self.assertEqual(val.shape, shape)
 
     def test_correct_output(self):
         for (method, N), val in self.order_est.items():
@@ -249,23 +253,32 @@ class HPS_Test(_OrderSeparationMethodGlobalTest, unittest.TestCase):
     method = sep.HPS
     tol = 1e-14
     N = 5
+    nb_phase = 2*N+1
+    shape = (nb_phase, _OrderSeparationMethodGlobalTest.L)
+
+    def _create_phase_vec(self):
+        return 2 * np.pi * np.arange(self.L)/self.L
+
+    def _init_homophase_true(self):
+        self.homophase_true = np.zeros((self.nb_phase, self.L),
+                                       dtype='complex')
 
     def setUp(self, **kwargs):
-        phase_vec = 2 * np.pi * np.arange(self.L)/self.L
+        phase_vec = self._create_phase_vec()
         input_sig = np.exp(1j * phase_vec)
         power_vec = np.arange(1, self.N+1)
 
         method = self.method(self.N, **kwargs)
         input_coll = method.gen_inputs(input_sig)
         output_coll = np.zeros(input_coll.shape, dtype='complex')
+
         for ind in range(input_coll.shape[0]):
-            tmp = input_coll[ind][np.newaxis, :]**power_vec[:, np.newaxis]
+            slice_obj = (slice(None),) + (np.newaxis,)*(phase_vec.ndim)
+            tmp = input_coll[ind][np.newaxis, :]**power_vec[slice_obj]
             output_coll[ind] = np.sum(tmp, axis=0)
         self.homophase_est = method.process_outputs(output_coll)
 
-        self.nb_phase = 2*self.N+1
-        self.homophase_true = np.zeros((self.nb_phase, self.L),
-                                       dtype='complex')
+        self._init_homophase_true()
         for p in range(-self.N, self.N+1):
             ind = p % self.nb_phase
             if p:
@@ -278,7 +291,7 @@ class HPS_Test(_OrderSeparationMethodGlobalTest, unittest.TestCase):
                 self.homophase_true[ind] += fac * np.exp(1j * p * phase_vec)
 
     def test_shape(self):
-        self.assertEqual(self.homophase_est.shape, (2*self.N+1, self.L))
+        self.assertEqual(self.homophase_est.shape, self.shape)
 
     def test_correct_output(self):
         error = rms(self.homophase_est - self.homophase_true)
@@ -304,7 +317,7 @@ class HPS_GenInputsTestCase(unittest.TestCase):
                                              ('complex', True, np.ndarray),
                                              ('complex', False, np.ndarray)):
             with self.subTest(i=(dtype, return_cplx)):
-                input_sig = np.zeros((self.L,), dtype=dtype)
+                input_sig = np.zeros((self.L), dtype=dtype)
                 outputs = self.method.gen_inputs(input_sig,
                                                  return_cplx_sig=return_cplx)
                 self.assertIsInstance(outputs, out_type)
@@ -363,12 +376,31 @@ class PASBestGainTest(ASBestGainTest):
     method = sep.PAS
 
 
+class MultiDimTestCase(NoKwargsTestCase):
+
+    L = (2, 1000)
+
+
+class HPS_MultiDimTestCase(HPS_Test):
+
+    L = (2, 1000)
+    shape = (HPS_Test.nb_phase,) + L
+
+    def _create_phase_vec(self):
+        _temp = 2 * np.pi * np.arange(self.L[1])/self.L[1]
+        return np.stack((_temp, _temp), axis=0)
+
+    def _init_homophase_true(self):
+        self.homophase_true = np.zeros((self.nb_phase,) + self.L,
+                                       dtype='complex')
+
+
 #==============================================================================
 # Functions
 #==============================================================================
 
 def generate_output(input_sig, N, by_order=False, constant_term=False):
-    output_by_order = np.zeros((N, len(input_sig)), dtype=input_sig.dtype)
+    output_by_order = np.zeros((N,) + input_sig.shape, dtype=input_sig.dtype)
     for n in range(N):
         output_by_order[n, :] = input_sig**(n+1)
         output_by_order[n, 1:] += input_sig[:-1]**(n+1)

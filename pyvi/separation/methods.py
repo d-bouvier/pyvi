@@ -36,7 +36,7 @@ import itertools as itr
 import numpy as np
 import scipy.fftpack as sc_fft
 import scipy.signal as sc_sig
-from .tools import _create_vandermonde_mixing_mat
+from .tools import _create_vandermonde_mixing_mat, _demix_coll
 from ..utilities.mathbox import binomial, multinomial
 from ..utilities.tools import inherit_docstring
 
@@ -87,12 +87,6 @@ class _SeparationMethod:
         self.condition_numbers = []
         self._update_constant_term(constant_term)
 
-    def _update_constant_term(self, constant_term):
-        """Update `constant_term option."""
-
-        self.constant_term = constant_term
-        self._N = self.N + int(self.constant_term)
-
     def gen_inputs(self, signal):
         """
         Returns the collection of input test signals.
@@ -130,9 +124,25 @@ class _SeparationMethod:
 
         raise NotImplementedError
 
+    def _update_constant_term(self, constant_term):
+        self.constant_term = constant_term
+        self._N = self.N + int(self.constant_term)
+
     def _update_factors(self, new_factors):
         self.factors = new_factors
         self.K = len(self.factors)
+
+    def _check_parameter(self, nb, name):
+        nb_min = getattr(self, '_compute_required_' + name)()
+        if nb is not None:
+            if nb < nb_min:
+                message = "Specified `{}` parameter is lower than " + \
+                          "the minimum needed ({}) .Instead, minimum was used."
+                warnings.warn(message.format(name, nb_min), UserWarning)
+                nb = nb_min
+            setattr(self, name, nb)
+        else:
+            setattr(self, name, nb_min)
 
 
 class AS(_SeparationMethod):
@@ -192,17 +202,7 @@ class AS(_SeparationMethod):
                  **kwargs):
         super().__init__(N, [], **kwargs)
 
-        nb_amp_min = self._compute_required_nb_amp()
-        if nb_amp is not None:
-            if nb_amp < nb_amp_min:
-                message = "Specified 'nb_amp' parameter is lower than " + \
-                          "the minimum needed ({}) .Instead, minimum was used."
-                warnings.warn(message.format(nb_amp_min), UserWarning)
-                nb_amp = nb_amp_min
-            self.nb_amp = nb_amp
-        else:
-            self.nb_amp = nb_amp_min
-
+        self._check_parameter(nb_amp, 'nb_amp')
         self.gain = gain
         self.negative_gain = negative_gain
         self._update_factors(self._gen_amp_factors())
@@ -226,16 +226,7 @@ class AS(_SeparationMethod):
 
     @inherit_docstring
     def process_outputs(self, output_coll):
-        return self._solve(output_coll, self.mixing_mat)
-
-    def _solve(self, sig_coll, mixing_mat):
-        """Solve the linear system via inverse or pseudo-inverse."""
-
-        is_square = mixing_mat.shape[0] == mixing_mat.shape[1]
-        if is_square:
-            return np.dot(np.linalg.inv(mixing_mat), sig_coll)
-        else:
-            return np.dot(np.linalg.pinv(mixing_mat), sig_coll)
+        return _demix_coll(output_coll, self.mixing_mat)
 
     @classmethod
     def best_gain(cls, N, gain_min=0.1, gain_max=1., tol=1e-6, **kwargs):
@@ -316,26 +307,16 @@ class CPS(_SeparationMethod):
     def __init__(self, N, nb_phase=None, rho=1., **kwargs):
         super().__init__(N, [], **kwargs)
 
-        nb_phase_min = self._compute_required_nb_phase()
-        if nb_phase is not None:
-            if nb_phase < nb_phase_min:
-                message = "Specified 'nb_phase' parameter is lower than " + \
-                          "the minimum needed ({}) .Instead, minimum was used."
-                warnings.warn(message.format(nb_phase_min), UserWarning)
-                nb_phase = nb_phase_min
-            self.nb_phase = nb_phase
-        else:
-            self.nb_phase = nb_phase_min
-
+        self._check_parameter(nb_phase, 'nb_phase')
         self.rho = rho
         self._update_factors(self._gen_phase_factors())
 
         self.condition_numbers.append(1.)
         power_min = int(not self.constant_term)
         self.contrast_vector = (1/self.rho) ** np.arange(power_min, self.N+1)
-        self.contrast_vector.shape = (self._N, 1)
         if self.rho != 1.:
-            self.condition_numbers.append(np.linalg.cond(self.contrast_vector))
+            _temp_cond = np.linalg.cond(np.diag(self.contrast_vector))
+            self.condition_numbers.append(_temp_cond)
 
     def _compute_required_nb_phase(self):
         """Computes the required minium number of phase."""
@@ -351,6 +332,7 @@ class CPS(_SeparationMethod):
 
     @inherit_docstring
     def process_outputs(self, output_coll):
+        self.contrast_vector.shape = (self._N,) + (1,)*(output_coll.ndim-1)
         estimation = self._ifft(output_coll)
         if not self.constant_term:
             estimation = np.roll(estimation, -1, axis=0)
@@ -595,7 +577,7 @@ class _AbstractPS(HPS):
         # Extract interconjugate terms from homophase signals
         for phase in range(self.N+1):
             sigs = self._corresponding_sigs(out_per_phase, phase)
-            tmp = AS._solve(self, sigs, self.mixing_mat_dict[phase])
+            tmp = _demix_coll(sigs, self.mixing_mat_dict[phase])
             for ind, (n, q) in enumerate(self.nq_dict[phase]):
                 if phase:
                     dec = tmp.shape[0] // 2
@@ -810,16 +792,22 @@ class PS(_AbstractPS):
     @inherit_docstring
     def _corresponding_sigs(self, out_per_phase, phase):
         dec_diag = (self.N + 1 - phase) // 2
+        args_diag = {'axis1': 0, 'axis2': 1}
+        args_moveaxis = {'source': -1, 'destination': 0}
         slice_obj = slice(dec_diag, -dec_diag) if dec_diag else slice(None)
         if phase:
-            upper_diag = np.diagonal(out_per_phase, offset=phase).T
-            lower_diag = np.diagonal(out_per_phase, offset=-phase).T
+            upper_diag = np.diagonal(out_per_phase, offset=phase, **args_diag)
+            lower_diag = np.diagonal(out_per_phase, offset=-phase, **args_diag)
+            upper_diag = np.moveaxis(upper_diag, **args_moveaxis)
+            lower_diag = np.moveaxis(lower_diag, **args_moveaxis)
             return np.concatenate((np.real(upper_diag[slice_obj]),
                                    np.real(lower_diag[slice_obj]),
                                    np.imag(upper_diag[slice_obj]),
                                    np.imag(lower_diag[slice_obj])))
         else:
-            return np.real((np.diagonal(out_per_phase).T)[slice_obj])
+            temp = np.diagonal(out_per_phase, **args_diag)
+            temp = np.moveaxis(temp, **args_moveaxis)
+            return np.real(temp[slice_obj])
 
 
 class PAS(_AbstractPS, AS):
@@ -900,7 +888,6 @@ class PAS(_AbstractPS, AS):
 
         factors = np.tensordot(self.HPS_obj.factors, self.factors, axes=0)
         self._update_factors(factors.flatten())
-        factors = factors.flatten()
 
         self.condition_numbers += self.HPS_obj.condition_numbers
         self._create_nq_dict()

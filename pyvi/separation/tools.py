@@ -6,6 +6,8 @@ Functions
 ---------
 _create_vandermonde_mixing_mat :
     Creates a Vandermonde matrix.
+_demix_coll :
+    Demix a collection of signals via inverse or pseudo-inverse.
 
 Notes
 -----
@@ -49,3 +51,29 @@ def _create_vandermonde_mixing_mat(factors, N, first_column=False):
         return temp_mat
     else:
         return temp_mat[:, 1::]
+
+
+def _demix_coll(sig_coll, mixing_mat):
+    """
+    Demix a collection of signals via inverse or pseudo-inverse.
+
+    Parameters
+    ----------
+    sig_coll : array_like
+        Collection of signals; it verifies ``sig_coll.ndim >= 2``.
+    mixing_mat : array_like
+        Mixing matrix that will be inverted; it verifies
+        ``mixing_mat.shape[1] == sig_coll.shape[1]``.
+
+    Returns
+    -------
+    numpy.ndarray
+        Separated signals.
+    """
+
+    is_square = mixing_mat.shape[0] == mixing_mat.shape[1]
+    if is_square:
+        inv_mixing_mat = np.linalg.inv(mixing_mat)
+    else:
+        inv_mixing_mat = np.linalg.pinv(mixing_mat)
+    return np.tensordot(inv_mixing_mat, sig_coll, axes=1)
