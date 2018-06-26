@@ -125,7 +125,8 @@ class _SeparationMethod:
         -------
         output_by_order : numpy.ndarray
             Estimation of the nonlinear homogeneous orders; it verifies
-            ``output_by_order.shape == (self.N, output_coll.shape[1:])``.
+            ``output_by_order.shape[0] == (self.N + self.constant_term,)`` and
+            ``output_by_order.shape[1:] == output_coll.shape[1:]``.
         """
 
         raise NotImplementedError
@@ -436,7 +437,7 @@ class HPS(CPS):
         -------
         input_coll : numpy.ndarray
             Collection of the input test signals; its shape verifies
-            ``input_coll.shape == (self.K, signal.shape)``.
+            ``input_coll.shape == (self.K,) + signal.shape``.
         signal_cplx : numpy.ndarray
             Complex version of `signal` obtained using Hilbert transform;
             only returned if `signal` is real-valued and `return_cplx_sig` is
@@ -469,7 +470,7 @@ class HPS(CPS):
         -------
         homophase : numpy.ndarray
             Estimation of the homophase signals; it verifies
-            ``homophase.shape == (2*self.N+1, output_coll.shape[1:])``.
+            ``homophase.shape == (2*self.N+1,) + output_coll.shape[1:]``.
         """
 
         temp = self._ifft(output_coll)
@@ -579,7 +580,8 @@ class _AbstractPS(HPS):
         -------
         output_by_order : numpy.ndarray
             Estimation of the nonlinear homogeneous orders; it verifies
-            ``output_by_order.shape == (self.N, output_coll.shape[1:])``.
+            ``output_by_order.shape[0] == (self.N + self.constant_term,)`` and
+            ``output_by_order.shape[1:] == output_coll.shape[1:]``.
         interconjugate_terms : dict((int, int): numpy.ndarray)
             Dictionary of the estimated interconjugate terms; contains
             all keys ``(n, q)`` for ``n in range(1, N+1)`` and
@@ -679,7 +681,7 @@ class PS(_AbstractPS):
     -------
     gen_inputs(signal)
         Returns the collection of input test signals.
-    process_output(output_coll, raw_mode=False)
+    process_output(output_coll, raw_mode=False, N=None, constant_term=None)
         Process outputs and returns estimated orders or interconjugate terms.
 
     See also
@@ -749,7 +751,8 @@ class PS(_AbstractPS):
         -------
         output_by_order : numpy.ndarray
             Estimation of the nonlinear homogeneous orders; it verifies
-            ``output_by_order.shape == (self.N, output_coll.shape[1:])``.
+            ``output_by_order.shape[0] == (self.N + self.constant_term,)`` and
+            ``output_by_order.shape[1:] == output_coll.shape[1:]``.
         interconjugate_terms : dict((int, int): numpy.ndarray)
             Dictionary of the estimated interconjugate terms; contains
             all keys ``(n, q)`` for ``n in range(1, N+1)`` and
