@@ -233,9 +233,10 @@ class AS(_SeparationMethod):
 
         is_square = mixing_mat.shape[0] == mixing_mat.shape[1]
         if is_square:
-            return np.dot(np.linalg.inv(mixing_mat), sig_coll)
+            inv_mixing_mat = np.linalg.inv(mixing_mat)
         else:
-            return np.dot(np.linalg.pinv(mixing_mat), sig_coll)
+            inv_mixing_mat = np.linalg.pinv(mixing_mat)
+        return np.tensordot(inv_mixing_mat, sig_coll, axes=1)
 
     @classmethod
     def best_gain(cls, N, gain_min=0.1, gain_max=1., tol=1e-6, **kwargs):
@@ -333,9 +334,9 @@ class CPS(_SeparationMethod):
         self.condition_numbers.append(1.)
         power_min = int(not self.constant_term)
         self.contrast_vector = (1/self.rho) ** np.arange(power_min, self.N+1)
-        self.contrast_vector.shape = (self._N, 1)
         if self.rho != 1.:
-            self.condition_numbers.append(np.linalg.cond(self.contrast_vector))
+            _temp_cond = np.linalg.cond(np.diag(self.contrast_vector))
+            self.condition_numbers.append(_temp_cond)
 
     def _compute_required_nb_phase(self):
         """Computes the required minium number of phase."""
@@ -351,6 +352,7 @@ class CPS(_SeparationMethod):
 
     @inherit_docstring
     def process_outputs(self, output_coll):
+        self.contrast_vector.shape = (self._N,) + (1,)*(output_coll.ndim-1)
         estimation = self._ifft(output_coll)
         if not self.constant_term:
             estimation = np.roll(estimation, -1, axis=0)
@@ -810,16 +812,22 @@ class PS(_AbstractPS):
     @inherit_docstring
     def _corresponding_sigs(self, out_per_phase, phase):
         dec_diag = (self.N + 1 - phase) // 2
+        args_diag = {'axis1': 0, 'axis2': 1}
+        args_moveaxis = {'source': -1, 'destination': 0}
         slice_obj = slice(dec_diag, -dec_diag) if dec_diag else slice(None)
         if phase:
-            upper_diag = np.diagonal(out_per_phase, offset=phase).T
-            lower_diag = np.diagonal(out_per_phase, offset=-phase).T
+            upper_diag = np.diagonal(out_per_phase, offset=phase, **args_diag)
+            lower_diag = np.diagonal(out_per_phase, offset=-phase, **args_diag)
+            upper_diag = np.moveaxis(upper_diag, **args_moveaxis)
+            lower_diag = np.moveaxis(lower_diag, **args_moveaxis)
             return np.concatenate((np.real(upper_diag[slice_obj]),
                                    np.real(lower_diag[slice_obj]),
                                    np.imag(upper_diag[slice_obj]),
                                    np.imag(lower_diag[slice_obj])))
         else:
-            return np.real((np.diagonal(out_per_phase).T)[slice_obj])
+            temp = np.diagonal(out_per_phase, **args_diag)
+            temp = np.moveaxis(temp, **args_moveaxis)
+            return np.real(temp[slice_obj])
 
 
 class PAS(_AbstractPS, AS):
