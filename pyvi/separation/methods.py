@@ -675,7 +675,9 @@ class PS(_AbstractPS):
 
         factors = []
         for w1, w2 in itr.combinations_with_replacement(self.factors, 2):
-            factors.append(w1 + w2)
+            # here we use a gain factor 1/2 instead of 2 in order to have
+            # a maximum factor at 1 (and not 4)
+            factors.append((1/2) * (w1 + w2))
 
         self.factors = factors
         self.K = len(factors)
@@ -700,7 +702,7 @@ class PS(_AbstractPS):
                     k4_vec = k3_vec - p2
 
                     for k in zip(k1_vec, k2_vec, k3_vec, k4_vec):
-                        tmp_mixing_mat[indp, indn] += multinomial(n, k)
+                        tmp_mixing_mat[indp, indn] += multinomial(n, k) / 2**n
 
         return tmp_mixing_mat
 
