@@ -100,7 +100,7 @@ class _SeparationMethod:
         -------
         input_coll : numpy.ndarray
             Collection of the input test signals; its shape verifies
-            ``input_coll.shape == (self.K, signal.shape)``.
+            ``input_coll.shape == (self.K,) + signal.shape``.
         """
 
         return np.tensordot(self.factors, signal, axes=0)
@@ -119,7 +119,8 @@ class _SeparationMethod:
         -------
         output_by_order : numpy.ndarray
             Estimation of the nonlinear homogeneous orders; it verifies
-            ``output_by_order.shape == (self.N, output_coll.shape[1:])``.
+            ``output_by_order.shape[0] == (self.N + self.constant_term,)`` and
+            ``output_by_order.shape[1:] == output_coll.shape[1:]``.
         """
 
         raise NotImplementedError
@@ -381,7 +382,7 @@ class HPS(CPS):
 
     Methods
     -------
-    gen_inputs(signal)
+    gen_inputs(signal, return_cplx_sig=False)
         Returns the collection of input test signals.
     process_output(output_coll)
         Process outputs and returns estimated homophase signals.
@@ -398,6 +399,8 @@ class HPS(CPS):
         super().__init__(N, nb_phase=nb_phase, rho=self.rho, **kwargs)
 
     def _compute_required_nb_phase(self):
+        """Computes the required minium number of phase."""
+
         return 2*self.N + 1
 
     def gen_inputs(self, signal, return_cplx_sig=False):
@@ -416,7 +419,7 @@ class HPS(CPS):
         -------
         input_coll : numpy.ndarray
             Collection of the input test signals; its shape verifies
-            ``input_coll.shape == (self.K, signal.shape)``.
+            ``input_coll.shape == (self.K,) + signal.shape``.
         signal_cplx : numpy.ndarray
             Complex version of `signal` obtained using Hilbert transform;
             only returned if `signal` is real-valued and `return_cplx_sig` is
@@ -449,7 +452,7 @@ class HPS(CPS):
         -------
         homophase : numpy.ndarray
             Estimation of the homophase signals; it verifies
-            ``homophase.shape == (2*self.N+1, output_coll.shape[1:])``.
+            ``homophase.shape == (2*self.N+1,) + output_coll.shape[1:]``.
         """
 
         temp = self._ifft(output_coll)
@@ -489,8 +492,6 @@ class _AbstractPS(HPS):
         Dictionnary of mixing matrix between orders and output for each phase.
     nq_dict : dict(int: list((int, int)))
         Dictionnary of list of tuples (n, q) for each phase.
-    c2r_mat : numpy.ndarray, class attribute
-        Matrix for taking into account conjuguated terms in estimation.
     condition_numbers : list(float)
         List of condition numbers of all matrix inverted during separation.
     constant_term : False
@@ -499,7 +500,7 @@ class _AbstractPS(HPS):
 
     Methods
     -------
-    gen_inputs(signal)
+    gen_inputs(signal, return_cplx_sig=False)
         Returns the collection of input test signals.
     process_output(output_coll, raw_mode=False)
         Process outputs and returns estimated orders or interconjugate terms.
@@ -511,7 +512,7 @@ class _AbstractPS(HPS):
     """
 
     negative_gain = False
-    c2r_mat = np.array([[1., 0], [1., 0], [0, 1.], [0, -1.]])
+    _cplx2real_mat = np.array([[1., 0], [1., 0], [0, 1.], [0, -1.]])
 
     def _create_nq_dict(self):
         """Create dictionnary of (n, q) tuple for each phase."""
@@ -533,7 +534,7 @@ class _AbstractPS(HPS):
         for phase in range(self.N+1):
             tmp_mixing_mat = self._create_tmp_mixing_matrix(phase)
             if phase:
-                tmp_mixing_mat = np.kron(self.c2r_mat, tmp_mixing_mat)
+                tmp_mixing_mat = np.kron(self._cplx2real_mat, tmp_mixing_mat)
             self.condition_numbers.append(np.linalg.cond(tmp_mixing_mat))
             self.mixing_mat_dict[phase] = tmp_mixing_mat
 
@@ -559,7 +560,8 @@ class _AbstractPS(HPS):
         -------
         output_by_order : numpy.ndarray
             Estimation of the nonlinear homogeneous orders; it verifies
-            ``output_by_order.shape == (self.N, output_coll.shape[1:])``.
+            ``output_by_order.shape[0] == (self.N + self.constant_term,)`` and
+            ``output_by_order.shape[1:] == output_coll.shape[1:]``.
         interconjugate_terms : dict((int, int): numpy.ndarray)
             Dictionary of the estimated interconjugate terms; contains
             all keys ``(n, q)`` for ``n in range(1, N+1)`` and
@@ -647,8 +649,6 @@ class PS(_AbstractPS):
         Dictionnary of mixing matrix between orders and output for each phase.
     nq_dict : dict(int: list((int, int)))
         Dictionnary of list of tuples (n, q) for each phase.
-    c2r_mat : numpy.ndarray, class attribute
-        Matrix for taking into account conjuguated terms in estimation.
     condition_numbers : list(float)
         List of condition numbers of all matrix inverted during separation.
     constant_term : False
@@ -657,9 +657,9 @@ class PS(_AbstractPS):
 
     Methods
     -------
-    gen_inputs(signal)
+    gen_inputs(signal, return_cplx_sig=False)
         Returns the collection of input test signals.
-    process_output(output_coll, raw_mode=False)
+    process_output(output_coll, raw_mode=False, N=None, constant_term=None)
         Process outputs and returns estimated orders or interconjugate terms.
 
     See also
@@ -729,7 +729,8 @@ class PS(_AbstractPS):
         -------
         output_by_order : numpy.ndarray
             Estimation of the nonlinear homogeneous orders; it verifies
-            ``output_by_order.shape == (self.N, output_coll.shape[1:])``.
+            ``output_by_order.shape[0] == (self.N + self.constant_term,)`` and
+            ``output_by_order.shape[1:] == output_coll.shape[1:]``.
         interconjugate_terms : dict((int, int): numpy.ndarray)
             Dictionary of the estimated interconjugate terms; contains
             all keys ``(n, q)`` for ``n in range(1, N+1)`` and
@@ -854,8 +855,6 @@ class PAS(_AbstractPS, AS):
         Dictionnary of mixing matrix between orders and output for each phase.
     nq_dict : dict(int: list((int, int)))
         Dictionnary of list of tuples (n, q) for each phase.
-    c2r_mat : numpy.ndarray, class attribute
-        Matrix for taking into account conjuguated terms in estimation.
     condition_numbers : list(float)
         List of condition numbers of all matrix inverted during separation.
     constant_term : False
@@ -864,7 +863,7 @@ class PAS(_AbstractPS, AS):
 
     Methods
     -------
-    gen_inputs(signal)
+    gen_inputs(signal, return_cplx_sig=False)
         Returns the collection of input test signals.
     process_output(output_coll, raw_mode=False)
         Process outputs and returns estimated orders or interconjugate terms.
