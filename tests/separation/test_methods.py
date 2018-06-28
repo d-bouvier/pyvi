@@ -40,7 +40,6 @@ class _OrderSeparationMethodGlobalTest():
     tol = 5e-10
     N = [4, 5]
     L = 1000
-    out_args = {}
 
     def setUp(self, **kwargs):
         self.order_est = dict()
@@ -63,8 +62,7 @@ class _OrderSeparationMethodGlobalTest():
                         generate_output(input_coll[ind], N,
                                         constant_term=self.constant_term)
 
-                self.order_est[key] = method.process_outputs(output_coll,
-                                                             **self.out_args)
+                self.order_est[key] = method.process_outputs(output_coll)
                 input_sig = self.true_input_func[method_name](input_sig)
                 self.order_true[key] = \
                     generate_output(input_sig, N, by_order=True,
@@ -155,73 +153,6 @@ class ConstantTermTestCase(_OrderSeparationMethodGlobalTest,
 
     def setUp(self):
         super().setUp(constant_term=True)
-
-
-class _PS_ConstantTermTestCase(_OrderSeparationMethodGlobalTest):
-
-    method = {'PS': sep.PS}
-    bool_list = []
-
-    def setUp(self):
-        self.out_args = {'constant_term': self.bool_list[1]}
-        super().setUp(constant_term=self.bool_list[0])
-
-    def _get_constant_term(self, **kwargs):
-        self.constant_term = self.out_args['constant_term']
-
-
-class PS_ConstantTermTestCase_1(_PS_ConstantTermTestCase, unittest.TestCase):
-
-    bool_list = [False, True]
-
-
-class PS_ConstantTermTestCase_2(_PS_ConstantTermTestCase, unittest.TestCase):
-
-    bool_list = [True, False]
-
-
-class PS_OptionN_TestCase(unittest.TestCase):
-
-    method = sep.PS
-    N = 4
-    L = 1000
-    N_opt = 3
-    N_error = 5
-    tol = 1e-12
-
-    def setUp(self):
-        method = self.method(self.N)
-        input_sig = np.random.normal(size=(self.L,)) + \
-                    1j * np.random.normal(size=(self.L,))
-        input_coll = method.gen_inputs(input_sig)
-        output_coll = np.zeros(input_coll.shape)
-        for ind in range(input_coll.shape[0]):
-            output_coll[ind] = generate_output(input_coll[ind], self.N_opt)
-        self.order_est = method.process_outputs(output_coll, N=self.N_opt)
-        self.order_true = generate_output(np.real(input_sig), self.N_opt,
-                                          by_order=True)
-
-    def test_shape(self):
-        self.assertEqual(self.order_est.shape, (self.N_opt, self.L))
-
-    def test_correct_output(self):
-        error = rms(self.order_est - self.order_true)
-        self.assertTrue(error < self.tol)
-
-
-class PS_ErrorOptionN_TestCase(PS_OptionN_TestCase):
-
-    N_opt = 5
-    test_shape = property()
-    test_correct_output = property()
-
-    def setUp(self):
-        self.method = self.method(self.N)
-        self.output_coll = np.zeros((self.method.K, self.L))
-
-    def test_error(self):
-        self.assertRaises(ValueError, self.method.process_outputs,
-                          self.output_coll, **{'N': self.N_opt})
 
 
 class PS_RawModeTestCase(unittest.TestCase):

@@ -85,7 +85,8 @@ class _SeparationMethod:
         self.factors = factors
         self.K = len(factors)
         self.condition_numbers = []
-        self._update_constant_term(constant_term)
+        self.constant_term = constant_term
+        self._N = self.N + int(self.constant_term)
 
     def gen_inputs(self, signal):
         """
@@ -124,10 +125,6 @@ class _SeparationMethod:
         """
 
         raise NotImplementedError
-
-    def _update_constant_term(self, constant_term):
-        self.constant_term = constant_term
-        self._N = self.N + int(self.constant_term)
 
     def _update_factors(self, new_factors):
         self.factors = new_factors
@@ -691,6 +688,8 @@ class PS(_AbstractPS):
 
         self.factors = factors
         self.K = len(factors)
+        self._create_nq_dict()
+        self._create_mixing_matrix_dict()
 
     @inherit_docstring
     def _create_tmp_mixing_matrix(self, phase):
@@ -715,66 +714,6 @@ class PS(_AbstractPS):
                         tmp_mixing_mat[indp, indn] += multinomial(n, k) / 2**n
 
         return tmp_mixing_mat
-
-    def process_outputs(self, output_coll, raw_mode=False, N=None,
-                        constant_term=None):
-        """
-        Process outputs and returns estimated orders or interconjugate terms.
-
-        Parameters
-        ----------
-        output_coll : numpy.ndarray
-            Collection of the output signals; it should verify
-            ``output_coll.shape[0] == self.K``
-        raw_mode : boolean, optional (default=False)
-            If False, only returns estimated orders; else also returns
-            estimated interconjugate terms.
-        N : int or None, optional (default=None)
-            Truncation order; if None,  the value defined at the method's
-            initialization is used.
-        constant_term : boolean or None, optional (default=None)
-            If True, constant term of the Volterra series (i.e. the order 0) is
-            also separated; if False, it is considered null; if None, the value
-            defined at the method's initialization is used (False by default).
-
-        Returns
-        -------
-        output_by_order : numpy.ndarray
-            Estimation of the nonlinear homogeneous orders; it verifies
-            ``output_by_order.shape[0] == (self.N + self.constant_term,)`` and
-            ``output_by_order.shape[1:] == output_coll.shape[1:]``.
-        interconjugate_terms : dict((int, int): numpy.ndarray)
-            Dictionary of the estimated interconjugate terms; contains
-            all keys ``(n, q)`` for ``n in range(1, N+1)`` and
-            ``q in range(1+n//2)``; each term verify
-            ``interconjugate_terms[(n, q)].shape == output_coll.shape[1:]``.
-        """
-
-        if N is not None:
-            if N > (self.nb_phase - 1) // 2:
-                raise ValueError("Specified order truncation `N` is greater " +
-                                 "than the potential maximum.")
-            else:
-                _save_N = self.N
-                self.N = N
-                self._update_constant_term(self.constant_term)
-        if constant_term is not None:
-            _save_constant_term = self.constant_term
-            self._update_constant_term(constant_term)
-
-        self.condition_numbers = self.condition_numbers[:1]
-        self._create_nq_dict()
-        self._create_mixing_matrix_dict()
-
-        out = super().process_outputs(output_coll, raw_mode=raw_mode)
-
-        if N is not None:
-            self.N = _save_N
-            self._update_constant_term(self.constant_term)
-        if constant_term is not None:
-            self._update_constant_term(_save_constant_term)
-
-        return out
 
     @inherit_docstring
     def _from_1d_to_2d(self, coll_1d):
