@@ -326,6 +326,104 @@ class HPS_MultiDimTestCase(HPS_Test):
                                        dtype='complex')
 
 
+class _ConditionNumbersGlobalTest():
+
+    method = sep._SeparationMethod
+    N = 3
+    p_values = [None, 1, -1, 2, -2, np.inf, -np.inf, 'fro']
+    results = {}
+    kwargs = {}
+    tol = 1e-8
+
+    def setUp(self):
+        self.obj = self.method(self.N, **self.kwargs)
+
+    def test_correct(self):
+        for p in self.p_values:
+            with self.subTest(i=p):
+                val = np.array(self.obj.get_condition_numbers(p=p))
+                ref = np.array(self.results[p])
+                self.assertTrue(np.allclose(val, ref, atol=self.tol, rtol=0))
+
+
+class AS_ConditionNumbersTest(_ConditionNumbersGlobalTest, unittest.TestCase):
+
+    method = sep.AS
+    results = {None: [8.04346051],
+               1: [13. + 1/3],
+               -1: [2.125],
+               2: [8.04346051],
+               -2: [0.12432459],
+               np.inf: [12],
+               -np.inf: [0.875],
+               'fro': [10.09718401]}
+    kwargs = {'gain': 0.5}
+
+
+class CPS_ConditionNumbersTest(_ConditionNumbersGlobalTest, unittest.TestCase):
+
+    method = sep.CPS
+    nb_phase = 10
+    results = {None: [1., 1.],
+               1: [nb_phase, 1.],
+               -1: [nb_phase, 1.],
+               2: [1., 1.],
+               -2: [1., 1.],
+               np.inf: [nb_phase, 1.],
+               -np.inf: [nb_phase, 1.],
+               'fro': [nb_phase, 3.]}
+    kwargs = {'nb_phase': nb_phase}
+
+
+class HPS_ConditionNumbersTest(_ConditionNumbersGlobalTest, unittest.TestCase):
+
+    method = sep.HPS
+    nb_phase = 11
+    results = {None: [1.],
+               1: [nb_phase],
+               -1: [nb_phase],
+               2: [1.],
+               -2: [1.],
+               np.inf: [nb_phase],
+               -np.inf: [nb_phase],
+               'fro': [nb_phase]}
+    kwargs = {'nb_phase': nb_phase}
+
+
+class PS_ConditionNumbersTest(_ConditionNumbersGlobalTest, unittest.TestCase):
+
+    method = sep.PS
+    nb_phase = 11
+    K = nb_phase*(nb_phase+1)//2
+    results = {None: [1., 1., 8.71863649, 1., 1.],
+               1: [K**2, 1+1/3, 13, 1+1/3, 1.2],
+               -1: [K**2, 2/3, 1, 2/3, .4],
+               2: [1., 1., 8.718636499713, 1., 1.],
+               -2: [1., 1., 0.114696833619, 1., 1.],
+               np.inf: [K**2, 1+1/3, 13., 1+1/3, 1.2],
+               -np.inf: [K**2, 2/3, 1., 2/3, .4],
+               'fro': [K**2, 1., 17+2/3, 2., 2.]}
+    kwargs = {'nb_phase': nb_phase}
+
+
+class PAS_ConditionNumbersTest(_ConditionNumbersGlobalTest, unittest.TestCase):
+
+    method = sep.PAS
+    nb_phase = 11
+    results = {None: [1., 1., 9.62474137, 1., 1.],
+               1: [nb_phase, 1.20708478, 13.36111111, 1.20708478, 1.18098718],
+               -1: [nb_phase, 0.49442192, 2.06370370, 0.49442192, 0.30958870],
+               2: [1., 1., 9.62474137, 1., 1.],
+               -2: [1., 1., 0.10389889, 1., 1.],
+               np.inf: [nb_phase, 1.20708477, 13.36111111, 1.20708477,
+                        1.18098717],
+               -np.inf: [nb_phase, 0.49442192, 2.06370370, 0.49442192,
+                         0.30958870],
+               'fro': [nb_phase, 1., 19.45728053, 2., 2.]}
+    kwargs = {'nb_phase': nb_phase}
+    tol = 1e-8
+
+
 #==============================================================================
 # Functions
 #==============================================================================
