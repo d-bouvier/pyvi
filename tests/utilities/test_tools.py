@@ -14,12 +14,82 @@ Developed for Python 3.6
 
 import unittest
 import numpy as np
-from pyvi.utilities.tools import _as_list, _is_sorted
+from pyvi.utilities.tools import _as_list, _is_sorted, inherit_docstring
 
 
 #==============================================================================
 # Test Class
 #==============================================================================
+
+class A():
+
+    def foo(self):
+        """Docstring of A.foo"""
+        pass
+
+
+class B(A):
+
+    @inherit_docstring
+    def foo(self):
+        pass
+
+
+class C(A):
+
+    def foo(self):
+        """Docstring of C.foo"""
+        pass
+
+    def bar(self):
+        """Docstring of C.bar"""
+        pass
+
+
+class D(B, C):
+    pass
+
+
+class E(D):
+
+    @inherit_docstring
+    def foo(self):
+        pass
+
+    @inherit_docstring
+    def bar(self):
+        pass
+
+
+class InheritDocstringTest(unittest.TestCase):
+
+    list_foo = [(A, B), (A, D), (A, E)]
+    list_bar = [(C, D), (C, E)]
+
+    def test_foo_correct_doc_without_instance(self):
+        for (cls1, cls2) in self.list_foo:
+            with self.subTest(i=(cls1, cls2)):
+                self.assertEqual(cls1.foo.__doc__, cls2.foo.__doc__)
+
+    def test_bar_correct_doc_without_instance(self):
+        for (cls1, cls2) in self.list_bar:
+            with self.subTest(i=(cls1, cls2)):
+                self.assertEqual(cls1.bar.__doc__, cls2.bar.__doc__)
+
+    def test_foo_correct_doc_with_instances(self):
+        for (cls1, cls2) in self.list_foo:
+            with self.subTest(i=(cls1, cls2)):
+                obj1 = cls1()
+                obj2 = cls2()
+                self.assertEqual(obj1.foo.__doc__, obj2.foo.__doc__)
+
+    def test_bar_correct_doc_with_instances(self):
+        for (cls1, cls2) in self.list_bar:
+            with self.subTest(i=(cls1, cls2)):
+                obj1 = cls1()
+                obj2 = cls2()
+                self.assertEqual(obj1.bar.__doc__, obj2.bar.__doc__)
+
 
 class AsListTest(unittest.TestCase):
 
