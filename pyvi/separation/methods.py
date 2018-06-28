@@ -154,7 +154,7 @@ class _SeparationMethod:
         ----------
         p : {None, 1, -1, 2, -2, inf, -inf, 'fro'}, optional
             Order of the norm
-            :ref:`(see np.linalg.norm for more details) <np.linalg.norm>`
+            :ref:`(see np.linalg.norm for more details) <np.linalg.norm>`.
 
         Returns
         -------
@@ -473,9 +473,8 @@ class HPS(CPS):
     def __init__(self, N, nb_phase=None, **kwargs):
         super().__init__(N, nb_phase=nb_phase, rho=self.rho, **kwargs)
 
+    @inherit_docstring
     def _compute_required_nb_phase(self):
-        """Computes the required minium number of phase."""
-
         return 2*self.N + 1
 
     def gen_inputs(self, signal, return_cplx_sig=False):

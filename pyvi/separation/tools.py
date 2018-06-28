@@ -63,7 +63,7 @@ def _compute_condition_number(mixing_mat, p=None):
         Mixing matrix for which the condition number will be returned.
     p : {None, 1, -1, 2, -2, inf, -inf, 'fro'}, optional
         Order of the norm
-        :ref:`(see np.linalg.norm for more details) <np.linalg.norm>`
+        :ref:`(see np.linalg.norm for more details) <np.linalg.norm>`.
 
     Returns
     -------
