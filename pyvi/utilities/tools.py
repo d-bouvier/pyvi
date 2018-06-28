@@ -50,9 +50,6 @@ class DocInherit(object):
         self.mthd = mthd
         self.name = mthd.__name__
 
-    #     return self.get(cls, obj)
-
-    # def get(self, cls, instance):
     def __get__(self, obj, cls):
 
         for parent in cls.__mro__[1:]:
