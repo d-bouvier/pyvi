@@ -36,7 +36,8 @@ import itertools as itr
 import numpy as np
 import scipy.fftpack as sc_fft
 import scipy.signal as sc_sig
-from .tools import _create_vandermonde_mixing_mat, _demix_coll
+from .tools import (_create_vandermonde_mixing_mat, _demix_coll,
+                    _compute_condition_number)
 from ..utilities.mathbox import binomial, multinomial
 from ..utilities.tools import inherit_docstring
 
@@ -78,6 +79,8 @@ class _SeparationMethod:
         Returns the collection of input test signals.
     process_outputs(output_coll)
         Process outputs and returns estimated orders.
+    get_condition_numbers(p=None)
+        Return the list of all condition numbers in the separation method.
     """
 
     def __init__(self, N, factors, constant_term=False):
@@ -142,6 +145,24 @@ class _SeparationMethod:
         else:
             setattr(self, name, nb_min)
 
+    def get_condition_numbers(self, p=None):
+        """
+        Return the list of all condition numbers in the separation method.
+
+        Parameters
+        ----------
+        p : {None, 1, -1, 2, -2, inf, -inf, 'fro'}, optional
+            Order of the norm
+            :ref:`(see np.linalg.norm for more details) <np.linalg.norm>`
+
+        Returns
+        -------
+        condition_numbers : list(float)
+            List of all condition numbers.
+        """
+
+        return []
+
 
 class AS(_SeparationMethod):
     """
@@ -190,6 +211,8 @@ class AS(_SeparationMethod):
         Returns the collection of input test signals.
     process_outputs(output_coll)
         Process outputs and returns estimated orders.
+    get_condition_numbers(p=None)
+        Return the list of all condition numbers in the separation method.
 
     See also
     --------
@@ -208,7 +231,6 @@ class AS(_SeparationMethod):
         self.mixing_mat = \
             _create_vandermonde_mixing_mat(self.factors, self.N,
                                            first_column=self.constant_term)
-        self.condition_numbers.append(np.linalg.cond(self.mixing_mat))
 
     def _compute_required_nb_amp(self):
         """Computes the required minium number of amplitude."""
@@ -236,6 +258,10 @@ class AS(_SeparationMethod):
             inv_mixing_mat = np.linalg.pinv(mixing_mat)
         return np.tensordot(inv_mixing_mat, sig_coll, axes=1)
 
+    @inherit_docstring
+    def get_condition_numbers(self, p=None):
+        return [_compute_condition_number(self.mixing_mat, p=p)]
+
     @classmethod
     def best_gain(cls, N, gain_min=0.1, gain_max=1., tol=1e-6, **kwargs):
         """Search for the gain that minimizes the maximum condition number."""
@@ -248,7 +274,7 @@ class AS(_SeparationMethod):
                 warnings.simplefilter("ignore")
                 for gain in gain_vec:
                     method_obj = cls(N, gain, **kwargs)
-                    cond_number.append(max(method_obj.condition_numbers))
+                    cond_number.append(max(method_obj.get_condition_numbers()))
             idx_min = np.argmin(cond_number)
             if gain_step < tol:
                 return gain_vec[idx_min]
@@ -304,6 +330,8 @@ class CPS(_SeparationMethod):
         Returns the collection of input test signals.
     process_outputs(output_coll)
         Process outputs and returns estimated orders.
+    get_condition_numbers(p=None)
+        Return the list of all condition numbers in the separation method.
 
     See also
     --------
@@ -319,12 +347,8 @@ class CPS(_SeparationMethod):
         self.rho = rho
         self._update_factors(self._gen_phase_factors())
 
-        self.condition_numbers.append(1.)
         power_min = int(not self.constant_term)
         self.contrast_vector = (1/self.rho) ** np.arange(power_min, self.N+1)
-        if self.rho != 1.:
-            _temp_cond = np.linalg.cond(np.diag(self.contrast_vector))
-            self.condition_numbers.append(_temp_cond)
 
     def _compute_required_nb_phase(self):
         """Computes the required minium number of phase."""
@@ -350,6 +374,20 @@ class CPS(_SeparationMethod):
         """Inverse Discrete Fourier Transform using the FFT algorithm."""
 
         return sc_fft.ifft(output_coll, n=self.nb_phase, axis=self.fft_axis)
+
+    @inherit_docstring
+    def get_condition_numbers(self, p=None):
+        return [self._fft_mat_condition_numbers(p),
+                self._contrast_condition_numbers(p)]
+
+    def _fft_mat_condition_numbers(self, p):
+        if p in [None, 2, -2]:
+            return 1
+        if p in ['fro', np.inf, -np.inf, 1, -1]:
+            return self.nb_phase
+
+    def _contrast_condition_numbers(self, p):
+        return _compute_condition_number(np.diag(self.contrast_vector), p=p)
 
 
 class HPS(CPS):
@@ -393,6 +431,8 @@ class HPS(CPS):
         Returns the collection of input test signals.
     process_outputs(output_coll)
         Process outputs and returns estimated homophase signals.
+    get_condition_numbers(p=None)
+        Return the list of all condition numbers in the separation method.
 
     See also
     --------
@@ -465,6 +505,10 @@ class HPS(CPS):
         temp = self._ifft(output_coll)
         return np.concatenate((temp[0:self.N+1], temp[-self.N:]), axis=0)
 
+    @inherit_docstring
+    def get_condition_numbers(self, p=None):
+        return [self._fft_mat_condition_numbers(p)]
+
 
 class _AbstractPS(HPS):
     """
@@ -511,6 +555,8 @@ class _AbstractPS(HPS):
         Returns the collection of input test signals.
     process_output(output_coll, raw_mode=False)
         Process outputs and returns estimated orders or interconjugate terms.
+    get_condition_numbers(p=None)
+        Return the list of all condition numbers in the separation method.
 
     See also
     --------
@@ -542,7 +588,6 @@ class _AbstractPS(HPS):
             tmp_mixing_mat = self._create_tmp_mixing_matrix(phase)
             if phase:
                 tmp_mixing_mat = np.kron(self._cplx2real_mat, tmp_mixing_mat)
-            self.condition_numbers.append(np.linalg.cond(tmp_mixing_mat))
             self.mixing_mat_dict[phase] = tmp_mixing_mat
 
     def _create_tmp_mixing_matrix(self, phase):
@@ -619,6 +664,13 @@ class _AbstractPS(HPS):
 
         raise NotImplementedError
 
+    @inherit_docstring
+    def get_condition_numbers(self, p=None):
+        condition_numbers = super().get_condition_numbers(p=p)
+        for mat in self.mixing_mat_dict.values():
+            condition_numbers.append(_compute_condition_number(mat, p=p))
+        return condition_numbers
+
 
 class PS(_AbstractPS):
     """
@@ -668,6 +720,8 @@ class PS(_AbstractPS):
         Returns the collection of input test signals.
     process_output(output_coll, raw_mode=False, N=None, constant_term=None)
         Process outputs and returns estimated orders or interconjugate terms.
+    get_condition_numbers(p=None)
+        Return the list of all condition numbers in the separation method.
 
     See also
     --------
@@ -761,6 +815,12 @@ class PS(_AbstractPS):
             temp = np.moveaxis(temp, **args_moveaxis)
             return np.real(temp[slice_obj])
 
+    def _fft_mat_condition_numbers(self, p):
+        if p in [None, 2, -2]:
+            return 1
+        if p in ['fro', np.inf, -np.inf, 1, -1]:
+            return self.K**2
+
 
 class PAS(_AbstractPS, AS):
     """
@@ -818,6 +878,8 @@ class PAS(_AbstractPS, AS):
         Returns the collection of input test signals.
     process_output(output_coll, raw_mode=False)
         Process outputs and returns estimated orders or interconjugate terms.
+    get_condition_numbers(p=None)
+        Return the list of all condition numbers in the separation method.
 
     See also
     --------
@@ -839,7 +901,6 @@ class PAS(_AbstractPS, AS):
         factors = np.tensordot(self.HPS_obj.factors, self.factors, axes=0)
         self._update_factors(factors.flatten())
 
-        self.condition_numbers += self.HPS_obj.condition_numbers
         self._create_nq_dict()
         self._create_mixing_matrix_dict()
 
@@ -874,3 +935,6 @@ class PAS(_AbstractPS, AS):
                                    np.imag(out_per_phase[phase_conj])))
         else:
             return np.real(out_per_phase[0])
+
+    def _fft_mat_condition_numbers(self, p):
+        return self.HPS_obj._fft_mat_condition_numbers(p)

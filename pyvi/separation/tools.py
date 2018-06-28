@@ -53,6 +53,33 @@ def _create_vandermonde_mixing_mat(factors, N, first_column=False):
         return temp_mat[:, 1::]
 
 
+def _compute_condition_number(mixing_mat, p=None):
+    """
+    Compute the condition number of a matrix.
+
+    Parameters
+    ----------
+    mixing_mat : array_like
+        Mixing matrix for which the condition number will be returned.
+    p : {None, 1, -1, 2, -2, inf, -inf, 'fro'}, optional
+        Order of the norm
+        :ref:`(see np.linalg.norm for more details) <np.linalg.norm>`
+
+    Returns
+    -------
+    c : {float, inf}
+        The condition number of the matrix. May be infinite.
+    """
+
+    is_square = mixing_mat.shape[0] == mixing_mat.shape[1]
+    if is_square or (p is None):
+        return np.linalg.cond(mixing_mat, p=p)
+    else:
+        norm_direct = np.linalg.norm(mixing_mat, p)
+        norm_inv = np.linalg.norm(np.linalg.pinv(mixing_mat), p)
+        return norm_direct * norm_inv
+
+
 def _demix_coll(sig_coll, mixing_mat):
     """
     Demix a collection of signals via inverse or pseudo-inverse.
