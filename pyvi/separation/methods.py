@@ -36,6 +36,7 @@ import itertools as itr
 import numpy as np
 import scipy.fftpack as sc_fft
 import scipy.signal as sc_sig
+import scipy.optimize as sc_optim
 from .tools import (_create_vandermonde_mixing_mat, _demix_coll,
                     _compute_condition_number)
 from ..utilities.mathbox import binomial, multinomial
@@ -214,6 +215,12 @@ class AS(_SeparationMethod):
     get_condition_numbers(p=None)
         Return the list of all condition numbers in the separation method.
 
+    Class methods
+    -------------
+    best_gain( N, p=None, gain_min=.1, gain_max=.99, gain_init=None,
+              tol=1e-6, **kwargs)
+        Search for the gain that minimizes the maximum condition number.
+
     See also
     --------
     _SeparationMethod : Parent class.
@@ -263,24 +270,45 @@ class AS(_SeparationMethod):
         return [_compute_condition_number(self.mixing_mat, p=p)]
 
     @classmethod
-    def best_gain(cls, N, gain_min=0.1, gain_max=1., tol=1e-6, **kwargs):
-        """Search for the gain that minimizes the maximum condition number."""
+    def best_gain(cls, N, p=None, gain_min=.1, gain_max=.99, gain_init=None,
+                  tol=1e-6, **kwargs):
+        """
+        Search for the gain that minimizes the maximum condition number.
 
-        while True:
-            gain_vec = np.linspace(gain_min, gain_max, num=9)
-            gain_step = abs(gain_vec[8] - gain_vec[0])
-            cond_number = []
-            with warnings.catch_warnings():
-                warnings.simplefilter("ignore")
-                for gain in gain_vec:
-                    method_obj = cls(N, gain, **kwargs)
-                    cond_number.append(max(method_obj.get_condition_numbers()))
-            idx_min = np.argmin(cond_number)
-            if gain_step < tol:
-                return gain_vec[idx_min]
-            else:
-                gain_min = gain_vec[idx_min-1] if idx_min else gain_vec[0]
-                gain_max = gain_vec[idx_min+1] if idx_min != 8 else gain_vec[8]
+        Parameters
+        ----------
+        N : int
+            Truncation order.
+        p : {None, 1, -1, 2, -2, inf, -inf, 'fro'}, optional
+            Order of the norm
+            :ref:`(see np.linalg.norm for more details) <np.linalg.norm>`.
+        gain_min : float, optional (default=0.1)
+            Minimum possible value for the gain.
+        gain_max : float, optional (default=0.99)
+            Maximum possible value for the gain.
+        gain_init : float, optional (default=None)
+            Starting value of the gian for the optimization procedure; if None,
+            it is set as ``(gain_min+gain_max)/2``.
+        **kwargs : Keywords arguments passed to the separation method.
+
+        Returns
+        -------
+        condition_numbers : list(float)
+            List of all condition numbers.
+        """
+
+        def func(gain):
+            method_obj = cls(N, gain, **kwargs)
+            return max(method_obj.get_condition_numbers(p=p))
+
+        if gain_init is None:
+            gain_init = (gain_min+gain_max)/2
+
+        results = sc_optim.minimize(func, gain_init, method='TNC',
+                                    bounds=[(gain_min, gain_max)],
+                                    options={'ftol': tol})
+
+        return results.x[0]
 
 
 class CPS(_SeparationMethod):
@@ -880,6 +908,12 @@ class PAS(_AbstractPS, AS):
         Process outputs and returns estimated orders or interconjugate terms.
     get_condition_numbers(p=None)
         Return the list of all condition numbers in the separation method.
+
+    Class methods
+    -------------
+    best_gain( N, p=None, gain_min=.1, gain_max=.99, gain_init=None,
+              tol=1e-6, **kwargs)
+        Search for the gain that minimizes the maximum condition number.
 
     See also
     --------

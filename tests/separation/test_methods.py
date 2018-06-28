@@ -271,39 +271,39 @@ class WarningsNbPhaseTestCase(unittest.TestCase):
 
 class ASBestGainTest(unittest.TestCase):
 
-    best_gains = [(3, {}, 0.52662910),
-                  (3, {'negative_gain': True}, 0.52662910),
-                  (3, {'negative_gain': False}, 0.53977263),
-                  (3, {'nb_amp': 10}, 0.66459128),
-                  (9, {}, 0.79174226),
-                  (3, {'constant_term': True}, 0.52179740),
+    best_gains = [(3, {}, 0.526623),
+                  (3, {'negative_gain': True}, 0.526623),
+                  (3, {'negative_gain': False}, 0.539772),
+                  (3, {'nb_amp': 10}, 0.664593),
+                  (9, {}, 0.791742),
+                  (3, {'constant_term': True}, 0.521798),
                   (3, {'negative_gain': True, 'constant_term': True},
-                   0.52179740),
+                   0.521798),
                   (3, {'negative_gain': False, 'constant_term': True},
-                   0.47381948),
-                  (3, {'nb_amp': 10, 'constant_term': True}, 0.72635961),
-                  (9, {'constant_term': True}, 0.79454131)]
-    tol = 1e-8
+                   0.473821),
+                  (3, {'nb_amp': 10, 'constant_term': True}, 0.726358),
+                  (9, {'constant_term': True}, 0.794541)]
+    tol = 1e-6
     method = sep.AS
 
     def test_correct(self):
         for N, kwargs, ref in self.best_gains:
             with self.subTest(i=(N, kwargs)):
-                val = self.method.best_gain(N, tol=self.tol, **kwargs)
+                val = self.method.best_gain(N, **kwargs)
                 error = abs(ref - val)
                 self.assertTrue(error < self.tol)
 
 
 class PASBestGainTest(ASBestGainTest):
 
-    best_gains = [(3, {}, 0.53896221),
-                  (4, {}, 0.67276061),
-                  (5, {}, 0.64621028),
-                  (9, {}, 0.76971949),
-                  (3, {'constant_term': True}, 0.53896221),
-                  (4, {'constant_term': True}, 0.53964988),
-                  (5, {'constant_term': True}, 0.64621028),
-                  (9, {'constant_term': True}, 0.76971949)]
+    best_gains = [(3, {}, 0.538972),
+                  (4, {}, 0.672760),
+                  (5, {}, 0.646206),
+                  (9, {}, 0.769719),
+                  (3, {'constant_term': True}, 0.538972),
+                  (4, {'constant_term': True}, 0.539649),
+                  (5, {'constant_term': True}, 0.646206),
+                  (9, {'constant_term': True}, 0.769719)]
     method = sep.PAS
 
 
