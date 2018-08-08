@@ -307,23 +307,21 @@ class PASBestGainTest(ASBestGainTest):
     method = sep.PAS
 
 
-class MultiDimTestCase(NoKwargsTestCase):
+class ErrorMultiDimInputTestCase(unittest.TestCase):
 
-    L = (2, 1000)
+    method = sep._SeparationMethod(3, [])
 
+    def test_error_raised(self):
+        for shape in [(100, 2), (2, 100), (1, 100, 2)]:
+            self.assertRaises(ValueError, self.method.gen_inputs,
+                              np.ones(shape))
 
-class HPS_MultiDimTestCase(HPS_Test):
-
-    L = (2, 1000)
-    shape = (HPS_Test.nb_phase,) + L
-
-    def _create_phase_vec(self):
-        _temp = 2 * np.pi * np.arange(self.L[1])/self.L[1]
-        return np.stack((_temp, _temp), axis=0)
-
-    def _init_homophase_true(self):
-        self.homophase_true = np.zeros((self.nb_phase,) + self.L,
-                                       dtype='complex')
+    def test_error_not_raised(self):
+        for shape in [(100,), (1, 100), (100, 1), (1, 100, 1)]:
+            try:
+                self.method.gen_inputs(np.ones(shape))
+            except ValueError:
+                self.fail()
 
 
 class _ConditionNumbersGlobalTest():

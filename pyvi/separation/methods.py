@@ -98,8 +98,8 @@ class _SeparationMethod:
 
         Parameters
         ----------
-        signal : array_like
-            Input signal.
+        signal : numpy.ndarray
+            Input signal; must be equivaent to a 1D array.
 
         Returns
         -------
@@ -107,6 +107,10 @@ class _SeparationMethod:
             Collection of the input test signals; its shape verifies
             ``input_coll.shape == (self.K,) + signal.shape``.
         """
+
+        if len(np.squeeze(signal).shape) != 1:
+            raise ValueError('Multi-dimensional input signals are not (yet) '
+                             'handled by separation methods.')
 
         return np.tensordot(self.factors, signal, axes=0)
 
@@ -124,7 +128,7 @@ class _SeparationMethod:
         -------
         output_by_order : numpy.ndarray
             Estimation of the nonlinear homogeneous orders; it verifies
-            ``output_by_order.shape[0] == (self.N + self.constant_term,)`` and
+            ``output_by_order.shape[0] == self.N + self.constant_term`` and
             ``output_by_order.shape[1:] == output_coll.shape[1:]``.
         """
 
@@ -483,8 +487,8 @@ class HPS(CPS):
 
         Parameters
         ----------
-        signal : array_like
-            Input signal.
+        signal : numpy.ndarray
+            Input signal; must be equivaent to a 1D array.
         return_cplx_sig : boolean, optional (default=False)
             If `signal`is real-valued, chosses Whether to return the complex
             signal constructed from its hilbert transform.
@@ -639,12 +643,12 @@ class _AbstractPS(HPS):
         -------
         output_by_order : numpy.ndarray
             Estimation of the nonlinear homogeneous orders; it verifies
-            ``output_by_order.shape[0] == (self.N + self.constant_term,)`` and
+            ``output_by_order.shape[0] == self.N + self.constant_term`` and
             ``output_by_order.shape[1:] == output_coll.shape[1:]``.
         interconjugate_terms : dict((int, int): numpy.ndarray)
             Dictionary of the estimated interconjugate terms; contains
             all keys ``(n, q)`` for ``n in range(1, N+1)`` and
-            ``q in range(1+n//2)``; each term verify
+            ``q in range(1+n//2)``; each corresponding value verifies
             ``interconjugate_terms[(n, q)].shape == output_coll.shape[1:]``.
         """
 
