@@ -13,7 +13,7 @@ CPS :
     Class for Complex Phase-based Separation method using complex signals.
 HPS :
     Class for Phase-based Separation method into homophase signals.
-PS :
+RPS :
     Class for Phase-based Separation method using real signals and 2D-DFT.
 PAS :
     Class for Phase-and-Amplitude-based Separation method using real signals.
@@ -24,7 +24,7 @@ Developed for Python 3.6
 @author: Damien Bouvier (Damien.Bouvier@ircam.fr)
 """
 
-__all__ = ['AS', 'CPS', 'HPS', 'PS', 'PAS']
+__all__ = ['AS', 'CPS', 'HPS', 'RPS', 'PAS']
 
 
 #==============================================================================
@@ -692,7 +692,7 @@ class _AbstractPS(HPS):
         return condition_numbers
 
 
-class PS(_AbstractPS):
+class RPS(_AbstractPS):
     """
     Class for Phase-based Separation method using real signals (and 2D-DFT).
 
@@ -719,11 +719,11 @@ class PS(_AbstractPS):
     factors : array_like
         Vector of length `K` regrouping all factors.
     rho : float, class attribute
-        Rejection factor; equal to 1 (not used) for PS.
+        Rejection factor; equal to 1 (not used) for RPS.
     w : float
         Initial phase factor.
     fft_axis : int or tuple(int), class attribute
-        Axis along which inverse FFT is computed; equal to (0, 1) for PS.
+        Axis along which inverse FFT is computed; equal to (0, 1) for RPS.
     mixing_mat_dict : dict(int: numpy.ndarray)
         Dictionnary of mixing matrix between orders and output for each phase.
     nq_dict : dict(int: list((int, int)))
@@ -748,6 +748,8 @@ class PS(_AbstractPS):
     """
 
     fft_axis = (0, 1)
+    args_diag = {'axis1': 0, 'axis2': 1}
+    args_moveaxis = {'source': -1, 'destination': 0}
 
     def __init__(self, N, nb_phase=None, **kwargs):
         super().__init__(N, nb_phase=nb_phase, **kwargs)
@@ -816,21 +818,21 @@ class PS(_AbstractPS):
     @inherit_docstring
     def _corresponding_sigs(self, out_per_phase, phase):
         dec_diag = (self.N + 1 - phase) // 2
-        args_diag = {'axis1': 0, 'axis2': 1}
-        args_moveaxis = {'source': -1, 'destination': 0}
         slice_obj = slice(dec_diag, -dec_diag) if dec_diag else slice(None)
         if phase:
-            upper_diag = np.diagonal(out_per_phase, offset=phase, **args_diag)
-            lower_diag = np.diagonal(out_per_phase, offset=-phase, **args_diag)
-            upper_diag = np.moveaxis(upper_diag, **args_moveaxis)
-            lower_diag = np.moveaxis(lower_diag, **args_moveaxis)
+            upper_diag = np.diagonal(out_per_phase, offset=phase,
+                                     **self.args_diag)
+            lower_diag = np.diagonal(out_per_phase, offset=-phase,
+                                     **self.args_diag)
+            upper_diag = np.moveaxis(upper_diag, **self.args_moveaxis)
+            lower_diag = np.moveaxis(lower_diag, **self.args_moveaxis)
             return np.concatenate((np.real(upper_diag[slice_obj]),
                                    np.real(lower_diag[slice_obj]),
                                    np.imag(upper_diag[slice_obj]),
                                    np.imag(lower_diag[slice_obj])))
         else:
-            temp = np.diagonal(out_per_phase, **args_diag)
-            temp = np.moveaxis(temp, **args_moveaxis)
+            temp = np.diagonal(out_per_phase, **self.args_diag)
+            temp = np.moveaxis(temp, **self.args_moveaxis)
             return np.real(temp[slice_obj])
 
     def _fft_mat_condition_numbers(self, p):

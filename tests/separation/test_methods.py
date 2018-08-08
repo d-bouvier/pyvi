@@ -27,15 +27,15 @@ class _OrderSeparationMethodGlobalTest():
     method = dict()
     input_dtype = {'AS': 'float',
                    'CPS': 'complex',
-                   'PS': 'complex',
+                   'RPS': 'complex',
                    'PAS': 'complex'}
     signal_dtype = {'AS': 'float',
                     'CPS': 'complex',
-                    'PS': 'float',
+                    'RPS': 'float',
                     'PAS': 'float'}
     true_input_func = {'AS': lambda x: x,
                        'CPS': lambda x: x,
-                       'PS': lambda x: np.real(x),
+                       'RPS': lambda x: np.real(x),
                        'PAS': lambda x: np.real(x)}
     tol = 5e-10
     N = [4, 5]
@@ -92,7 +92,7 @@ class NoKwargsTestCase(_OrderSeparationMethodGlobalTest, unittest.TestCase):
 
     method = {'AS': sep.AS,
               'CPS': sep.CPS,
-              'PS': sep.PS,
+              'RPS': sep.RPS,
               'PAS': sep.PAS}
 
 
@@ -126,7 +126,7 @@ class NbAmpTestCase(_OrderSeparationMethodGlobalTest, unittest.TestCase):
 class NbPhaseTestCase(_OrderSeparationMethodGlobalTest, unittest.TestCase):
 
     method = {'CPS': sep.CPS,
-              'PS': sep.PS,
+              'RPS': sep.RPS,
               'PAS': sep.PAS}
     tol = 5e-10
 
@@ -148,16 +148,16 @@ class ConstantTermTestCase(_OrderSeparationMethodGlobalTest,
 
     method = {'AS': sep.AS,
               'CPS': sep.CPS,
-              'PS': sep.PS,
+              'RPS': sep.RPS,
               'PAS': sep.PAS}
 
     def setUp(self):
         super().setUp(constant_term=True)
 
 
-class PS_RawModeTestCase(unittest.TestCase):
+class RPS_RawModeTestCase(unittest.TestCase):
 
-    method = sep.PS
+    method = sep.RPS
     N = 3
     L = 1000
 
@@ -174,7 +174,7 @@ class PS_RawModeTestCase(unittest.TestCase):
         self.assertEqual(self.term_est.keys(), keys.keys())
 
 
-class PAS_RawModeTestCase(PS_RawModeTestCase):
+class PAS_RawModeTestCase(RPS_RawModeTestCase):
 
     method = sep.PAS
 
@@ -395,9 +395,9 @@ class HPS_ConditionNumbersTest(_ConditionNumbersGlobalTest, unittest.TestCase):
     kwargs = {'nb_phase': nb_phase}
 
 
-class PS_ConditionNumbersTest(_ConditionNumbersGlobalTest, unittest.TestCase):
+class RPS_ConditionNumbersTest(_ConditionNumbersGlobalTest, unittest.TestCase):
 
-    method = sep.PS
+    method = sep.RPS
     nb_phase = 11
     results = {None: [1., 1., 8.71863649, 1., 1.],
                1: [nb_phase**2, 1+1/3, 13, 1+1/3, 1.2],
