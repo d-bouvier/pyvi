@@ -174,14 +174,20 @@ class AS(_SeparationMethod):
     ----------
     N : int
         Number of orders to separate (truncation order of the Volterra series).
+    factors : array_like, optional (default=None)
+        Factors applied to the base signal in order to create the test signals;
+        if not specified, those values will be computed using parameters
+        `gain`, `negative_gain` and `nb_amp`.
     gain : float, optional (default=0.64)
-        Gain factor in amplitude between consecutive test signals.
+        Gain factor in amplitude between consecutive test signals; if `factors`
+        is specified, this value is not used.
     negative_gain : boolean, optional (default=True)
         Defines if amplitudes with negative values can be used; this greatly
-        improves separation.
+        improves separation; if `factors` is specified, this value is not used.
     nb_amp : int, optional (default=None)
         Number of different amplitudes; must be greater than or equal to `N`;
-        if None, will be set equal to `N`.
+        if None, will be set equal to `N`; if `factors` is specified,
+        this value is not used.
     constant_term : boolean, optional (default=False)
         If True, constant term of the Volterra series (i.e. the order 0) is
         also separated; otherwise it is considered null.
@@ -196,10 +202,6 @@ class AS(_SeparationMethod):
         Number of amplitude factors; always equal to `K` for AS.
     factors : array_like
         Vector of length `K` regrouping all factors.
-    gain : float
-        Amplitude factor between consecutive test signals.
-    negative_gain : boolean
-        Boolean for use of negative values amplitudes.
     mixing_mat : numpy.ndarray
         Mixing matrix between orders and output.
     constant_term : boolean
@@ -225,14 +227,22 @@ class AS(_SeparationMethod):
     _SeparationMethod : Parent class.
     """
 
-    def __init__(self, N, gain=0.64, negative_gain=True, nb_amp=None,
-                 **kwargs):
+    def __init__(self, N, factors=None, gain=0.64, negative_gain=True,
+                 nb_amp=None, **kwargs):
         super().__init__(N, [], **kwargs)
 
-        self._check_parameter(nb_amp, 'nb_amp')
-        self.gain = gain
-        self.negative_gain = negative_gain
-        self._update_factors(self._gen_amp_factors())
+        if factors is not None:
+            nb_amp = len(factors)
+            nb_amp_min = self._compute_required_nb_amp()
+            if nb_amp < nb_amp_min:
+                raise ValueError('Not enough values in `factors` ' +
+                                 '(got {}, '.format(nb_amp) +
+                                 'expected at least {})'.format(nb_amp_min))
+            self.nb_amp = nb_amp
+            self._update_factors(factors)
+        else:
+            self._check_parameter(nb_amp, 'nb_amp')
+            self._update_factors(self._gen_amp_factors(gain, negative_gain))
 
         self.mixing_mat = \
             _create_vandermonde_mixing_mat(self.factors, self.N,
@@ -243,12 +253,12 @@ class AS(_SeparationMethod):
 
         return self._N
 
-    def _gen_amp_factors(self):
+    def _gen_amp_factors(self, gain, negative_gain):
         """Generates the vector of amplitude factors."""
 
         tmp_vec = np.arange(self.nb_amp)
-        return (-1)**(tmp_vec*self.negative_gain) * \
-                self.gain**(tmp_vec // (1+self.negative_gain))
+        return (-1)**(tmp_vec*negative_gain) * \
+                gain**(tmp_vec // (1+negative_gain))
 
     @inherit_docstring
     def process_outputs(self, output_coll):
@@ -272,7 +282,7 @@ class AS(_SeparationMethod):
     def optimum_gain(cls, N, p=2, gain_min=0., gain_max=1., gain_init=None,
                      tol=1e-6, **kwargs):
         """
-        Search for the gain that minimizes the maximum condition number.
+        Search for the gain that minimizes the condition number.
 
         Parameters
         ----------
@@ -297,7 +307,7 @@ class AS(_SeparationMethod):
         """
 
         def func(gain):
-            method_obj = cls(N, gain, **kwargs)
+            method_obj = cls(N, gain=gain, **kwargs)
             try:
                 return np.log10(max(method_obj.get_condition_numbers(p=p)))
             except (ValueError, np.linalg.linalg.LinAlgError):
@@ -872,12 +882,21 @@ class PAS(_AbstractPS, AS):
     ----------
     N : int
         Number of nonlinear orders (truncation order of the Volterra series).
-    gain : float, optional (default=0.64)
-        Gain factor in amplitude between the input test signals.
     nb_phase : int
         Number of phase factors used; should be greater than ``2*N+1``;
         choosing `nb_phase` large leads to a more robust method but also to
         more test signals.
+    gain_factors : array_like, optional (default=None)
+        Amplitude factors; if not specified, those values will be computed
+        using parameters `gain` and `nb_amp`.
+    gain : float, optional (default=0.64)
+        Gain factor in amplitude between the input test signals; if
+        `gain_factors` is specified, this value is not used.
+    nb_amp : int, optional (default=None)
+        Number of different amplitudes; must be greater than or equal to
+        ``(N + int(constant_term) + 1) // 2``; if None, will be set equal to
+        ``(N + int(constant_term) + 1) // 2``; if `gain_factors` is specified,
+        this value is not used.
     constant_term : boolean, optional (default=False)
         If True, constant term of the Volterra series (i.e. the order 0) is
         also separated; otherwise it is considered null.
@@ -898,10 +917,6 @@ class PAS(_AbstractPS, AS):
         Rejection factor; equal to None for PAS.
     w : float
         Initial phase factor.
-    gain : float
-        Amplitude factor between consecutive test signals.
-    negative_gain : boolean, class attribute
-        Boolean for use of negative values amplitudes; equal to False for PAS.
     fft_axis : int or tuple(int), class attribute
         Axis along which inverse FFT is computed; equal to 0 for PAS.
     mixing_mat_dict : dict(int: numpy.ndarray)
@@ -933,11 +948,10 @@ class PAS(_AbstractPS, AS):
     HPS, CPS, _SeparationMethod
     """
 
-    negative_gain = False
-
-    def __init__(self, N, gain=0.64, nb_phase=None, **kwargs):
-        AS.__init__(self, N, gain=gain, negative_gain=self.negative_gain,
-                    **kwargs)
+    def __init__(self, N, nb_phase=None, gain_factors=None, gain=0.64,
+                 nb_amp=None, **kwargs):
+        AS.__init__(self, N, factors=gain_factors, gain=gain, nb_amp=nb_amp,
+                    negative_gain=False, **kwargs)
         self.nb_phase = self._compute_required_nb_phase()
         self.HPS_obj = HPS(N, nb_phase=nb_phase)
 
