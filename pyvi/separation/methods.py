@@ -216,8 +216,8 @@ class AS(_SeparationMethod):
 
     Class methods
     -------------
-    best_gain( N, p=2, gain_min=.1, gain_max=.99, gain_init=None,
-              tol=1e-6, **kwargs)
+    optimum_gain(N, p=2, gain_min=.1, gain_max=.99, gain_init=None, tol=1e-6,
+                 **kwargs)
         Search for the gain that minimizes the maximum condition number.
 
     See also
@@ -269,8 +269,8 @@ class AS(_SeparationMethod):
         return [_compute_condition_number(self.mixing_mat, p=p)]
 
     @classmethod
-    def best_gain(cls, N, p=2, gain_min=.1, gain_max=.99, gain_init=None,
-                  tol=1e-6, **kwargs):
+    def optimum_gain(cls, N, p=2, gain_min=0., gain_max=1., gain_init=None,
+                     tol=1e-6, **kwargs):
         """
         Search for the gain that minimizes the maximum condition number.
 
@@ -292,20 +292,31 @@ class AS(_SeparationMethod):
 
         Returns
         -------
-        condition_numbers : list(float)
-            List of all condition numbers.
+        gain : float
+            Gain minimizing the condition number computed using norm `p`.
         """
 
         def func(gain):
             method_obj = cls(N, gain, **kwargs)
-            return max(method_obj.get_condition_numbers(p=p))
+            try:
+                return np.log10(max(method_obj.get_condition_numbers(p=p)))
+            except (ValueError, np.linalg.linalg.LinAlgError):
+                return np.inf
 
         if gain_init is None:
-            gain_init = (gain_min+gain_max)/2
+            _nb_amp = kwargs.get('nb_amp', N)
+            gain_init = min(max(np.cos(np.pi/(2*_nb_amp)), gain_min), gain_max)
 
-        results = sc_optim.minimize(func, gain_init, method='TNC',
-                                    bounds=[(gain_min, gain_max)],
-                                    options={'ftol': tol})
+        not_succeed = True
+        eps = tol
+        while not_succeed:
+            results = sc_optim.minimize(func, gain_init, method='TNC',
+                                        bounds=[(gain_min, gain_max)],
+                                        options={'ftol': tol, 'eps': eps})
+            if results.success and results.x[0] != 0 and results.x[0] != 1:
+                not_succeed = False
+            else:
+                eps *= 1e-1
 
         return results.x[0]
 
@@ -596,7 +607,6 @@ class _AbstractPS(HPS):
     CPS, _SeparationMethod
     """
 
-    negative_gain = False
     _cplx2real_mat = np.array([[1., 0], [1., 0], [0, 1.], [0, -1.]])
 
     def _create_nq_dict(self):
@@ -913,8 +923,8 @@ class PAS(_AbstractPS, AS):
 
     Class methods
     -------------
-    best_gain( N, p=2, gain_min=.1, gain_max=.99, gain_init=None,
-              tol=1e-6, **kwargs)
+    optimum_gain(N, p=2, gain_min=.1, gain_max=.99, gain_init=None, tol=1e-6,
+                 **kwargs)
         Search for the gain that minimizes the maximum condition number.
 
     See also
@@ -922,6 +932,8 @@ class PAS(_AbstractPS, AS):
     _AbstractPS, AS: Parents class
     HPS, CPS, _SeparationMethod
     """
+
+    negative_gain = False
 
     def __init__(self, N, gain=0.64, nb_phase=None, **kwargs):
         AS.__init__(self, N, gain=gain, negative_gain=self.negative_gain,

@@ -269,10 +269,9 @@ class WarningsNbPhaseTestCase(unittest.TestCase):
         self.assertWarns(UserWarning, sep.HPS, 3, nb_phase=5)
 
 
-class ASBestGainTest(unittest.TestCase):
+class ASOptimumGainTest(unittest.TestCase):
 
-    best_gains = [(3, {}, 0.526629),
-                  (3, {'p': None}, 0.526623),
+    best_gains = [(3, {}, 0.526635),
                   (3, {'negative_gain': True}, 0.526629),
                   (3, {'negative_gain': False}, 0.539772),
                   (3, {'nb_amp': 10}, 0.664619),
@@ -284,13 +283,15 @@ class ASBestGainTest(unittest.TestCase):
                    0.473819),
                   (3, {'nb_amp': 10, 'constant_term': True}, 0.726372),
                   (9, {'constant_term': True}, 0.794541)]
-    tol = 1e-6
+    tol = 1e-4
+    tol_method = 1e-6
     method = sep.AS
 
     def test_correct(self):
         for N, kwargs, ref in self.best_gains:
             with self.subTest(i=(N, kwargs)):
-                val = self.method.best_gain(N, **kwargs)
+                val = self.method.optimum_gain(N, tol=self.tol_method,
+                                               **kwargs)
                 error = abs(ref - val)
                 if error >= self.tol:
                     print()
@@ -299,18 +300,14 @@ class ASBestGainTest(unittest.TestCase):
                 self.assertTrue(error < self.tol)
 
 
-class PASBestGainTest(ASBestGainTest):
+class PASOptimumGainTest(ASOptimumGainTest):
 
     best_gains = [(3, {}, 0.538955),
                   (4, {}, 0.672761),
                   (5, {}, 0.646210),
-                  (9, {}, 0.769719),
                   (3, {'constant_term': True}, 0.538954),
                   (4, {'constant_term': True}, 0.539649),
-                  (5, {'constant_term': True}, 0.646210),
-                  (9, {'constant_term': True}, 0.769719),
-                  (3, {'p': None}, 0.538972),
-                  (3, {'p': None}, 0.538972)]
+                  (5, {'constant_term': True}, 0.646210)]
     method = sep.PAS
 
 
