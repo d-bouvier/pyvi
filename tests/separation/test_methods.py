@@ -271,17 +271,18 @@ class WarningsNbPhaseTestCase(unittest.TestCase):
 
 class ASBestGainTest(unittest.TestCase):
 
-    best_gains = [(3, {}, 0.526623),
-                  (3, {'negative_gain': True}, 0.526623),
+    best_gains = [(3, {}, 0.526629),
+                  (3, {'p': None}, 0.526623),
+                  (3, {'negative_gain': True}, 0.526629),
                   (3, {'negative_gain': False}, 0.539772),
-                  (3, {'nb_amp': 10}, 0.664593),
+                  (3, {'nb_amp': 10}, 0.664619),
                   (9, {}, 0.791742),
                   (3, {'constant_term': True}, 0.521798),
                   (3, {'negative_gain': True, 'constant_term': True},
                    0.521798),
                   (3, {'negative_gain': False, 'constant_term': True},
-                   0.473821),
-                  (3, {'nb_amp': 10, 'constant_term': True}, 0.726358),
+                   0.473819),
+                  (3, {'nb_amp': 10, 'constant_term': True}, 0.726372),
                   (9, {'constant_term': True}, 0.794541)]
     tol = 1e-6
     method = sep.AS
@@ -291,19 +292,25 @@ class ASBestGainTest(unittest.TestCase):
             with self.subTest(i=(N, kwargs)):
                 val = self.method.best_gain(N, **kwargs)
                 error = abs(ref - val)
+                if error >= self.tol:
+                    print()
+                    print(ref)
+                    print(val)
                 self.assertTrue(error < self.tol)
 
 
 class PASBestGainTest(ASBestGainTest):
 
-    best_gains = [(3, {}, 0.538972),
-                  (4, {}, 0.672760),
-                  (5, {}, 0.646206),
+    best_gains = [(3, {}, 0.538955),
+                  (4, {}, 0.672761),
+                  (5, {}, 0.646210),
                   (9, {}, 0.769719),
-                  (3, {'constant_term': True}, 0.538972),
+                  (3, {'constant_term': True}, 0.538954),
                   (4, {'constant_term': True}, 0.539649),
-                  (5, {'constant_term': True}, 0.646206),
-                  (9, {'constant_term': True}, 0.769719)]
+                  (5, {'constant_term': True}, 0.646210),
+                  (9, {'constant_term': True}, 0.769719),
+                  (3, {'p': None}, 0.538972),
+                  (3, {'p': None}, 0.538972)]
     method = sep.PAS
 
 
@@ -369,7 +376,7 @@ class CPS_ConditionNumbersTest(_ConditionNumbersGlobalTest, unittest.TestCase):
                -2: [1., 1.],
                np.inf: [nb_phase, 1.],
                -np.inf: [nb_phase, 1.],
-               'fro': [nb_phase, 3.]}
+               'fro': [1., 3.]}
     kwargs = {'nb_phase': nb_phase}
 
 
@@ -384,7 +391,7 @@ class HPS_ConditionNumbersTest(_ConditionNumbersGlobalTest, unittest.TestCase):
                -2: [1.],
                np.inf: [nb_phase],
                -np.inf: [nb_phase],
-               'fro': [nb_phase]}
+               'fro': [1.]}
     kwargs = {'nb_phase': nb_phase}
 
 
@@ -392,15 +399,14 @@ class PS_ConditionNumbersTest(_ConditionNumbersGlobalTest, unittest.TestCase):
 
     method = sep.PS
     nb_phase = 11
-    K = nb_phase*(nb_phase+1)//2
     results = {None: [1., 1., 8.71863649, 1., 1.],
-               1: [K**2, 1+1/3, 13, 1+1/3, 1.2],
-               -1: [K**2, 2/3, 1, 2/3, .4],
+               1: [nb_phase**2, 1+1/3, 13, 1+1/3, 1.2],
+               -1: [nb_phase**2, 2/3, 1, 2/3, .4],
                2: [1., 1., 8.718636499713, 1., 1.],
                -2: [1., 1., 0.114696833619, 1., 1.],
-               np.inf: [K**2, 1+1/3, 13., 1+1/3, 1.2],
-               -np.inf: [K**2, 2/3, 1., 2/3, .4],
-               'fro': [K**2, 1., 17+2/3, 2., 2.]}
+               np.inf: [nb_phase**2, 1+1/3, 13., 1+1/3, 1.2],
+               -np.inf: [nb_phase**2, 2/3, 1., 2/3, .4],
+               'fro': [1., 1., 17+2/3, 2., 2.]}
     kwargs = {'nb_phase': nb_phase}
 
 
@@ -417,7 +423,7 @@ class PAS_ConditionNumbersTest(_ConditionNumbersGlobalTest, unittest.TestCase):
                         1.18098717],
                -np.inf: [nb_phase, 0.49442192, 2.06370370, 0.49442192,
                          0.30958870],
-               'fro': [nb_phase, 1., 19.45728053, 2., 2.]}
+               'fro': [1., 1., 19.45728053, 2., 2.]}
     kwargs = {'nb_phase': nb_phase}
     tol = 1e-8
 
