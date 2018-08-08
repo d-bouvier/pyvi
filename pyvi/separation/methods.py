@@ -322,10 +322,10 @@ class CPS(_SeparationMethod):
         Number of phase factors used; should be greater than `N`; choosing
         `nb_phase` large leads to a more robust method but also to more test
         signals.
-    rho : float, optional (default=1.)
+    rho : float, optional (default=None)
         Rejection factor value for dealing with the order aliasing effect;
         must be less than 1 to reject higher-orders; must be close to 1 to
-        not enhance noise measurement.
+        not enhance noise measurement; not used if None.
     constant_term : boolean, optional (default=False)
         If True, constant term of the Volterra series (i.e. the order 0) is
         also separated; otherwise it is considered null.
@@ -373,7 +373,9 @@ class CPS(_SeparationMethod):
         self._update_factors(self._gen_phase_factors())
 
         power_min = int(not self.constant_term)
-        self.contrast_vector = (1/self.rho) ** np.arange(power_min, self.N+1)
+        if self.rho is not None:
+            self.contrast_vector = (1/self.rho) ** np.arange(power_min,
+                                                             self.N+1)
 
     def _compute_required_nb_phase(self):
         """Computes the required minium number of phase."""
@@ -385,15 +387,23 @@ class CPS(_SeparationMethod):
 
         self.w = np.exp(- 1j * 2 * np.pi / self.nb_phase)
         vec = np.arange(self.nb_phase)/self.nb_phase
-        return self.rho * np.exp(- 2j * np.pi * vec)
+        factors = np.exp(- 2j * np.pi * vec)
+        if self.rho is not None:
+            return self.rho * factors
+        else:
+            return factors
 
     @inherit_docstring
     def process_outputs(self, output_coll):
-        self.contrast_vector.shape = (self._N,) + (1,)*(output_coll.ndim-1)
         estimation = self._ifft(output_coll)
         if not self.constant_term:
             estimation = np.roll(estimation, -1, axis=0)
-        return self.contrast_vector * estimation[:self._N]
+        estimation = estimation[:self._N]
+        if self.rho is not None:
+            self.contrast_vector.shape = (self._N,) + (1,)*(output_coll.ndim-1)
+            return self.contrast_vector * estimation
+        else:
+            return estimation
 
     def _ifft(self, output_coll):
         """Inverse Discrete Fourier Transform using the FFT algorithm."""
@@ -402,8 +412,10 @@ class CPS(_SeparationMethod):
 
     @inherit_docstring
     def get_condition_numbers(self, p=2):
-        return [self._fft_mat_condition_numbers(p),
-                self._contrast_condition_numbers(p)]
+        condition_numbers = [self._fft_mat_condition_numbers(p)]
+        if self.rho is not None:
+            condition_numbers.append(self._contrast_condition_numbers(p))
+        return condition_numbers
 
     def _fft_mat_condition_numbers(self, p):
         if p in [None, 'fro', 2, -2]:
@@ -439,7 +451,7 @@ class HPS(CPS):
     factors : array_like
         Vector of length `K` regrouping all factors.
     rho : float, class attribute
-        Rejection factor; equal to 1 (not used) for HPS.
+        Rejection factor; equal to None for HPS.
     w : float
         Initial phase factor.
     fft_axis : int or tuple(int), class attribute
@@ -463,7 +475,7 @@ class HPS(CPS):
     _SeparationMethod
     """
 
-    rho = 1
+    rho = None
 
     def __init__(self, N, nb_phase=None, **kwargs):
         super().__init__(N, nb_phase=nb_phase, rho=self.rho, **kwargs)
@@ -556,7 +568,7 @@ class _AbstractPS(HPS):
     factors : array_like
         Vector of length `K` regrouping all factors.
     rho : float, class attribute
-        Rejection factor; equal to 1 (not used) for _AbstractPS.
+        Rejection factor; equal to None for _AbstractPS.
     w : float
         Initial phase factor.
     fft_axis : int or tuple(int), class attribute
@@ -719,7 +731,7 @@ class RPS(_AbstractPS):
     factors : array_like
         Vector of length `K` regrouping all factors.
     rho : float, class attribute
-        Rejection factor; equal to 1 (not used) for RPS.
+        Rejection factor; equal to None for RPS.
     w : float
         Initial phase factor.
     fft_axis : int or tuple(int), class attribute
@@ -873,7 +885,7 @@ class PAS(_AbstractPS, AS):
     factors : array_like
         Vector of length `K` regrouping all factors.
     rho : float, class attribute
-        Rejection factor; equal to 1 (not used) for PAS.
+        Rejection factor; equal to None for PAS.
     w : float
         Initial phase factor.
     gain : float
