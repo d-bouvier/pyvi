@@ -96,6 +96,23 @@ class NoKwargsTestCase(_OrderSeparationMethodGlobalTest, unittest.TestCase):
               'PAS': sep.PAS}
 
 
+class FactorsTestCase(_OrderSeparationMethodGlobalTest, unittest.TestCase):
+
+    method = {'AS': sep.AS}
+
+    def setUp(self):
+        super().setUp(factors=[1, 0.8, 0.5, 0.2, 0.1])
+
+
+class GainFactorsTestCase(_OrderSeparationMethodGlobalTest, unittest.TestCase):
+
+    method = {'PAS': sep.PAS}
+
+    def setUp(self):
+        super().setUp(gain_factors=[1, 0.5, 0.2])
+
+
+
 class GainTestCase(_OrderSeparationMethodGlobalTest, unittest.TestCase):
 
     method = {'AS': sep.AS,
@@ -117,7 +134,8 @@ class NegativeGainTestCase(_OrderSeparationMethodGlobalTest,
 
 class NbAmpTestCase(_OrderSeparationMethodGlobalTest, unittest.TestCase):
 
-    method = {'AS': sep.AS}
+    method = {'AS': sep.AS,
+              'PAS': sep.PAS}
 
     def setUp(self):
         super().setUp(nb_amp=3*max(self.N))
@@ -153,30 +171,6 @@ class ConstantTermTestCase(_OrderSeparationMethodGlobalTest,
 
     def setUp(self):
         super().setUp(constant_term=True)
-
-
-class RPS_RawModeTestCase(unittest.TestCase):
-
-    method = sep.RPS
-    N = 3
-    L = 1000
-
-    def setUp(self):
-        method = self.method(self.N)
-        output_coll = np.zeros((method.K, self.L))
-        _, self.term_est = method.process_outputs(output_coll, raw_mode=True)
-
-    def test_keys(self):
-        keys = dict()
-        for n in range(1, self.N+1):
-            for k in range(n//2 + 1):
-                keys[(n, k)] = ()
-        self.assertEqual(self.term_est.keys(), keys.keys())
-
-
-class PAS_RawModeTestCase(RPS_RawModeTestCase):
-
-    method = sep.PAS
 
 
 class HPS_Test(_OrderSeparationMethodGlobalTest, unittest.TestCase):
@@ -254,9 +248,33 @@ class HPS_GenInputsTestCase(unittest.TestCase):
                 self.assertIsInstance(outputs, out_type)
 
 
+class RPS_RawModeTestCase(unittest.TestCase):
+
+    method = sep.RPS
+    N = 3
+    L = 1000
+
+    def setUp(self):
+        method = self.method(self.N)
+        output_coll = np.zeros((method.K, self.L))
+        _, self.term_est = method.process_outputs(output_coll, raw_mode=True)
+
+    def test_keys(self):
+        keys = dict()
+        for n in range(1, self.N+1):
+            for k in range(n//2 + 1):
+                keys[(n, k)] = ()
+        self.assertEqual(self.term_est.keys(), keys.keys())
+
+
+class PAS_RawModeTestCase(RPS_RawModeTestCase):
+
+    method = sep.PAS
+
+
 class WarningsNbAmpTestCase(unittest.TestCase):
 
-    def test_warnings_CPS(self):
+    def test_warnings_AS(self):
         self.assertWarns(UserWarning, sep.AS, 3, nb_amp=2)
 
 
@@ -269,46 +287,12 @@ class WarningsNbPhaseTestCase(unittest.TestCase):
         self.assertWarns(UserWarning, sep.HPS, 3, nb_phase=5)
 
 
-class ASOptimumGainTest(unittest.TestCase):
+class ErrorASNotEnoughFactorsTestCase(unittest.TestCase):
 
-    best_gains = [(3, {}, 0.526635),
-                  (3, {'negative_gain': True}, 0.526629),
-                  (3, {'negative_gain': False}, 0.539772),
-                  (3, {'nb_amp': 10}, 0.664619),
-                  (9, {}, 0.791742),
-                  (3, {'constant_term': True}, 0.521798),
-                  (3, {'negative_gain': True, 'constant_term': True},
-                   0.521798),
-                  (3, {'negative_gain': False, 'constant_term': True},
-                   0.473819),
-                  (3, {'nb_amp': 10, 'constant_term': True}, 0.726372),
-                  (9, {'constant_term': True}, 0.794541)]
-    tol = 1e-4
-    tol_method = 1e-6
-    method = sep.AS
+    method = sep._SeparationMethod(3, [])
 
-    def test_correct(self):
-        for N, kwargs, ref in self.best_gains:
-            with self.subTest(i=(N, kwargs)):
-                val = self.method.optimum_gain(N, tol=self.tol_method,
-                                               **kwargs)
-                error = abs(ref - val)
-                if error >= self.tol:
-                    print()
-                    print(ref)
-                    print(val)
-                self.assertTrue(error < self.tol)
-
-
-class PASOptimumGainTest(ASOptimumGainTest):
-
-    best_gains = [(3, {}, 0.538955),
-                  (4, {}, 0.672761),
-                  (5, {}, 0.646210),
-                  (3, {'constant_term': True}, 0.538954),
-                  (4, {'constant_term': True}, 0.539649),
-                  (5, {'constant_term': True}, 0.646210)]
-    method = sep.PAS
+    def test_error_raised(self):
+        self.assertRaises(ValueError, sep.AS, 3, factors=[1, 0.5])
 
 
 class ErrorMultiDimInputTestCase(unittest.TestCase):
@@ -423,6 +407,48 @@ class PAS_ConditionNumbersTest(_ConditionNumbersGlobalTest, unittest.TestCase):
                'fro': [1., 1., 19.45728053, 2., 2.]}
     kwargs = {'nb_phase': nb_phase}
     tol = 1e-8
+
+
+class ASOptimumGainTest(unittest.TestCase):
+
+    best_gains = [(3, {}, 0.526635),
+                  (3, {'negative_gain': True}, 0.526629),
+                  (3, {'negative_gain': False}, 0.539772),
+                  (3, {'nb_amp': 10}, 0.664619),
+                  (9, {}, 0.791742),
+                  (3, {'constant_term': True}, 0.521798),
+                  (3, {'negative_gain': True, 'constant_term': True},
+                   0.521798),
+                  (3, {'negative_gain': False, 'constant_term': True},
+                   0.473819),
+                  (3, {'nb_amp': 10, 'constant_term': True}, 0.726372),
+                  (9, {'constant_term': True}, 0.794541)]
+    tol = 1e-4
+    tol_method = 1e-6
+    method = sep.AS
+
+    def test_correct(self):
+        for N, kwargs, ref in self.best_gains:
+            with self.subTest(i=(N, kwargs)):
+                val = self.method.optimum_gain(N, tol=self.tol_method,
+                                               **kwargs)
+                error = abs(ref - val)
+                if error >= self.tol:
+                    print()
+                    print(ref)
+                    print(val)
+                self.assertTrue(error < self.tol)
+
+
+class PASOptimumGainTest(ASOptimumGainTest):
+
+    best_gains = [(3, {}, 0.538955),
+                  (4, {}, 0.672761),
+                  (5, {}, 0.646210),
+                  (3, {'constant_term': True}, 0.538954),
+                  (4, {'constant_term': True}, 0.539649),
+                  (5, {'constant_term': True}, 0.646210)]
+    method = sep.PAS
 
 
 #==============================================================================

@@ -66,9 +66,11 @@ class VolterraTestCase(PyviTestCase):
 class SeparationTestCase(PyviTestCase):
 
     module = pyvi.separation
-    needed_properties = ['AS', 'CPS', 'HPS', 'PS', 'PAS']
+    needed_properties = ['AS', 'CPS', 'HPS', 'RPS', 'PAS']
     should_be_absent_properties = ['_SeparationMethod', '_AbstractPS',
-                                   '_create_vandermonde_mixing_mat']
+                                   '_create_vandermonde_mixing_mat',
+                                   '_compute_condition_number',
+                                   '_demix_coll']
 
 
 
