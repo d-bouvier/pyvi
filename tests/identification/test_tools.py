@@ -127,10 +127,6 @@ class CastSigComplex2RealTest(unittest.TestCase):
         self.imag = np.array([2, 4])
         self.real_imag = np.array([1, 3, 2, 4])
 
-    def test_default_mode(self):
-        result = _cast_sig_complex2real(self.val)
-        self.assertTrue(np.all(result == self.real_imag))
-
     def test_real_mode(self):
         result = _cast_sig_complex2real(self.val, cast_mode='real')
         self.assertTrue(np.all(result == self.real))
