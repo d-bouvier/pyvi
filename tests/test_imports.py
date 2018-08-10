@@ -55,8 +55,7 @@ class VolterraTestCase(PyviTestCase):
 class SeparationTestCase(PyviTestCase):
 
     module = pyvi.separation
-    needed_properties = ['AS', 'CPS', 'HPS', 'PS', 'PAS']
-
+    needed_properties = ['AS', 'CPS', 'HPS', 'RPS', 'PAS']
 
 
 class IdentificationTestCase(PyviTestCase):

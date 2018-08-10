@@ -20,7 +20,7 @@ from pyvi.identification.methods import (direct_method, order_method,
                                          phase_method, _check_parameters,
                                          _compute_list_nb_coeff,
                                           compute_combinatorial_basis)
-from pyvi.separation.methods import HPS, PS
+from pyvi.separation.methods import HPS, RPS
 from pyvi.utilities.orthogonal_basis import LaguerreBasis
 
 
@@ -113,7 +113,7 @@ class TermMethodTest(DirectMethodTest):
         return super()._create_input() + 1j * super()._create_input()
 
     def _create_output(self, input_sig):
-        sep_method = PS(self.N)
+        sep_method = RPS(self.N)
         input_coll = sep_method.gen_inputs(input_sig)
         output_coll = np.zeros(input_coll.shape)
         for ind in range(input_coll.shape[0]):

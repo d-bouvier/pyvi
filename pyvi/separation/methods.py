@@ -13,7 +13,7 @@ CPS :
     Class for Complex Phase-based Separation method using complex signals.
 HPS :
     Class for Phase-based Separation method into homophase signals.
-PS :
+RPS :
     Class for Phase-based Separation method using real signals and 2D-DFT.
 PAS :
     Class for Phase-and-Amplitude-based Separation method using real signals.
@@ -24,7 +24,7 @@ Developed for Python 3.6
 @author: Damien Bouvier (Damien.Bouvier@ircam.fr)
 """
 
-__all__ = ['AS', 'CPS', 'HPS', 'PS', 'PAS']
+__all__ = ['AS', 'CPS', 'HPS', 'RPS', 'PAS']
 
 
 #==============================================================================
@@ -69,8 +69,6 @@ class _SeparationMethod:
         Number of tests signals.
     factors : array_like
         Vector of length `K` regrouping all factors.
-    condition_numbers : list(float)
-        List of condition numbers of all matrix inverted during separation.
     constant_term : boolean
         Whether constant term of the Volterra series is separated.
 
@@ -80,7 +78,7 @@ class _SeparationMethod:
         Returns the collection of input test signals.
     process_outputs(output_coll)
         Process outputs and returns estimated orders.
-    get_condition_numbers(p=None)
+    get_condition_numbers(p=2)
         Return the list of all condition numbers in the separation method.
     """
 
@@ -88,7 +86,6 @@ class _SeparationMethod:
         self.N = N
         self.factors = factors
         self.K = len(factors)
-        self.condition_numbers = []
         self.constant_term = constant_term
         self._N = self.N + int(self.constant_term)
 
@@ -98,8 +95,8 @@ class _SeparationMethod:
 
         Parameters
         ----------
-        signal : array_like
-            Input signal.
+        signal : numpy.ndarray
+            Input signal; must be equivaent to a 1D array.
 
         Returns
         -------
@@ -107,6 +104,10 @@ class _SeparationMethod:
             Collection of the input test signals; its shape verifies
             ``input_coll.shape == (self.K,) + signal.shape``.
         """
+
+        if len(np.squeeze(signal).shape) != 1:
+            raise ValueError('Multi-dimensional input signals are not (yet) '
+                             'handled by separation methods.')
 
         return np.tensordot(self.factors, signal, axes=0)
 
@@ -124,7 +125,7 @@ class _SeparationMethod:
         -------
         output_by_order : numpy.ndarray
             Estimation of the nonlinear homogeneous orders; it verifies
-            ``output_by_order.shape[0] == (self.N + self.constant_term,)`` and
+            ``output_by_order.shape[0] == self.N + self.constant_term`` and
             ``output_by_order.shape[1:] == output_coll.shape[1:]``.
         """
 
@@ -139,20 +140,20 @@ class _SeparationMethod:
         if nb is not None:
             if nb < nb_min:
                 message = "Specified `{}` parameter is lower than " + \
-                          "the minimum needed ({}) .Instead, minimum was used."
+                          "the minimum needed ({}). Instead, minimum was used."
                 warnings.warn(message.format(name, nb_min), UserWarning)
                 nb = nb_min
             setattr(self, name, nb)
         else:
             setattr(self, name, nb_min)
 
-    def get_condition_numbers(self, p=None):
+    def get_condition_numbers(self, p=2):
         """
         Return the list of all condition numbers in the separation method.
 
         Parameters
         ----------
-        p : {None, 1, -1, 2, -2, inf, -inf, 'fro'}, optional
+        p : {None, 1, -1, 2, -2, inf, -inf, 'fro'}, optional (default=2)
             Order of the norm
             :ref:`(see np.linalg.norm for more details) <np.linalg.norm>`.
 
@@ -173,14 +174,20 @@ class AS(_SeparationMethod):
     ----------
     N : int
         Number of orders to separate (truncation order of the Volterra series).
+    factors : array_like, optional (default=None)
+        Factors applied to the base signal in order to create the test signals;
+        if not specified, those values will be computed using parameters
+        `gain`, `negative_gain` and `nb_amp`.
     gain : float, optional (default=0.64)
-        Gain factor in amplitude between consecutive test signals.
+        Gain factor in amplitude between consecutive test signals; if `factors`
+        is specified, this value is not used.
     negative_gain : boolean, optional (default=True)
         Defines if amplitudes with negative values can be used; this greatly
-        improves separation.
+        improves separation; if `factors` is specified, this value is not used.
     nb_amp : int, optional (default=None)
         Number of different amplitudes; must be greater than or equal to `N`;
-        if None, will be set equal to `N`.
+        if None, will be set equal to `N`; if `factors` is specified,
+        this value is not used.
     constant_term : boolean, optional (default=False)
         If True, constant term of the Volterra series (i.e. the order 0) is
         also separated; otherwise it is considered null.
@@ -195,14 +202,8 @@ class AS(_SeparationMethod):
         Number of amplitude factors; always equal to `K` for AS.
     factors : array_like
         Vector of length `K` regrouping all factors.
-    gain : float
-        Amplitude factor between consecutive test signals.
-    negative_gain : boolean
-        Boolean for use of negative values amplitudes.
     mixing_mat : numpy.ndarray
         Mixing matrix between orders and output.
-    condition_numbers : list(float)
-        List of condition numbers of all matrix inverted during separation.
     constant_term : boolean
         Whether constant term of the Volterra series is separated.
 
@@ -212,13 +213,13 @@ class AS(_SeparationMethod):
         Returns the collection of input test signals.
     process_outputs(output_coll)
         Process outputs and returns estimated orders.
-    get_condition_numbers(p=None)
+    get_condition_numbers(p=2)
         Return the list of all condition numbers in the separation method.
 
     Class methods
     -------------
-    best_gain( N, p=None, gain_min=.1, gain_max=.99, gain_init=None,
-              tol=1e-6, **kwargs)
+    optimum_gain(N, p=2, gain_min=.1, gain_max=.99, gain_init=None, tol=1e-6,
+                 **kwargs)
         Search for the gain that minimizes the maximum condition number.
 
     See also
@@ -226,14 +227,22 @@ class AS(_SeparationMethod):
     _SeparationMethod : Parent class.
     """
 
-    def __init__(self, N, gain=0.64, negative_gain=True, nb_amp=None,
-                 **kwargs):
+    def __init__(self, N, factors=None, gain=0.64, negative_gain=True,
+                 nb_amp=None, **kwargs):
         super().__init__(N, [], **kwargs)
 
-        self._check_parameter(nb_amp, 'nb_amp')
-        self.gain = gain
-        self.negative_gain = negative_gain
-        self._update_factors(self._gen_amp_factors())
+        if factors is not None:
+            nb_amp = len(factors)
+            nb_amp_min = self._compute_required_nb_amp()
+            if nb_amp < nb_amp_min:
+                raise ValueError('Not enough values in `factors` ' +
+                                 '(got {}, '.format(nb_amp) +
+                                 'expected at least {})'.format(nb_amp_min))
+            self.nb_amp = nb_amp
+            self._update_factors(factors)
+        else:
+            self._check_parameter(nb_amp, 'nb_amp')
+            self._update_factors(self._gen_amp_factors(gain, negative_gain))
 
         self.mixing_mat = \
             _create_vandermonde_mixing_mat(self.factors, self.N,
@@ -244,12 +253,12 @@ class AS(_SeparationMethod):
 
         return self._N
 
-    def _gen_amp_factors(self):
+    def _gen_amp_factors(self, gain, negative_gain):
         """Generates the vector of amplitude factors."""
 
         tmp_vec = np.arange(self.nb_amp)
-        return (-1)**(tmp_vec*self.negative_gain) * \
-                self.gain**(tmp_vec // (1+self.negative_gain))
+        return (-1)**(tmp_vec*negative_gain) * \
+                gain**(tmp_vec // (1+negative_gain))
 
     @inherit_docstring
     def process_outputs(self, output_coll):
@@ -266,20 +275,20 @@ class AS(_SeparationMethod):
         return np.tensordot(inv_mixing_mat, sig_coll, axes=1)
 
     @inherit_docstring
-    def get_condition_numbers(self, p=None):
+    def get_condition_numbers(self, p=2):
         return [_compute_condition_number(self.mixing_mat, p=p)]
 
     @classmethod
-    def best_gain(cls, N, p=None, gain_min=.1, gain_max=.99, gain_init=None,
-                  tol=1e-6, **kwargs):
+    def optimum_gain(cls, N, p=2, gain_min=0., gain_max=1., gain_init=None,
+                     tol=1e-6, **kwargs):
         """
-        Search for the gain that minimizes the maximum condition number.
+        Search for the gain that minimizes the condition number.
 
         Parameters
         ----------
         N : int
             Truncation order.
-        p : {None, 1, -1, 2, -2, inf, -inf, 'fro'}, optional
+        p : {None, 1, -1, 2, -2, inf, -inf, 'fro'}, optional (default=2)
             Order of the norm
             :ref:`(see np.linalg.norm for more details) <np.linalg.norm>`.
         gain_min : float, optional (default=0.1)
@@ -293,20 +302,31 @@ class AS(_SeparationMethod):
 
         Returns
         -------
-        condition_numbers : list(float)
-            List of all condition numbers.
+        gain : float
+            Gain minimizing the condition number computed using norm `p`.
         """
 
         def func(gain):
-            method_obj = cls(N, gain, **kwargs)
-            return max(method_obj.get_condition_numbers(p=p))
+            method_obj = cls(N, gain=gain, **kwargs)
+            try:
+                return np.log10(max(method_obj.get_condition_numbers(p=p)))
+            except (ValueError, np.linalg.linalg.LinAlgError):
+                return np.inf
 
         if gain_init is None:
-            gain_init = (gain_min+gain_max)/2
+            _nb_amp = kwargs.get('nb_amp', N)
+            gain_init = min(max(np.cos(np.pi/(2*_nb_amp)), gain_min), gain_max)
 
-        results = sc_optim.minimize(func, gain_init, method='TNC',
-                                    bounds=[(gain_min, gain_max)],
-                                    options={'ftol': tol})
+        not_succeed = True
+        eps = tol
+        while not_succeed:
+            results = sc_optim.minimize(func, gain_init, method='TNC',
+                                        bounds=[(gain_min, gain_max)],
+                                        options={'ftol': tol, 'eps': eps})
+            if results.success and results.x[0] != 0 and results.x[0] != 1:
+                not_succeed = False
+            else:
+                eps *= 1e-1
 
         return results.x[0]
 
@@ -323,10 +343,10 @@ class CPS(_SeparationMethod):
         Number of phase factors used; should be greater than `N`; choosing
         `nb_phase` large leads to a more robust method but also to more test
         signals.
-    rho : float, optional (default=1.)
+    rho : float, optional (default=None)
         Rejection factor value for dealing with the order aliasing effect;
         must be less than 1 to reject higher-orders; must be close to 1 to
-        not enhance noise measurement.
+        not enhance noise measurement; not used if None.
     constant_term : boolean, optional (default=False)
         If True, constant term of the Volterra series (i.e. the order 0) is
         also separated; otherwise it is considered null.
@@ -347,8 +367,6 @@ class CPS(_SeparationMethod):
         Initial phase factor.
     fft_axis : int, class attribute
         Axis along which to compute the inverse FFT; equal to 0 for CPS.
-    condition_numbers : list(float)
-        List of condition numbers of all matrix inverted during separation.
     constant_term : boolean
         Whether constant term of the Volterra series is separated.
 
@@ -358,7 +376,7 @@ class CPS(_SeparationMethod):
         Returns the collection of input test signals.
     process_outputs(output_coll)
         Process outputs and returns estimated orders.
-    get_condition_numbers(p=None)
+    get_condition_numbers(p=2)
         Return the list of all condition numbers in the separation method.
 
     See also
@@ -376,7 +394,9 @@ class CPS(_SeparationMethod):
         self._update_factors(self._gen_phase_factors())
 
         power_min = int(not self.constant_term)
-        self.contrast_vector = (1/self.rho) ** np.arange(power_min, self.N+1)
+        if self.rho is not None:
+            self.contrast_vector = (1/self.rho) ** np.arange(power_min,
+                                                             self.N+1)
 
     def _compute_required_nb_phase(self):
         """Computes the required minium number of phase."""
@@ -388,15 +408,23 @@ class CPS(_SeparationMethod):
 
         self.w = np.exp(- 1j * 2 * np.pi / self.nb_phase)
         vec = np.arange(self.nb_phase)/self.nb_phase
-        return self.rho * np.exp(- 2j * np.pi * vec)
+        factors = np.exp(- 2j * np.pi * vec)
+        if self.rho is not None:
+            return self.rho * factors
+        else:
+            return factors
 
     @inherit_docstring
     def process_outputs(self, output_coll):
-        self.contrast_vector.shape = (self._N,) + (1,)*(output_coll.ndim-1)
         estimation = self._ifft(output_coll)
         if not self.constant_term:
             estimation = np.roll(estimation, -1, axis=0)
-        return self.contrast_vector * estimation[:self._N]
+        estimation = estimation[:self._N]
+        if self.rho is not None:
+            self.contrast_vector.shape = (self._N,) + (1,)*(output_coll.ndim-1)
+            return self.contrast_vector * estimation
+        else:
+            return estimation
 
     def _ifft(self, output_coll):
         """Inverse Discrete Fourier Transform using the FFT algorithm."""
@@ -404,14 +432,16 @@ class CPS(_SeparationMethod):
         return sc_fft.ifft(output_coll, n=self.nb_phase, axis=self.fft_axis)
 
     @inherit_docstring
-    def get_condition_numbers(self, p=None):
-        return [self._fft_mat_condition_numbers(p),
-                self._contrast_condition_numbers(p)]
+    def get_condition_numbers(self, p=2):
+        condition_numbers = [self._fft_mat_condition_numbers(p)]
+        if self.rho is not None:
+            condition_numbers.append(self._contrast_condition_numbers(p))
+        return condition_numbers
 
     def _fft_mat_condition_numbers(self, p):
-        if p in [None, 2, -2]:
+        if p in [None, 'fro', 2, -2]:
             return 1
-        if p in ['fro', np.inf, -np.inf, 1, -1]:
+        if p in [np.inf, -np.inf, 1, -1]:
             return self.nb_phase
 
     def _contrast_condition_numbers(self, p):
@@ -442,13 +472,11 @@ class HPS(CPS):
     factors : array_like
         Vector of length `K` regrouping all factors.
     rho : float, class attribute
-        Rejection factor; equal to 1 (not used) for HPS.
+        Rejection factor; equal to None for HPS.
     w : float
         Initial phase factor.
     fft_axis : int or tuple(int), class attribute
         Axis along which inverse FFT is computed; equal to 0 for HPS.
-    condition_numbers : list(float)
-        List of condition numbers of all matrix inverted during separation.
     constant_term : False
         Whether constant term of the Volterra series is separated; have no
         effect for HPS.
@@ -459,7 +487,7 @@ class HPS(CPS):
         Returns the collection of input test signals.
     process_outputs(output_coll)
         Process outputs and returns estimated homophase signals.
-    get_condition_numbers(p=None)
+    get_condition_numbers(p=2)
         Return the list of all condition numbers in the separation method.
 
     See also
@@ -468,7 +496,7 @@ class HPS(CPS):
     _SeparationMethod
     """
 
-    rho = 1
+    rho = None
 
     def __init__(self, N, nb_phase=None, **kwargs):
         super().__init__(N, nb_phase=nb_phase, rho=self.rho, **kwargs)
@@ -483,8 +511,8 @@ class HPS(CPS):
 
         Parameters
         ----------
-        signal : array_like
-            Input signal.
+        signal : numpy.ndarray
+            Input signal; must be equivaent to a 1D array.
         return_cplx_sig : boolean, optional (default=False)
             If `signal`is real-valued, chosses Whether to return the complex
             signal constructed from its hilbert transform.
@@ -533,7 +561,7 @@ class HPS(CPS):
         return np.concatenate((temp[0:self.N+1], temp[-self.N:]), axis=0)
 
     @inherit_docstring
-    def get_condition_numbers(self, p=None):
+    def get_condition_numbers(self, p=2):
         return [self._fft_mat_condition_numbers(p)]
 
 
@@ -561,7 +589,7 @@ class _AbstractPS(HPS):
     factors : array_like
         Vector of length `K` regrouping all factors.
     rho : float, class attribute
-        Rejection factor; equal to 1 (not used) for _AbstractPS.
+        Rejection factor; equal to None for _AbstractPS.
     w : float
         Initial phase factor.
     fft_axis : int or tuple(int), class attribute
@@ -570,8 +598,6 @@ class _AbstractPS(HPS):
         Dictionnary of mixing matrix between orders and output for each phase.
     nq_dict : dict(int: list((int, int)))
         Dictionnary of list of tuples (n, q) for each phase.
-    condition_numbers : list(float)
-        List of condition numbers of all matrix inverted during separation.
     constant_term : False
         Whether constant term of the Volterra series is separated; have no
         effect for HPS.
@@ -580,9 +606,9 @@ class _AbstractPS(HPS):
     -------
     gen_inputs(signal, return_cplx_sig=False)
         Returns the collection of input test signals.
-    process_output(output_coll, raw_mode=False)
+    process_outputs(output_coll, raw_mode=False)
         Process outputs and returns estimated orders or interconjugate terms.
-    get_condition_numbers(p=None)
+    get_condition_numbers(p=2)
         Return the list of all condition numbers in the separation method.
 
     See also
@@ -591,7 +617,6 @@ class _AbstractPS(HPS):
     CPS, _SeparationMethod
     """
 
-    negative_gain = False
     _cplx2real_mat = np.array([[1., 0], [1., 0], [0, 1.], [0, -1.]])
 
     def _create_nq_dict(self):
@@ -639,12 +664,12 @@ class _AbstractPS(HPS):
         -------
         output_by_order : numpy.ndarray
             Estimation of the nonlinear homogeneous orders; it verifies
-            ``output_by_order.shape[0] == (self.N + self.constant_term,)`` and
+            ``output_by_order.shape[0] == self.N + self.constant_term`` and
             ``output_by_order.shape[1:] == output_coll.shape[1:]``.
         interconjugate_terms : dict((int, int): numpy.ndarray)
             Dictionary of the estimated interconjugate terms; contains
             all keys ``(n, q)`` for ``n in range(1, N+1)`` and
-            ``q in range(1+n//2)``; each term verify
+            ``q in range(1+n//2)``; each corresponding value verifies
             ``interconjugate_terms[(n, q)].shape == output_coll.shape[1:]``.
         """
 
@@ -692,14 +717,14 @@ class _AbstractPS(HPS):
         raise NotImplementedError
 
     @inherit_docstring
-    def get_condition_numbers(self, p=None):
+    def get_condition_numbers(self, p=2):
         condition_numbers = super().get_condition_numbers(p=p)
         for mat in self.mixing_mat_dict.values():
             condition_numbers.append(_compute_condition_number(mat, p=p))
         return condition_numbers
 
 
-class PS(_AbstractPS):
+class RPS(_AbstractPS):
     """
     Class for Phase-based Separation method using real signals (and 2D-DFT).
 
@@ -726,17 +751,15 @@ class PS(_AbstractPS):
     factors : array_like
         Vector of length `K` regrouping all factors.
     rho : float, class attribute
-        Rejection factor; equal to 1 (not used) for PS.
+        Rejection factor; equal to None for RPS.
     w : float
         Initial phase factor.
     fft_axis : int or tuple(int), class attribute
-        Axis along which inverse FFT is computed; equal to (0, 1) for PS.
+        Axis along which inverse FFT is computed; equal to (0, 1) for RPS.
     mixing_mat_dict : dict(int: numpy.ndarray)
         Dictionnary of mixing matrix between orders and output for each phase.
     nq_dict : dict(int: list((int, int)))
         Dictionnary of list of tuples (n, q) for each phase.
-    condition_numbers : list(float)
-        List of condition numbers of all matrix inverted during separation.
     constant_term : False
         Whether constant term of the Volterra series is separated; have no
         effect for HPS.
@@ -745,9 +768,9 @@ class PS(_AbstractPS):
     -------
     gen_inputs(signal, return_cplx_sig=False)
         Returns the collection of input test signals.
-    process_output(output_coll, raw_mode=False, N=None, constant_term=None)
+    process_outputs(output_coll, raw_mode=False, N=None, constant_term=None)
         Process outputs and returns estimated orders or interconjugate terms.
-    get_condition_numbers(p=None)
+    get_condition_numbers(p=2)
         Return the list of all condition numbers in the separation method.
 
     See also
@@ -757,6 +780,8 @@ class PS(_AbstractPS):
     """
 
     fft_axis = (0, 1)
+    args_diag = {'axis1': 0, 'axis2': 1}
+    args_moveaxis = {'source': -1, 'destination': 0}
 
     def __init__(self, N, nb_phase=None, **kwargs):
         super().__init__(N, nb_phase=nb_phase, **kwargs)
@@ -825,28 +850,28 @@ class PS(_AbstractPS):
     @inherit_docstring
     def _corresponding_sigs(self, out_per_phase, phase):
         dec_diag = (self.N + 1 - phase) // 2
-        args_diag = {'axis1': 0, 'axis2': 1}
-        args_moveaxis = {'source': -1, 'destination': 0}
         slice_obj = slice(dec_diag, -dec_diag) if dec_diag else slice(None)
         if phase:
-            upper_diag = np.diagonal(out_per_phase, offset=phase, **args_diag)
-            lower_diag = np.diagonal(out_per_phase, offset=-phase, **args_diag)
-            upper_diag = np.moveaxis(upper_diag, **args_moveaxis)
-            lower_diag = np.moveaxis(lower_diag, **args_moveaxis)
+            upper_diag = np.diagonal(out_per_phase, offset=phase,
+                                     **self.args_diag)
+            lower_diag = np.diagonal(out_per_phase, offset=-phase,
+                                     **self.args_diag)
+            upper_diag = np.moveaxis(upper_diag, **self.args_moveaxis)
+            lower_diag = np.moveaxis(lower_diag, **self.args_moveaxis)
             return np.concatenate((np.real(upper_diag[slice_obj]),
                                    np.real(lower_diag[slice_obj]),
                                    np.imag(upper_diag[slice_obj]),
                                    np.imag(lower_diag[slice_obj])))
         else:
-            temp = np.diagonal(out_per_phase, **args_diag)
-            temp = np.moveaxis(temp, **args_moveaxis)
+            temp = np.diagonal(out_per_phase, **self.args_diag)
+            temp = np.moveaxis(temp, **self.args_moveaxis)
             return np.real(temp[slice_obj])
 
     def _fft_mat_condition_numbers(self, p):
-        if p in [None, 2, -2]:
+        if p in [None, 'fro', 2, -2]:
             return 1
-        if p in ['fro', np.inf, -np.inf, 1, -1]:
-            return self.K**2
+        if p in [np.inf, -np.inf, 1, -1]:
+            return self.nb_phase**2
 
 
 class PAS(_AbstractPS, AS):
@@ -857,12 +882,21 @@ class PAS(_AbstractPS, AS):
     ----------
     N : int
         Number of nonlinear orders (truncation order of the Volterra series).
-    gain : float, optional (default=0.64)
-        Gain factor in amplitude between the input test signals.
     nb_phase : int
         Number of phase factors used; should be greater than ``2*N+1``;
         choosing `nb_phase` large leads to a more robust method but also to
         more test signals.
+    gain_factors : array_like, optional (default=None)
+        Amplitude factors; if not specified, those values will be computed
+        using parameters `gain` and `nb_amp`.
+    gain : float, optional (default=0.64)
+        Gain factor in amplitude between the input test signals; if
+        `gain_factors` is specified, this value is not used.
+    nb_amp : int, optional (default=None)
+        Number of different amplitudes; must be greater than or equal to
+        ``(N + int(constant_term) + 1) // 2``; if None, will be set equal to
+        ``(N + int(constant_term) + 1) // 2``; if `gain_factors` is specified,
+        this value is not used.
     constant_term : boolean, optional (default=False)
         If True, constant term of the Volterra series (i.e. the order 0) is
         also separated; otherwise it is considered null.
@@ -880,21 +914,15 @@ class PAS(_AbstractPS, AS):
     factors : array_like
         Vector of length `K` regrouping all factors.
     rho : float, class attribute
-        Rejection factor; equal to 1 (not used) for PAS.
+        Rejection factor; equal to None for PAS.
     w : float
         Initial phase factor.
-    gain : float
-        Amplitude factor between consecutive test signals.
-    negative_gain : boolean, class attribute
-        Boolean for use of negative values amplitudes; equal to False for PAS.
     fft_axis : int or tuple(int), class attribute
         Axis along which inverse FFT is computed; equal to 0 for PAS.
     mixing_mat_dict : dict(int: numpy.ndarray)
         Dictionnary of mixing matrix between orders and output for each phase.
     nq_dict : dict(int: list((int, int)))
         Dictionnary of list of tuples (n, q) for each phase.
-    condition_numbers : list(float)
-        List of condition numbers of all matrix inverted during separation.
     constant_term : False
         Whether constant term of the Volterra series is separated; have no
         effect for HPS.
@@ -903,15 +931,15 @@ class PAS(_AbstractPS, AS):
     -------
     gen_inputs(signal, return_cplx_sig=False)
         Returns the collection of input test signals.
-    process_output(output_coll, raw_mode=False)
+    process_outputs(output_coll, raw_mode=False)
         Process outputs and returns estimated orders or interconjugate terms.
-    get_condition_numbers(p=None)
+    get_condition_numbers(p=2)
         Return the list of all condition numbers in the separation method.
 
     Class methods
     -------------
-    best_gain( N, p=None, gain_min=.1, gain_max=.99, gain_init=None,
-              tol=1e-6, **kwargs)
+    optimum_gain(N, p=2, gain_min=.1, gain_max=.99, gain_init=None, tol=1e-6,
+                 **kwargs)
         Search for the gain that minimizes the maximum condition number.
 
     See also
@@ -920,9 +948,10 @@ class PAS(_AbstractPS, AS):
     HPS, CPS, _SeparationMethod
     """
 
-    def __init__(self, N, gain=0.64, nb_phase=None, **kwargs):
-        AS.__init__(self, N, gain=gain, negative_gain=self.negative_gain,
-                    **kwargs)
+    def __init__(self, N, nb_phase=None, gain_factors=None, gain=0.64,
+                 nb_amp=None, **kwargs):
+        AS.__init__(self, N, factors=gain_factors, gain=gain, nb_amp=nb_amp,
+                    negative_gain=False, **kwargs)
         self.nb_phase = self._compute_required_nb_phase()
         self.HPS_obj = HPS(N, nb_phase=nb_phase)
 
