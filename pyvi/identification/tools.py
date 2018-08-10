@@ -57,9 +57,8 @@ def _ls_solver(A, y):
 def _qr_solver(A, y):
     """Compute solution of Ax=y using a QR decomposition of A."""
 
-    q, r = sc_lin.qr(A, mode='economic')
-    z = np.dot(q.T, y)
-    return sc_lin.solve_triangular(r, z)
+    z, R = sc_lin.qr_multiply(A, y, mode='right')
+    return sc_lin.solve_triangular(R, z)
 
 
 def _complex2real(sig_cplx, cast_mode='real-imag'):
