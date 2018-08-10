@@ -285,12 +285,19 @@ class PhaseMethodHammerstein_Proj_Test(DirectMethodHammerstein_Proj_Test,
     pass
 
 
-class HammersteinWarningTest(unittest.TestCase):
+class WarningHammersteinTest(unittest.TestCase):
 
     def test_warning(self):
         self.assertWarns(UserWarning, direct_method, np.arange(30),
                          np.arange(30), 3, M=5, out_form='tri',
                          system_type='hammerstein')
+
+
+class ErrorPhiTest(unittest.TestCase):
+
+    def test_warning(self):
+        self.assertRaises(ValueError, direct_method, np.arange(30),
+                          np.arange(30), 3, M=1, phi={1: None, 2: None})
 
 
 #==============================================================================

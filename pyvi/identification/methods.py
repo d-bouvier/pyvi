@@ -491,8 +491,14 @@ def _identification(input_data, output_data, N, required_nb_data_func,
                                           sorted_by=sorted_by,
                                           system_type=system_type)
     else:
-        pass
-        #TODO check correct
+        if sorted_by == 'order':
+            needed_keys = [n for n in range(1, N+1)]
+        elif sorted_by == 'term':
+            needed_keys = [[(n, q) for q in range(n//2)]
+                           for n in range(1, N+1)]
+        if not set(needed_keys).issubset(set(phi.keys())):
+            raise ValueError('Given variable `phi` does not contains all ' +
+                             'necessary combinatorial matrices.')
 
     # Estimate kernels
     kernels_vec = core_func(phi, output_data, solver, sizes=list_nb_coeff,
