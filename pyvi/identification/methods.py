@@ -29,7 +29,7 @@ Developed for Python 3.6
 """
 
 __all__ = ['direct_method', 'order_method', 'term_method', 'iter_method',
-           'phase_method']
+           'phase_method', 'compute_combinatorial_basis']
 
 
 #==============================================================================
@@ -38,11 +38,9 @@ __all__ = ['direct_method', 'order_method', 'term_method', 'iter_method',
 
 import warnings
 import numpy as np
-from .tools import _solver, _complex2real
-from ..volterra.combinatorial_basis import (compute_combinatorial_basis,
-                                            _check_parameters,
-                                            _compute_list_nb_coeff,
-                                            _STRING_HAMMERSTEIN)
+from .tools import (compute_combinatorial_basis, _check_parameters,
+                    _compute_list_nb_coeff, _STRING_HAMMERSTEIN, _solver,
+                    _complex2real)
 from ..volterra.tools import vec2series, _vec2dict_of_vec, _STRING_OPT_VEC
 from ..utilities.mathbox import binomial
 

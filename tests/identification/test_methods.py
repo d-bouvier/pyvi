@@ -17,11 +17,10 @@ import unittest
 import numpy as np
 from pyvi.identification.methods import (direct_method, order_method,
                                          term_method, iter_method,
-                                         phase_method)
+                                         phase_method, _check_parameters,
+                                         _compute_list_nb_coeff,
+                                          compute_combinatorial_basis)
 from pyvi.separation.methods import HPS, PS
-from pyvi.volterra.combinatorial_basis import (_check_parameters,
-                                               _compute_list_nb_coeff,
-                                               compute_combinatorial_basis)
 from pyvi.utilities.orthogonal_basis import LaguerreBasis
 
 

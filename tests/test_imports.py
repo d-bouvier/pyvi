@@ -47,8 +47,9 @@ class VolterraTestCase(PyviTestCase):
 
     module = pyvi.volterra
     needed_properties = ['kernel_nb_coeff', 'series_nb_coeff', 'vec2kernel',
-                         'vec2series', 'kernel2vec',
-                         'compute_combinatorial_basis']
+                         'vec2series', 'kernel2vec', 'volterra_basis',
+                         'hammerstein_basis', 'projected_volterra_basis',
+                         'projected_hammerstein_basis']
 
 
 class SeparationTestCase(PyviTestCase):
@@ -62,7 +63,8 @@ class IdentificationTestCase(PyviTestCase):
 
     module = pyvi.identification
     needed_properties = ['direct_method', 'order_method', 'term_method',
-                         'iter_method', 'phase_method']
+                         'iter_method', 'phase_method',
+                         'compute_combinatorial_basis']
 
 
 #==============================================================================
