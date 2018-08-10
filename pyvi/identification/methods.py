@@ -38,7 +38,7 @@ __all__ = ['direct_method', 'order_method', 'term_method', 'iter_method',
 
 import warnings
 import numpy as np
-from .tools import _solver, _complex2real
+from .tools import _solver, _cast_sig_complex2real, _cast_dict_complex2real
 from ..volterra.combinatorial_basis import (compute_combinatorial_basis,
                                             _check_parameters,
                                             _compute_list_nb_coeff,
@@ -246,8 +246,8 @@ def term_method(input_sig, output_by_term, N, **kwargs):
         """Core computation of the identification."""
 
         kernels_vec = dict()
-        _phi_by_term = _cast_complex2real(phi_by_term, cast_mode)
-        _out_by_term = _cast_complex2real(out_by_term, cast_mode)
+        _phi_by_term = _cast_dict_complex2real(phi_by_term, cast_mode)
+        _out_by_term = _cast_dict_complex2real(out_by_term, cast_mode)
 
         for n in range(1, N+1):
             k_vec = list(range(1+n//2))
@@ -328,13 +328,13 @@ def iter_method(input_sig, output_by_phase, N, **kwargs):
         """Core computation of the identification."""
 
         kernels_vec = dict()
-        _phi_by_term = _cast_complex2real(phi_by_term, cast_mode)
+        _phi_by_term = _cast_dict_complex2real(phi_by_term, cast_mode)
         _out_by_phase = out_by_phase.copy()
 
         for n in range(N, 0, -1):
             current_phi = _phi_by_term[(n, 0)]
-            current_phase_sig = _complex2real(_out_by_phase[n],
-                                              cast_mode=cast_mode)
+            current_phase_sig = _cast_sig_complex2real(_out_by_phase[n],
+                                                       cast_mode)
 
             if n == 2:
                 current_phi = np.concatenate(
@@ -421,12 +421,12 @@ def phase_method(input_sig, output_by_phase, N, **kwargs):
         L = out_by_phase.shape[1]
         L = 2*L if cast_mode == 'real-imag' else L
         kernels = dict()
-        _phi_by_term = _cast_complex2real(phi_by_term, cast_mode)
+        _phi_by_term = _cast_dict_complex2real(phi_by_term, cast_mode)
 
         for is_odd in [False, True]:
             curr_phases = range(2-is_odd, N+1, 2)
-            curr_y = np.concatenate([_complex2real(out_by_phase[p],
-                                                   cast_mode=cast_mode)
+            curr_y = np.concatenate([_cast_sig_complex2real(out_by_phase[p],
+                                                            cast_mode)
                                      for p in curr_phases], axis=0)
 
             curr_phi = np.bmat(
@@ -511,17 +511,4 @@ def _identification(input_data, output_data, N, required_nb_data_func,
         else:
             return vec2series(kernels_vec, N, orthogonal_basis.K,
                               form=out_form)
-
-
-def _cast_complex2real(val_by_term, cast_mode):
-    """Cast dictionary of values sorted by term from complex to real. """
-
-    _val_by_term = dict()
-    for (n, k) in val_by_term.keys():
-        if (not n % 2) and (k == n//2):
-            _val_by_term[(n, k)] = np.real(val_by_term[(n, k)])
-        else:
-            _val_by_term[(n, k)] = _complex2real(val_by_term[(n, k)],
-                                                 cast_mode=cast_mode)
-    return _val_by_term
 
