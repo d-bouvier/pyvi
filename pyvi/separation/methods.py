@@ -37,8 +37,8 @@ import numpy as np
 import scipy.fftpack as sc_fft
 import scipy.signal as sc_sig
 import scipy.optimize as sc_optim
-from .tools import (_create_vandermonde_mixing_mat, _demix_coll,
-                    _compute_condition_number)
+from .tools import (_create_vandermonde_mixing_mat, _compute_condition_number,
+                    _demix_coll)
 from ..utilities.mathbox import binomial, multinomial
 from ..utilities.tools import inherit_docstring
 
@@ -262,17 +262,7 @@ class AS(_SeparationMethod):
 
     @inherit_docstring
     def process_outputs(self, output_coll):
-        return self._solve(output_coll, self.mixing_mat)
-
-    def _solve(self, sig_coll, mixing_mat):
-        """Solve the linear system via inverse or pseudo-inverse."""
-
-        is_square = mixing_mat.shape[0] == mixing_mat.shape[1]
-        if is_square:
-            inv_mixing_mat = np.linalg.inv(mixing_mat)
-        else:
-            inv_mixing_mat = np.linalg.pinv(mixing_mat)
-        return np.tensordot(inv_mixing_mat, sig_coll, axes=1)
+        return _demix_coll(output_coll, self.mixing_mat)
 
     @inherit_docstring
     def get_condition_numbers(self, p=2):

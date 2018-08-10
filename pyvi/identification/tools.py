@@ -8,10 +8,6 @@ compute_combinatorial_basis :
     Creates dictionary of combinatorial basis matrix.
 _solver :
     Solve Ax=y using specified method if A is not an empty array.
-_ls_solver :
-    Compute least-squares solution of Ax=y.
-_qr_solver :
-    Compute solution of Ax=y using a QR decomposition of A.
 _cast_sig_complex2real :
     Cast an array of complex type to real type with a specified mode.
 _cast_dict_complex2real :
@@ -31,7 +27,6 @@ Developed for Python 3.6
 import warnings
 from collections.abc import Sequence
 import numpy as np
-import scipy.linalg as sc_lin
 from ..volterra.combinatorial_basis import (volterra_basis, hammerstein_basis,
                                             projected_volterra_basis,
                                             projected_hammerstein_basis)
@@ -39,6 +34,7 @@ from ..volterra.tools import series_nb_coeff
 from ..utilities.orthogonal_basis import (_OrthogonalBasis,
                                           is_valid_basis_instance)
 from ..utilities.tools import _as_list
+from ..utilities.mathbox import _ls_solver, _qr_solver
 
 
 #==============================================================================
@@ -179,20 +175,6 @@ def _solver(A, y, solver):
             raise ValueError(message.format(solver))
     else:
         return np.zeros((0,))
-
-
-def _ls_solver(A, y):
-    """Compute least-squares solution of Ax=y."""
-
-    x, _, _, _ = sc_lin.lstsq(A, y)
-    return x
-
-
-def _qr_solver(A, y):
-    """Compute solution of Ax=y using a QR decomposition of A."""
-
-    z, R = sc_lin.qr_multiply(A, y, mode='right')
-    return sc_lin.solve_triangular(R, z)
 
 
 def _cast_sig_complex2real(sig_cplx, cast_mode):

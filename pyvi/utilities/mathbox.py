@@ -16,6 +16,10 @@ multinomial :
     Multinomial coefficient returning an integer.
 array_symmetrization :
     Symmetrize a multidimensional square array.
+_ls_solver :
+    Compute least-squares solution of Ax=y.
+_qr_solver :
+    Compute solution of Ax=y using a QR decomposition of A.
 
 Notes
 -----
@@ -34,6 +38,7 @@ __all__ = ['rms', 'db', 'safe_db', 'binomial', 'multinomial',
 import math
 import itertools as itr
 import numpy as np
+import scipy.linalg as sc_lin
 import scipy.special as sc_sp
 
 
@@ -201,3 +206,17 @@ def array_symmetrization(array):
     for ind in itr.permutations(range(n), n):
         array_sym += np.transpose(array, ind)
     return array_sym / math.factorial(n)
+
+
+def _ls_solver(A, y):
+    """Compute least-squares solution of Ax=y."""
+
+    x, _, _, _ = sc_lin.lstsq(A, y)
+    return x
+
+
+def _qr_solver(A, y):
+    """Compute solution of Ax=y using a QR decomposition of A."""
+
+    z, R = sc_lin.qr_multiply(A, y, mode='right')
+    return sc_lin.solve_triangular(R, z)

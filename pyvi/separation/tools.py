@@ -20,6 +20,7 @@ Developed for Python 3.6
 #==============================================================================
 
 import numpy as np
+from ..utilities.mathbox import _ls_solver
 
 
 #==============================================================================
@@ -98,9 +99,6 @@ def _demix_coll(sig_coll, mixing_mat):
         Separated signals.
     """
 
-    is_square = mixing_mat.shape[0] == mixing_mat.shape[1]
-    if is_square:
-        inv_mixing_mat = np.linalg.inv(mixing_mat)
-    else:
-        inv_mixing_mat = np.linalg.pinv(mixing_mat)
-    return np.tensordot(inv_mixing_mat, sig_coll, axes=1)
+    shape = sig_coll.shape
+    _sig_coll = sig_coll.reshape((shape[0], -1))
+    return _ls_solver(mixing_mat, _sig_coll).reshape((-1,) + shape[1:])
