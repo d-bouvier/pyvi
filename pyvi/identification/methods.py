@@ -40,7 +40,7 @@ import warnings
 import numpy as np
 from .tools import (compute_combinatorial_basis, _check_parameters,
                     _compute_list_nb_coeff, _STRING_HAMMERSTEIN, _solver,
-                    _complex2real)
+                    _cast_sig_complex2real, _cast_dict_complex2real)
 from ..volterra.tools import vec2series, _vec2dict_of_vec, _STRING_OPT_VEC
 from ..utilities.mathbox import binomial
 
@@ -66,7 +66,37 @@ def direct_method(input_sig, output_sig, N, **kwargs):
     -------
     dict(int: numpy.ndarray)
         Dictionary of estimated kernels, where each key is the nonlinear order.
-    {}
+
+    Other parameters
+    ----------------
+    solver : {'LS', 'QR'}, optional (default='LS')
+        Method used for solving linear systems; if set to 'LS', a standard
+        Least-Squares estimate is used; if set to 'QR', a QR decomposition of
+        the matrix to invert is used.
+    out_form : {'tri', 'sym', 'vec'}, optional (default='vec')
+        Form to assume for the kernel; if None, no specific form is assumed.
+        See module :mod:`pyvi.volterra.tools` for more precisions.
+    M : int or list(int), optional (default=None)
+        Memory length for each kernels (in samples); can be specified
+        globally for all orders, or separately for each order via a list of
+        different values.
+    orthogonal_basis : (list of) basis object, optional (default=None)
+        Orthogonal basis unto which kernels are projected; can be specified
+        globally for all orders, or separately for each order via a list of
+        different values. See module :mod:`pyvi.utilities.orthogonal_basis`
+        for precisions on what basis object can be.
+    phi : dict(int: numpy.ndarray), optional (default=None)
+        Pre-computed dictionary of the combinatorial matrix for each nonlinear
+        homogeneous order.
+    system_type : {'volterra', 'hammerstein'}, optional (default='volterra')
+        Assumed type of the system; if set to 'volterra', combinatorial basis
+        contains all possible input products; if set to 'hammerstein',
+        combinatorial basis only contains those corresponding to diagonal
+        kernel values.
+
+    Either the memory length `M` or parameter `orthogonal_basis` must be
+    specified; if both are `None`, the method will issue an error; if both are
+    given, memory length `M` will not be used.
     """
 
     def required_nb_data_func(list_nb_coeff):
@@ -102,7 +132,37 @@ def order_method(input_sig, output_by_order, N, **kwargs):
     -------
     dict(int: numpy.ndarray)
         Dictionary of estimated kernels, where each key is the nonlinear order.
-    {}
+
+    Other parameters
+    ----------------
+    solver : {'LS', 'QR'}, optional (default='LS')
+        Method used for solving linear systems; if set to 'LS', a standard
+        Least-Squares estimate is used; if set to 'QR', a QR decomposition of
+        the matrix to invert is used.
+    out_form : {'tri', 'sym', 'vec'}, optional (default='vec')
+        Form to assume for the kernel; if None, no specific form is assumed.
+        See module :mod:`pyvi.volterra.tools` for more precisions.
+    M : int or list(int), optional (default=None)
+        Memory length for each kernels (in samples); can be specified
+        globally for all orders, or separately for each order via a list of
+        different values.
+    orthogonal_basis : (list of) basis object, optional (default=None)
+        Orthogonal basis unto which kernels are projected; can be specified
+        globally for all orders, or separately for each order via a list of
+        different values. See module :mod:`pyvi.utilities.orthogonal_basis`
+        for precisions on what basis object can be.
+    phi : dict(int: numpy.ndarray), optional (default=None)
+        Pre-computed dictionary of the combinatorial matrix for each nonlinear
+        homogeneous order.
+    system_type : {'volterra', 'hammerstein'}, optional (default='volterra')
+        Assumed type of the system; if set to 'volterra', combinatorial basis
+        contains all possible input products; if set to 'hammerstein',
+        combinatorial basis only contains those corresponding to diagonal
+        kernel values.
+
+    Either the memory length `M` or parameter `orthogonal_basis` must be
+    specified; if both are `None`, the method will issue an error; if both are
+    given, memory length `M` will not be used.
     """
 
     def required_nb_data_func(list_nb_coeff):
@@ -140,7 +200,40 @@ def term_method(input_sig, output_by_term, N, **kwargs):
     -------
     dict(int: numpy.ndarray)
         Dictionary of estimated kernels, where each key is the nonlinear order.
-    {}
+
+    Other parameters
+    ----------------
+    solver : {'LS', 'QR'}, optional (default='LS')
+        Method used for solving linear systems; if set to 'LS', a standard
+        Least-Squares estimate is used; if set to 'QR', a QR decomposition of
+        the matrix to invert is used.
+    out_form : {'tri', 'sym', 'vec'}, optional (default='vec')
+        Form to assume for the kernel; if None, no specific form is assumed.
+        See module :mod:`pyvi.volterra.tools` for more precisions.
+    M : int or list(int), optional (default=None)
+        Memory length for each kernels (in samples); can be specified
+        globally for all orders, or separately for each order via a list of
+        different values.
+    orthogonal_basis : (list of) basis object, optional (default=None)
+        Orthogonal basis unto which kernels are projected; can be specified
+        globally for all orders, or separately for each order via a list of
+        different values. See module :mod:`pyvi.utilities.orthogonal_basis`
+        for precisions on what basis object can be.
+    phi : dict((int, int): numpy.ndarray), optional (default=None)
+        Pre-computed dictionary of the combinatorial matrix for each nonlinear
+        interconjugate term.
+    cast_mode : {'real', 'imag', 'real-imag'}, optional (default='real-imag')
+        Choose how complex number are casted to real numbers; if set to
+        'real-imag', arrays for the real and imaginary part will be stacked.
+    system_type : {'volterra', 'hammerstein'}, optional (default='volterra')
+        Assumed type of the system; if set to 'volterra', combinatorial basis
+        contains all possible input products; if set to 'hammerstein',
+        combinatorial basis only contains those corresponding to diagonal
+        kernel values.
+
+    Either the memory length `M` or parameter `orthogonal_basis` must be
+    specified; if both are `None`, the method will issue an error; if both are
+    given, memory length `M` will not be used.
     """
 
     def required_nb_data_func(list_nb_coeff):
@@ -151,8 +244,8 @@ def term_method(input_sig, output_by_term, N, **kwargs):
         """Core computation of the identification."""
 
         kernels_vec = dict()
-        _phi_by_term = _cast_complex2real(phi_by_term, cast_mode)
-        _out_by_term = _cast_complex2real(out_by_term, cast_mode)
+        _phi_by_term = _cast_dict_complex2real(phi_by_term, cast_mode)
+        _out_by_term = _cast_dict_complex2real(out_by_term, cast_mode)
 
         for n in range(1, N+1):
             k_vec = list(range(1+n//2))
@@ -189,7 +282,40 @@ def iter_method(input_sig, output_by_phase, N, **kwargs):
     -------
     dict(int: numpy.ndarray)
         Dictionary of estimated kernels, where each key is the nonlinear order.
-    {}
+
+    Other parameters
+    ----------------
+    solver : {'LS', 'QR'}, optional (default='LS')
+        Method used for solving linear systems; if set to 'LS', a standard
+        Least-Squares estimate is used; if set to 'QR', a QR decomposition of
+        the matrix to invert is used.
+    out_form : {'tri', 'sym', 'vec'}, optional (default='vec')
+        Form to assume for the kernel; if None, no specific form is assumed.
+        See module :mod:`pyvi.volterra.tools` for more precisions.
+    M : int or list(int), optional (default=None)
+        Memory length for each kernels (in samples); can be specified
+        globally for all orders, or separately for each order via a list of
+        different values.
+    orthogonal_basis : (list of) basis object, optional (default=None)
+        Orthogonal basis unto which kernels are projected; can be specified
+        globally for all orders, or separately for each order via a list of
+        different values. See module :mod:`pyvi.utilities.orthogonal_basis`
+        for precisions on what basis object can be.
+    phi : dict((int, int): numpy.ndarray), optional (default=None)
+        Pre-computed dictionary of the combinatorial matrix for each nonlinear
+        interconjugate term.
+    cast_mode : {'real', 'imag', 'real-imag'}, optional (default='real-imag')
+        Choose how complex number are casted to real numbers; if set to
+        'real-imag', arrays for the real and imaginary part will be stacked.
+    system_type : {'volterra', 'hammerstein'}, optional (default='volterra')
+        Assumed type of the system; if set to 'volterra', combinatorial basis
+        contains all possible input products; if set to 'hammerstein',
+        combinatorial basis only contains those corresponding to diagonal
+        kernel values.
+
+    Either the memory length `M` or parameter `orthogonal_basis` must be
+    specified; if both are `None`, the method will issue an error; if both are
+    given, memory length `M` will not be used.
     """
 
     def required_nb_data_func(list_nb_coeff):
@@ -200,13 +326,13 @@ def iter_method(input_sig, output_by_phase, N, **kwargs):
         """Core computation of the identification."""
 
         kernels_vec = dict()
-        _phi_by_term = _cast_complex2real(phi_by_term, cast_mode)
+        _phi_by_term = _cast_dict_complex2real(phi_by_term, cast_mode)
         _out_by_phase = out_by_phase.copy()
 
         for n in range(N, 0, -1):
             current_phi = _phi_by_term[(n, 0)]
-            current_phase_sig = _complex2real(_out_by_phase[n],
-                                              cast_mode=cast_mode)
+            current_phase_sig = _cast_sig_complex2real(_out_by_phase[n],
+                                                       cast_mode)
 
             if n == 2:
                 current_phi = np.concatenate(
@@ -247,7 +373,40 @@ def phase_method(input_sig, output_by_phase, N, **kwargs):
     -------
     kernels : dict(int: numpy.ndarray)
         Dictionary of estimated kernels, where each key is the nonlinear order.
-    {}
+
+    Other parameters
+    ----------------
+    solver : {'LS', 'QR'}, optional (default='LS')
+        Method used for solving linear systems; if set to 'LS', a standard
+        Least-Squares estimate is used; if set to 'QR', a QR decomposition of
+        the matrix to invert is used.
+    out_form : {'tri', 'sym', 'vec'}, optional (default='vec')
+        Form to assume for the kernel; if None, no specific form is assumed.
+        See module :mod:`pyvi.volterra.tools` for more precisions.
+    M : int or list(int), optional (default=None)
+        Memory length for each kernels (in samples); can be specified
+        globally for all orders, or separately for each order via a list of
+        different values.
+    orthogonal_basis : (list of) basis object, optional (default=None)
+        Orthogonal basis unto which kernels are projected; can be specified
+        globally for all orders, or separately for each order via a list of
+        different values. See module :mod:`pyvi.utilities.orthogonal_basis`
+        for precisions on what basis object can be.
+    phi : dict((int, int): numpy.ndarray), optional (default=None)
+        Pre-computed dictionary of the combinatorial matrix for each nonlinear
+        interconjugate term.
+    cast_mode : {'real', 'imag', 'real-imag'}, optional (default='real-imag')
+        Choose how complex number are casted to real numbers; if set to
+        'real-imag', arrays for the real and imaginary part will be stacked.
+    system_type : {'volterra', 'hammerstein'}, optional (default='volterra')
+        Assumed type of the system; if set to 'volterra', combinatorial basis
+        contains all possible input products; if set to 'hammerstein',
+        combinatorial basis only contains those corresponding to diagonal
+        kernel values.
+
+    Either the memory length `M` or parameter `orthogonal_basis` must be
+    specified; if both are `None`, the method will issue an error; if both are
+    given, memory length `M` will not be used.
     """
 
     def required_nb_data_func(list_nb_coeff):
@@ -260,12 +419,12 @@ def phase_method(input_sig, output_by_phase, N, **kwargs):
         L = out_by_phase.shape[1]
         L = 2*L if cast_mode == 'real-imag' else L
         kernels = dict()
-        _phi_by_term = _cast_complex2real(phi_by_term, cast_mode)
+        _phi_by_term = _cast_dict_complex2real(phi_by_term, cast_mode)
 
         for is_odd in [False, True]:
             curr_phases = range(2-is_odd, N+1, 2)
-            curr_y = np.concatenate([_complex2real(out_by_phase[p],
-                                                   cast_mode=cast_mode)
+            curr_y = np.concatenate([_cast_sig_complex2real(out_by_phase[p],
+                                                            cast_mode)
                                      for p in curr_phases], axis=0)
 
             curr_phi = np.bmat(
@@ -330,8 +489,14 @@ def _identification(input_data, output_data, N, required_nb_data_func,
                                           sorted_by=sorted_by,
                                           system_type=system_type)
     else:
-        pass
-        #TODO check correct
+        if sorted_by == 'order':
+            needed_keys = [n for n in range(1, N+1)]
+        elif sorted_by == 'term':
+            needed_keys = [[(n, q) for q in range(n//2)]
+                           for n in range(1, N+1)]
+        if not set(needed_keys).issubset(set(phi.keys())):
+            raise ValueError('Given variable `phi` does not contains all ' +
+                             'necessary combinatorial matrices.')
 
     # Estimate kernels
     kernels_vec = core_func(phi, output_data, solver, sizes=list_nb_coeff,
@@ -351,86 +516,3 @@ def _identification(input_data, output_data, N, required_nb_data_func,
             return vec2series(kernels_vec, N, orthogonal_basis.K,
                               form=out_form)
 
-
-def _cast_complex2real(val_by_term, cast_mode):
-    """Cast dictionary of values sorted by term from complex to real. """
-
-    _val_by_term = dict()
-    for (n, k) in val_by_term.keys():
-        if (not n % 2) and (k == n//2):
-            _val_by_term[(n, k)] = np.real(val_by_term[(n, k)])
-        else:
-            _val_by_term[(n, k)] = _complex2real(val_by_term[(n, k)],
-                                                 cast_mode=cast_mode)
-    return _val_by_term
-
-
-#========================================#
-
-kwargs_docstring_common_pre = """
-    Other parameters
-    ----------------
-    solver : {'LS', 'QR'}, optional (default='LS')
-        Method used for solving linear systems; if set to 'LS', a standard
-        Least-Squares estimate is used; if set to 'QR', a QR decomposition of
-        the matrix to invert is used.
-    out_form : {'tri', 'sym', 'vec'}, optional (default='vec')
-        Form to assume for the kernel; if None, no specific form is assumed.
-        See module :mod:`pyvi.volterra.tools` for more precisions.
-    M : int or list(int), optional (default=None)
-        Memory length for each kernels (in samples); can be specified
-        globally for all orders, or separately for each order via a list of
-        different values.
-    orthogonal_basis : (list of) basis object, optional (default=None)
-        Orthogonal basis unto which kernels are projected; can be specified
-        globally for all orders, or separately for each order via a list of
-        different values. See module :mod:`pyvi.utilities.orthogonal_basis`
-        for precisions on what basis object can be."""
-kwargs_docstring_phi_order = """
-    phi : dict(int: numpy.ndarray), optional (default=None)
-        Pre-computed dictionary of the combinatorial matrix for each nonlinear
-        homogeneous order."""
-kwargs_docstring_phi_term = """
-    phi : dict((int, int): numpy.ndarray), optional (default=None)
-        Pre-computed dictionary of the combinatorial matrix for each nonlinear
-        interconjugate term."""
-kwargs_docstring_cast_mode = """
-    cast_mode : {'real', 'imag', 'real-imag'}, optional (default='real-imag')
-        Choose how complex number are casted to real numbers; if set to
-        'real-imag', arrays for the real and imaginary part will be stacked."""
-kwargs_docstring_common_post = """
-    system_type : {'volterra', 'hammerstein'}, optional (default='volterra')
-        Assumed type of the system; if set to 'volterra', combinatorial basis
-        contains all possible input products; if set to 'hammerstein',
-        combinatorial basis only contains those corresponding to diagonal
-        kernel values.
-
-    Either the memory length `M` or parameter `orthogonal_basis` must be
-    specified; if both are `None`, the method will issue an error; if both are
-    given, memory length `M` will not be used.
-    """
-
-for mode in ('direct', 'order', 'term', 'iter', 'phase'):
-    method = locals()[mode + '_method']
-    kwargs_docstring = kwargs_docstring_common_pre
-    if mode in {'direct', 'order'}:
-        kwargs_docstring += kwargs_docstring_phi_order
-    elif mode in {'term', 'iter', 'phase'}:
-        kwargs_docstring += kwargs_docstring_phi_term
-        kwargs_docstring += kwargs_docstring_cast_mode
-    kwargs_docstring += kwargs_docstring_common_post
-    method.__doc__ = method.__doc__.format(kwargs_docstring)
-
-_wrapper_doc_pre = """
-    This function is only a wrapper kept for convenience; refer to
-    :func:`pyvi.identification.{}_method`.
-    """
-_wrapper_doc_post = """
-    See also
-    --------
-    pyvi.identification.{}_method
-    """
-
-del (kwargs_docstring_common_pre, kwargs_docstring_common_post,
-     kwargs_docstring_phi_order, kwargs_docstring_phi_term,
-     kwargs_docstring_cast_mode, kwargs_docstring, method, mode)

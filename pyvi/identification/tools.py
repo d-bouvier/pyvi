@@ -4,24 +4,24 @@ Tools for kernel identification.
 
 Functions
 ---------
+compute_combinatorial_basis :
+    Creates dictionary of combinatorial basis matrix.
 _solver :
     Solve Ax=y using specified method if A is not an empty array.
 _ls_solver :
     Compute least-squares solution of Ax=y.
 _qr_solver :
     Compute solution of Ax=y using a QR decomposition of A.
-_cplx_to_real :
-    Cast a numpy.ndarray of complex type to real type with a specified mode.
-compute_combinatorial_basis :
-    Creates dictionary of combinatorial basis matrix.
+_cast_sig_complex2real :
+    Cast an array of complex type to real type with a specified mode.
+_cast_dict_complex2real :
+    Cast dictionary of arrays sorted by interconjugate indexes.
 
 Notes
 -----
 Developed for Python 3.6
 @author: Damien Bouvier (Damien.Bouvier@ircam.fr)
 """
-
-__all__ = ['compute_combinatorial_basis']
 
 
 #==============================================================================
@@ -191,27 +191,12 @@ def _ls_solver(A, y):
 def _qr_solver(A, y):
     """Compute solution of Ax=y using a QR decomposition of A."""
 
-    q, r = sc_lin.qr(A, mode='economic')
-    z = np.dot(q.T, y)
-    return sc_lin.solve_triangular(r, z)
+    z, R = sc_lin.qr_multiply(A, y, mode='right')
+    return sc_lin.solve_triangular(R, z)
 
 
-def _complex2real(sig_cplx, cast_mode='real-imag'):
-    """
-    Cast a numpy.ndarray of complex type to real type with a specified mode.
-
-    Parameters
-    ----------
-    sig_cplx : numpy.ndarray
-        Array to cast to real numbers.
-    cast_mode : {'real', 'imag', 'real-imag'}, optional (default='real-imag')
-        Choose how complex number are casted to real numbers.
-
-    Returns
-    -------
-    numpy.ndarray
-        Array `sig_cplx` casted to real numbers following `cast_mode`.
-    """
+def _cast_sig_complex2real(sig_cplx, cast_mode):
+    """Cast an array of complex type to real type with a specified mode."""
 
     if cast_mode not in {'real', 'imag', 'real-imag', 'cplx'}:
         warnings.warn("Unknown cast_mode, mode 'real-imag' used.", UserWarning)
@@ -225,3 +210,16 @@ def _complex2real(sig_cplx, cast_mode='real-imag'):
         return np.concatenate((np.real(sig_cplx), np.imag(sig_cplx)), axis=0)
     elif cast_mode == 'cplx':
         return sig_cplx
+
+
+def _cast_dict_complex2real(dict_cplx, cast_mode):
+    """Cast dictionary of arrays sorted by interconjugate indexes."""
+
+    casted_dict = dict()
+    for (n, k), val in dict_cplx.items():
+        if (not n % 2) and (k == n//2):
+            casted_dict[(n, k)] = np.real(val)
+        else:
+            casted_dict[(n, k)] = _cast_sig_complex2real(val, cast_mode)
+
+    return casted_dict
