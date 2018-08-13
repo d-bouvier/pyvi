@@ -376,7 +376,7 @@ class CPS(_SeparationMethod):
 
     fft_axis = 0
 
-    def __init__(self, N, nb_phase=None, rho=1., **kwargs):
+    def __init__(self, N, nb_phase=None, rho=None, **kwargs):
         super().__init__(N, [], **kwargs)
 
         self._check_parameter(nb_phase, 'nb_phase')

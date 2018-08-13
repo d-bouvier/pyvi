@@ -350,15 +350,31 @@ class CPS_ConditionNumbersTest(_ConditionNumbersGlobalTest, unittest.TestCase):
 
     method = sep.CPS
     nb_phase = 10
-    results = {None: [1., 1.],
-               1: [nb_phase, 1.],
-               -1: [nb_phase, 1.],
-               2: [1., 1.],
-               -2: [1., 1.],
-               np.inf: [nb_phase, 1.],
-               -np.inf: [nb_phase, 1.],
-               'fro': [1., 3.]}
+    results = {None: [1.],
+               1: [nb_phase],
+               -1: [nb_phase],
+               2: [1.],
+               -2: [1.],
+               np.inf: [nb_phase],
+               -np.inf: [nb_phase],
+               'fro': [1.]}
     kwargs = {'nb_phase': nb_phase}
+
+
+class CPS_ConditionNumbersTestWithRho(CPS_ConditionNumbersTest,
+                                      unittest.TestCase):
+
+    nb_phase = 10
+    results = {None: [1., 100.],
+               1: [nb_phase, 100.],
+               -1: [nb_phase, 0.01],
+               2: [1., 100.],
+               -2: [1., 0.01],
+               np.inf: [nb_phase, 100.],
+               -np.inf: [nb_phase, 0.01],
+               'fro': [1., 101.01]}
+    kwargs = {'nb_phase': nb_phase,
+              'rho': 0.1}
 
 
 class HPS_ConditionNumbersTest(_ConditionNumbersGlobalTest, unittest.TestCase):
@@ -409,7 +425,7 @@ class PAS_ConditionNumbersTest(_ConditionNumbersGlobalTest, unittest.TestCase):
     tol = 1e-8
 
 
-class ASOptimumGainTest(unittest.TestCase):
+class AS_OptimumGainTest(unittest.TestCase):
 
     best_gains = [(3, {}, 0.526635),
                   (3, {'negative_gain': True}, 0.526629),
@@ -440,7 +456,7 @@ class ASOptimumGainTest(unittest.TestCase):
                 self.assertTrue(error < self.tol)
 
 
-class PASOptimumGainTest(ASOptimumGainTest):
+class PAS_OptimumGainTest(AS_OptimumGainTest):
 
     best_gains = [(3, {}, 0.538955),
                   (4, {}, 0.672761),
