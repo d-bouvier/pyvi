@@ -174,19 +174,21 @@ class AS(_SeparationMethod):
     ----------
     N : int
         Number of orders to separate (truncation order of the Volterra series).
-    factors : array_like, optional (default=None)
-        Factors applied to the base signal in order to create the test signals;
-        if not specified, those values will be computed using parameters
-        `gain`, `negative_gain` and `nb_amp`.
-    gain : float, optional (default=0.64)
-        Gain factor in amplitude between consecutive test signals; if `factors`
-        is specified, this value is not used.
-    negative_gain : boolean, optional (default=True)
+    amplitudes : array_like, optional (default=None)
+        Amplitude factors applied to the base signal in order to create the
+        test signals; if not specified, those values will be computed using
+        parameters `gain`, `negative_amp` and `nb_amp` (if they are given),
+        or chosen as the Chebyshev nodes.
+    gain : float, optional (default=None)
+        Gain factor in amplitude between consecutive test signals; if
+        `amplitudes` is specified, this value is not used.
+    negative_amp : boolean, optional (default=True)
         Defines if amplitudes with negative values can be used; this greatly
-        improves separation; if `factors` is specified, this value is not used.
+        improves separation; if `amplitudes` is specified, this value is not
+        used.
     nb_amp : int, optional (default=None)
         Number of different amplitudes; must be greater than or equal to `N`;
-        if None, will be set equal to `N`; if `factors` is specified,
+        if None, will be set equal to `N`; if `amplitudes` is specified,
         this value is not used.
     constant_term : boolean, optional (default=False)
         If True, constant term of the Volterra series (i.e. the order 0) is
@@ -202,6 +204,9 @@ class AS(_SeparationMethod):
         Number of amplitude factors; always equal to `K` for AS.
     factors : array_like
         Vector of length `K` regrouping all factors.
+    amplitudes : array_like
+        Vector of length `nb_amp` regrouping all amplitudes; always equal to
+        `factors` for AS.
     mixing_mat : numpy.ndarray
         Mixing matrix between orders and output.
     constant_term : boolean
@@ -227,22 +232,35 @@ class AS(_SeparationMethod):
     _SeparationMethod : Parent class.
     """
 
-    def __init__(self, N, factors=None, gain=0.64, negative_gain=True,
+    def __init__(self, N, amplitudes=None, gain=None, negative_amp=True,
                  nb_amp=None, **kwargs):
         super().__init__(N, [], **kwargs)
 
-        if factors is not None:
-            nb_amp = len(factors)
+        if amplitudes is not None:
+            nb_amp = len(amplitudes)
             nb_amp_min = self._compute_required_nb_amp()
             if nb_amp < nb_amp_min:
-                raise ValueError('Not enough values in `factors` ' +
+                raise ValueError('Not enough values in `amplitudes` ' +
                                  '(got {}, '.format(nb_amp) +
                                  'expected at least {})'.format(nb_amp_min))
             self.nb_amp = nb_amp
-            self._update_factors(factors)
+            self.amplitudes = amplitudes
         else:
             self._check_parameter(nb_amp, 'nb_amp')
-            self._update_factors(self._gen_amp_factors(gain, negative_gain))
+            if gain is None and negative_amp is False:
+                self.amplitudes = \
+                    np.cos(np.pi * np.arange(self.nb_amp)/(2*self.nb_amp-1))
+            elif gain is None and negative_amp is True:
+                if self.nb_amp % 2:
+                    _tmp = np.cos(np.pi * np.arange(self.nb_amp+1)/self.nb_amp)
+                    self.amplitudes = np.concatenate((_tmp[:self.nb_amp//2+1],
+                                                      _tmp[2+self.nb_amp//2:]))
+                else:
+                    self.amplitudes = \
+                        np.cos(np.pi * np.arange(self.nb_amp)/(self.nb_amp-1))
+            else:
+                self.amplitudes = self._gen_amplitudes(gain, negative_amp)
+        self._update_factors(self.amplitudes)
 
         self.mixing_mat = \
             _create_vandermonde_mixing_mat(self.factors, self.N,
@@ -253,12 +271,12 @@ class AS(_SeparationMethod):
 
         return self._N
 
-    def _gen_amp_factors(self, gain, negative_gain):
-        """Generates the vector of amplitude factors."""
+    def _gen_amplitudes(self, gain, negative_amp):
+        """Generates the vector of amplitude."""
 
         tmp_vec = np.arange(self.nb_amp)
-        return (-1)**(tmp_vec*negative_gain) * \
-                gain**(tmp_vec // (1+negative_gain))
+        return (-1)**(tmp_vec*negative_amp) * \
+                gain**(tmp_vec // (1+negative_amp))
 
     @inherit_docstring
     def process_outputs(self, output_coll):
@@ -876,16 +894,17 @@ class PAS(_AbstractPS, AS):
         Number of phase factors used; should be greater than ``2*N+1``;
         choosing `nb_phase` large leads to a more robust method but also to
         more test signals.
-    gain_factors : array_like, optional (default=None)
+    amplitudes : array_like, optional (default=None)
         Amplitude factors; if not specified, those values will be computed
-        using parameters `gain` and `nb_amp`.
-    gain : float, optional (default=0.64)
+        using parameters `gain` and `nb_amp` (if they are given), or chosen as
+        the Chebyshev nodes.
+    gain : float, optional (default=None)
         Gain factor in amplitude between the input test signals; if
-        `gain_factors` is specified, this value is not used.
+        `amplitudes` is specified, this value is not used.
     nb_amp : int, optional (default=None)
         Number of different amplitudes; must be greater than or equal to
         ``(N + int(constant_term) + 1) // 2``; if None, will be set equal to
-        ``(N + int(constant_term) + 1) // 2``; if `gain_factors` is specified,
+        ``(N + int(constant_term) + 1) // 2``; if `amplitudes` is specified,
         this value is not used.
     constant_term : boolean, optional (default=False)
         If True, constant term of the Volterra series (i.e. the order 0) is
@@ -903,6 +922,8 @@ class PAS(_AbstractPS, AS):
         Number of amplitude factors.
     factors : array_like
         Vector of length `K` regrouping all factors.
+    amplitudes : array_like
+        Vector of length `nb_amp` regrouping all amplitudes.
     rho : float, class attribute
         Rejection factor; equal to None for PAS.
     w : float
@@ -938,10 +959,10 @@ class PAS(_AbstractPS, AS):
     HPS, CPS, _SeparationMethod
     """
 
-    def __init__(self, N, nb_phase=None, gain_factors=None, gain=0.64,
+    def __init__(self, N, nb_phase=None, amplitudes=None, gain=None,
                  nb_amp=None, **kwargs):
-        AS.__init__(self, N, factors=gain_factors, gain=gain, nb_amp=nb_amp,
-                    negative_gain=False, **kwargs)
+        AS.__init__(self, N, amplitudes=amplitudes, gain=gain, nb_amp=nb_amp,
+                    negative_amp=False, **kwargs)
         self.nb_phase = self._compute_required_nb_phase()
         self.HPS_obj = HPS(N, nb_phase=nb_phase)
 

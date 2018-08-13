@@ -24,7 +24,7 @@ from pyvi.utilities import binomial, rms
 
 class _OrderSeparationMethodGlobalTest():
 
-    method = dict()
+    methods = dict()
     input_dtype = {'AS': 'float',
                    'CPS': 'complex',
                    'RPS': 'complex',
@@ -44,8 +44,9 @@ class _OrderSeparationMethodGlobalTest():
     def setUp(self, **kwargs):
         self.order_est = dict()
         self.order_true = dict()
+        self.method_obj = dict()
         self._get_constant_term(**kwargs)
-        for method_name, method_class in self.method.items():
+        for method_name, method_class in self.methods.items():
             for N in self.N:
                 key = (method_name, N)
                 if self.input_dtype[method_name] == 'float':
@@ -53,8 +54,8 @@ class _OrderSeparationMethodGlobalTest():
                 elif self.input_dtype[method_name] == 'complex':
                     input_sig = np.random.normal(size=(self.L)) + \
                                 1j * np.random.normal(size=(self.L))
-                method = method_class(N, **kwargs)
-                input_coll = method.gen_inputs(input_sig)
+                method_obj = method_class(N, **kwargs)
+                input_coll = method_obj.gen_inputs(input_sig)
                 output_coll = np.zeros(input_coll.shape,
                                        dtype=self.signal_dtype[method_name])
                 for ind in range(input_coll.shape[0]):
@@ -62,7 +63,8 @@ class _OrderSeparationMethodGlobalTest():
                         generate_output(input_coll[ind], N,
                                         constant_term=self.constant_term)
 
-                self.order_est[key] = method.process_outputs(output_coll)
+                self.order_est[key] = method_obj.process_outputs(output_coll)
+                self.method_obj[key] = method_obj
                 input_sig = self.true_input_func[method_name](input_sig)
                 self.order_true[key] = \
                     generate_output(input_sig, N, by_order=True,
@@ -90,52 +92,83 @@ class _OrderSeparationMethodGlobalTest():
 
 class NoKwargsTestCase(_OrderSeparationMethodGlobalTest, unittest.TestCase):
 
-    method = {'AS': sep.AS,
-              'CPS': sep.CPS,
-              'RPS': sep.RPS,
-              'PAS': sep.PAS}
+    methods = {'AS': sep.AS,
+               'CPS': sep.CPS,
+               'RPS': sep.RPS,
+               'PAS': sep.PAS}
 
 
-class FactorsTestCase(_OrderSeparationMethodGlobalTest, unittest.TestCase):
+class AmplitudesTestCase(_OrderSeparationMethodGlobalTest, unittest.TestCase):
 
-    method = {'AS': sep.AS}
-
-    def setUp(self):
-        super().setUp(factors=[1, 0.8, 0.5, 0.2, 0.1])
-
-
-class GainFactorsTestCase(_OrderSeparationMethodGlobalTest, unittest.TestCase):
-
-    method = {'PAS': sep.PAS}
+    methods = {'AS': sep.AS,
+               'PAS': sep.PAS}
+    amplitudes = [1, 0.8, 0.5, 0.2, 0.1]
 
     def setUp(self):
-        super().setUp(gain_factors=[1, 0.5, 0.2])
+        super().setUp(amplitudes=self.amplitudes)
+
+    def test_correct_amplitudes(self):
+        for (name, N), method in self.method_obj.items():
+            with self.subTest(i=(name, N)):
+                self.assertListEqual(method.amplitudes, self.amplitudes)
 
 
+class GainAS_TestCase(_OrderSeparationMethodGlobalTest, unittest.TestCase):
 
-class GainTestCase(_OrderSeparationMethodGlobalTest, unittest.TestCase):
-
-    method = {'AS': sep.AS,
-              'PAS': sep.PAS}
+    methods = {'AS': sep.AS}
+    gain = 2.
+    amplitudes = {4: [1., -1., 2., -2.],
+                  5: [1., -1., 2., -2., 4.]}
     tol = 1e-10
 
     def setUp(self):
-        super().setUp(gain=1.5)
+        super().setUp(gain=self.gain)
+
+    def test_correct_amplitudes(self):
+        for (name, N), method in self.method_obj.items():
+            with self.subTest(i=(name, N)):
+                correct = np.all(method.amplitudes == self.amplitudes[N])
+                self.assertTrue(correct)
 
 
-class NegativeGainTestCase(_OrderSeparationMethodGlobalTest,
-                           unittest.TestCase):
+class GainPAS_TestCase(GainAS_TestCase):
 
-    method = {'AS': sep.AS}
+    methods = {'PAS': sep.PAS}
+    gain = 2.
+    amplitudes = {4: [1., 2.],
+                  5: [1., 2., 4.]}
+
+
+class NegativeAmpTestCase(GainAS_TestCase):
+
+    methods = {'AS': sep.AS}
+    amplitudes = {4: [1., np.cos(np.pi/7), np.cos(2*np.pi/7),
+                      np.cos(3*np.pi/7)],
+                  5: [1., np.cos(np.pi/9), np.cos(2*np.pi/9),
+                      np.cos(3*np.pi/9), np.cos(4*np.pi/9)]}
 
     def setUp(self):
-        super().setUp(negative_gain=False)
+        _OrderSeparationMethodGlobalTest.setUp(self, negative_amp=False)
+
+
+
+class NegativeAmpAndGainTestCase(GainAS_TestCase):
+
+    methods = {'AS': sep.AS}
+    gain = 2.
+    amplitudes = {4: [1., 2., 4., 8.],
+                  5: [1., 2., 4., 8., 16.]}
+    tol = 1e-6
+
+    def setUp(self):
+        _OrderSeparationMethodGlobalTest.setUp(self, negative_amp=False,
+                                               gain=self.gain)
 
 
 class NbAmpTestCase(_OrderSeparationMethodGlobalTest, unittest.TestCase):
 
-    method = {'AS': sep.AS,
-              'PAS': sep.PAS}
+    methods = {'AS': sep.AS,
+               'PAS': sep.PAS}
 
     def setUp(self):
         super().setUp(nb_amp=3*max(self.N))
@@ -143,9 +176,9 @@ class NbAmpTestCase(_OrderSeparationMethodGlobalTest, unittest.TestCase):
 
 class NbPhaseTestCase(_OrderSeparationMethodGlobalTest, unittest.TestCase):
 
-    method = {'CPS': sep.CPS,
-              'RPS': sep.RPS,
-              'PAS': sep.PAS}
+    methods = {'CPS': sep.CPS,
+               'RPS': sep.RPS,
+               'PAS': sep.PAS}
     tol = 5e-10
 
     def setUp(self):
@@ -154,7 +187,7 @@ class NbPhaseTestCase(_OrderSeparationMethodGlobalTest, unittest.TestCase):
 
 class RhoTestCase(_OrderSeparationMethodGlobalTest, unittest.TestCase):
 
-    method = {'CPS': sep.CPS}
+    methods = {'CPS': sep.CPS}
     atol = {'CPS': 5e-10}
 
     def setUp(self):
@@ -164,10 +197,10 @@ class RhoTestCase(_OrderSeparationMethodGlobalTest, unittest.TestCase):
 class ConstantTermTestCase(_OrderSeparationMethodGlobalTest,
                            unittest.TestCase):
 
-    method = {'AS': sep.AS,
-              'CPS': sep.CPS,
-              'RPS': sep.RPS,
-              'PAS': sep.PAS}
+    methods = {'AS': sep.AS,
+               'CPS': sep.CPS,
+               'RPS': sep.RPS,
+               'PAS': sep.PAS}
 
     def setUp(self):
         super().setUp(constant_term=True)
@@ -193,15 +226,15 @@ class HPS_Test(_OrderSeparationMethodGlobalTest, unittest.TestCase):
         input_sig = np.exp(1j * phase_vec)
         power_vec = np.arange(1, self.N+1)
 
-        method = self.method(self.N, **kwargs)
-        input_coll = method.gen_inputs(input_sig)
+        method_obj = self.method(self.N, **kwargs)
+        input_coll = method_obj.gen_inputs(input_sig)
         output_coll = np.zeros(input_coll.shape, dtype='complex')
 
         for ind in range(input_coll.shape[0]):
             slice_obj = (slice(None),) + (np.newaxis,)*(phase_vec.ndim)
             tmp = input_coll[ind][np.newaxis, :]**power_vec[slice_obj]
             output_coll[ind] = np.sum(tmp, axis=0)
-        self.homophase_est = method.process_outputs(output_coll)
+        self.homophase_est = method_obj.process_outputs(output_coll)
 
         self._init_homophase_true()
         for p in range(-self.N, self.N+1):
@@ -292,7 +325,7 @@ class ErrorASNotEnoughFactorsTestCase(unittest.TestCase):
     method = sep._SeparationMethod(3, [])
 
     def test_error_raised(self):
-        self.assertRaises(ValueError, sep.AS, 3, factors=[1, 0.5])
+        self.assertRaises(ValueError, sep.AS, 3, amplitudes=[1, 0.5])
 
 
 class ErrorMultiDimInputTestCase(unittest.TestCase):
@@ -411,16 +444,16 @@ class PAS_ConditionNumbersTest(_ConditionNumbersGlobalTest, unittest.TestCase):
 
     method = sep.PAS
     nb_phase = 11
-    results = {None: [1., 1., 9.62474137, 1., 1.],
-               1: [nb_phase, 1.20708478, 13.36111111, 1.20708478, 1.18098718],
-               -1: [nb_phase, 0.49442192, 2.06370370, 0.49442192, 0.30958870],
-               2: [1., 1., 9.62474137, 1., 1.],
-               -2: [1., 1., 0.10389889, 1., 1.],
-               np.inf: [nb_phase, 1.20708477, 13.36111111, 1.20708477,
-                        1.18098717],
-               -np.inf: [nb_phase, 0.49442192, 2.06370370, 0.49442192,
-                         0.30958870],
-               'fro': [1., 1., 19.45728053, 2., 2.]}
+    results = {None: [1., 1., 9.12654057, 1., 1.],
+               1: [nb_phase, 1.17647059, 12, 1.17647059, 1.10769231],
+               -1: [nb_phase, 0.29411765, 1.16666667, 0.29411765, 0.13846154],
+               2: [1., 1., 9.12654057, 1., 1.],
+               -2: [1., 1., 0.10957054, 1., 1.],
+               np.inf: [nb_phase, 1.17647059, 12, 1.17647059,
+                        1.10769231],
+               -np.inf: [nb_phase, 0.29411765, 1.16666667, 0.29411765,
+                         0.13846154],
+               'fro': [1., 1., 18.47222222, 2., 2.]}
     kwargs = {'nb_phase': nb_phase}
     tol = 1e-8
 
@@ -428,14 +461,14 @@ class PAS_ConditionNumbersTest(_ConditionNumbersGlobalTest, unittest.TestCase):
 class AS_OptimumGainTest(unittest.TestCase):
 
     best_gains = [(3, {}, 0.526635),
-                  (3, {'negative_gain': True}, 0.526629),
-                  (3, {'negative_gain': False}, 0.539772),
+                  (3, {'negative_amp': True}, 0.526629),
+                  (3, {'negative_amp': False}, 0.539772),
                   (3, {'nb_amp': 10}, 0.664619),
                   (9, {}, 0.791742),
                   (3, {'constant_term': True}, 0.521798),
-                  (3, {'negative_gain': True, 'constant_term': True},
+                  (3, {'negative_amp': True, 'constant_term': True},
                    0.521798),
-                  (3, {'negative_gain': False, 'constant_term': True},
+                  (3, {'negative_amp': False, 'constant_term': True},
                    0.473819),
                   (3, {'nb_amp': 10, 'constant_term': True}, 0.726372),
                   (9, {'constant_term': True}, 0.794541)]
@@ -449,10 +482,6 @@ class AS_OptimumGainTest(unittest.TestCase):
                 val = self.method.optimum_gain(N, tol=self.tol_method,
                                                **kwargs)
                 error = abs(ref - val)
-                if error >= self.tol:
-                    print()
-                    print(ref)
-                    print(val)
                 self.assertTrue(error < self.tol)
 
 
