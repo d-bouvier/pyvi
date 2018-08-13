@@ -421,8 +421,8 @@ class CPS(_SeparationMethod):
             estimation = np.roll(estimation, -1, axis=0)
         estimation = estimation[:self._N]
         if self.rho is not None:
-            self.contrast_vector.shape = (self._N,) + (1,)*(output_coll.ndim-1)
-            return self.contrast_vector * estimation
+            indexes = (slice(None),) + (np.newaxis,) * (estimation.ndim - 1)
+            return self.contrast_vector[indexes] * estimation
         else:
             return estimation
 
