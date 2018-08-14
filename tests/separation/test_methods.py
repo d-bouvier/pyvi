@@ -322,8 +322,6 @@ class WarningsNbPhaseTestCase(unittest.TestCase):
 
 class ErrorASNotEnoughFactorsTestCase(unittest.TestCase):
 
-    method = sep._SeparationMethod(3, [])
-
     def test_error_raised(self):
         self.assertRaises(ValueError, sep.AS, 3, amplitudes=[1, 0.5])
 

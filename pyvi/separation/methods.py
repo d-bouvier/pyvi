@@ -55,7 +55,7 @@ class _SeparationMethod:
     ----------
     N : int
         Number of orders to separate (truncation order of the Volterra series).
-    factors : array_like
+    factors : array_like, optional (default=[])
         Factors applied to the base signal in order to create the test signals.
     constant_term : boolean, optional (default=False)
         If True, constant term of the Volterra series (i.e. the order 0) is
@@ -82,7 +82,7 @@ class _SeparationMethod:
         Return the list of all condition numbers in the separation method.
     """
 
-    def __init__(self, N, factors, constant_term=False):
+    def __init__(self, N, factors=[], constant_term=False):
         self.N = N
         self.factors = factors
         self.K = len(factors)
@@ -234,7 +234,7 @@ class AS(_SeparationMethod):
 
     def __init__(self, N, amplitudes=None, gain=None, negative_amp=True,
                  nb_amp=None, **kwargs):
-        super().__init__(N, [], **kwargs)
+        super().__init__(N, **kwargs)
 
         if amplitudes is not None:
             nb_amp = len(amplitudes)
@@ -395,7 +395,7 @@ class CPS(_SeparationMethod):
     fft_axis = 0
 
     def __init__(self, N, nb_phase=None, rho=None, **kwargs):
-        super().__init__(N, [], **kwargs)
+        super().__init__(N, **kwargs)
 
         self._check_parameter(nb_phase, 'nb_phase')
         self.rho = rho
@@ -961,17 +961,14 @@ class PAS(_AbstractPS, AS):
 
     def __init__(self, N, nb_phase=None, amplitudes=None, gain=None,
                  nb_amp=None, **kwargs):
-        AS.__init__(self, N, amplitudes=amplitudes, gain=gain, nb_amp=nb_amp,
-                    negative_amp=False, **kwargs)
-        self.nb_phase = self._compute_required_nb_phase()
-        self.HPS_obj = HPS(N, nb_phase=nb_phase)
+        super().__init__(N, amplitudes=amplitudes, gain=gain, nb_amp=nb_amp,
+                         negative_amp=False, nb_phase=nb_phase, **kwargs)
 
         self._global_mix_mat = \
-            _create_vandermonde_mixing_mat(self.factors, N,
+            _create_vandermonde_mixing_mat(self.amplitudes, N,
                                            first_column=self.constant_term)
-        self.nb_term = self.nb_amp * self.nb_phase
-
-        factors = np.tensordot(self.HPS_obj.factors, self.factors, axes=0)
+        factors = np.tensordot(self._gen_phase_factors(), self.amplitudes,
+                               axes=0)
         self._update_factors(factors.flatten())
 
         self._create_nq_dict()
@@ -991,12 +988,8 @@ class PAS(_AbstractPS, AS):
 
     @inherit_docstring
     def _from_1d_to_2d(self, coll_1d):
-        shape_2d = (self.HPS_obj.nb_phase, self.nb_amp) + coll_1d.shape[1:]
+        shape_2d = (self.nb_phase, self.nb_amp) + coll_1d.shape[1:]
         return coll_1d.reshape(shape_2d)
-
-    @inherit_docstring
-    def _ifft(self, output_coll_2d):
-        return self.HPS_obj.process_outputs(output_coll_2d)
 
     @inherit_docstring
     def _corresponding_sigs(self, out_per_phase, phase):
@@ -1008,6 +1001,3 @@ class PAS(_AbstractPS, AS):
                                    np.imag(out_per_phase[phase_conj])))
         else:
             return np.real(out_per_phase[0])
-
-    def _fft_mat_condition_numbers(self, p):
-        return self.HPS_obj._fft_mat_condition_numbers(p)
